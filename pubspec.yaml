@@ -1,0 +1,28 @@
+name: restaurant_app
+description: "PARAGON — a restaurant app frontend built in Flutter from the Figma designs."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  # Typography that matches the Figma (Quicksand for display, Poppins for body).
+  # Fonts are fetched on first run; see README if you need a fully offline build.
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/foodplanner/
+    - assets/images/foodplanner/extracted/
+    - assets/images/order/extracted/
