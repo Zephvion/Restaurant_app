@@ -46,6 +46,7 @@ class CartController extends ChangeNotifier {
   List<CartItem> get items => List.unmodifiable(_items);
 
   bool get isEmpty => _items.isEmpty;
+  bool get isNotEmpty => _items.isNotEmpty;
 
   /// Number of distinct dishes in the basket (drives the cart badge).
   /// Number of distinct dishes in the basket.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
@@ -34,11 +35,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await AuthService.instance.signInWithEmail(
+      final user = await AuthService.instance.signInWithEmail(
         email: _identifier.text.trim(),
         password: _password.text,
       );
       if (mounted) {
+        final name = user?.displayName.isNotEmpty == true
+            ? user!.displayName
+            : 'Welcome back';
+        AppBanner.showSuccess(
+          context,
+          'Logged in successfully! $name.',
+          title: 'Welcome Back',
+        );
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
@@ -46,11 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
-            backgroundColor: AppColors.accentRed,
-          ),
+        AppBanner.showError(
+          context,
+          'Login failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}',
         );
       }
     } finally {
@@ -63,16 +70,16 @@ class _LoginScreenState extends State<LoginScreen> {
   void _loginWithGoogle() {
     showGoogleAccountPickerSheet(
       context,
-      onAccountSelected: () async {
-        setState(() => _isLoading = true);
-        await AuthService.instance.signInWithGoogle();
-        if (mounted) {
-          setState(() => _isLoading = false);
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            AppRoutes.home,
-            (route) => false,
-          );
-        }
+      onSuccess: () {
+        AppBanner.showSuccess(
+          context,
+          'Logged in successfully with Google!',
+          title: 'Welcome Back',
+        );
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
       },
     );
   }
@@ -123,7 +130,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Required' : null,
                 ),
-                SizedBox(height: h * 0.22),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Forgot Password?',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.copper,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: h * 0.16),
                 PrimaryButton(
                   label: _isLoading ? 'Logging in...' : 'Login',
                   onPressed: _isLoading ? null : _login,

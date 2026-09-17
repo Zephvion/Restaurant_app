@@ -40,11 +40,10 @@ class FoodPlannerManagePaymentsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: const [
                 ListTile(
@@ -89,11 +88,10 @@ class FoodPlannerManagePaymentsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: const [
                 ListTile(
@@ -148,11 +146,10 @@ class FoodPlannerManagePaymentsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: const [
                 ListTile(

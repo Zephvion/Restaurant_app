@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 /// (Meals, Chicken, Biriyani, Breakfast, Fish, Veg Rice…).
 @immutable
 class MenuCategory {
-  const MenuCategory({required this.name, required this.imageUrl});
   const MenuCategory({
     this.id = '',
     required this.name,

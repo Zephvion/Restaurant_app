@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'routes/app_routes.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -69,15 +70,40 @@ Future<void> main() async {
     ),
   );
 
-  // Initialize Firebase and session/backend services
-  await FirebaseInitializer.initialize();
-  await SessionManager.instance.init();
-  await AuthService.instance.init();
-  await MenuService.instance.init();
-  await OrderService.instance.init();
-  await NotificationService.instance.init();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
 
+  try {
+    await FirebaseInitializer.initialize().timeout(
+      const Duration(seconds: 4),
+      onTimeout: () => debugPrint('Firebase init timed out; continuing offline.'),
+    );
+  } catch (e) {
+    debugPrint('FirebaseInitializer error: $e');
+  }
+
+  try {
+    await SessionManager.instance.init();
+    await AuthService.instance.init();
+  } catch (e) {
+    debugPrint('Local session init error: $e');
+  }
+
+  // Launch UI immediately
   runApp(const ParagonApp());
+
+  // Initialize catalog and background services asynchronously
+  Future.microtask(() async {
+    try {
+      await MenuService.instance.init();
+      await OrderService.instance.init();
+      await NotificationService.instance.init();
+    } catch (e) {
+      debugPrint('Background service init note: $e');
+    }
+  });
 }
 
 class ParagonApp extends StatelessWidget {
@@ -89,20 +115,29 @@ class ParagonApp extends StatelessWidget {
       title: 'PARAGON',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
+      builder: (context, child) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
       initialRoute: AppRoutes.splash,
       routes: {
         // ── Onboarding & Auth ──────────────────────────────────────────────
         AppRoutes.splash: (_) => const SplashScreen(),
         AppRoutes.onboarding: (_) => const OnboardingScreen(),
         AppRoutes.login: (_) => const LoginScreen(),
+        AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
         AppRoutes.signup: (_) => const SignupScreen(),
         AppRoutes.otp: (_) => const OtpScreen(),
 
         // ── Home ──────────────────────────────────────────────────────────
-        AppRoutes.home: (_) => const FoodHomeScreen(),
+        AppRoutes.home: (_) => const HomeScreen(),
 
         // ── Order Food flow ───────────────────────────────────────────────
-        AppRoutes.orderFood: (_) => const FoodHomeScreen(),
+        AppRoutes.orderFood: (_) => const OrderFoodIntroScreen(),
         AppRoutes.foodHome: (_) => const FoodHomeScreen(),
         AppRoutes.productDetail: (_) => const ProductDetailScreen(),
         AppRoutes.cart: (_) => const CartScreen(),
@@ -117,7 +152,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.account: (_) => const AccountScreen(),
 
         // ── Reserve Table flow ─────────────────────────────────────────────
-        AppRoutes.reserveTable: (_) => const ReserveDashboardScreen(),
+        AppRoutes.reserveTable: (_) => const ReserveTableIntroScreen(),
         AppRoutes.reserveDashboard: (_) => const ReserveDashboardScreen(),
         AppRoutes.selectRestaurant: (_) => const SelectRestaurantScreen(),
         AppRoutes.reservationBooking: (_) => const ReservationBookingScreen(),
@@ -125,7 +160,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.reservationSuccess: (_) => const ReservationSuccessScreen(),
 
         // ── Take Away flow ─────────────────────────────────────────────────
-        AppRoutes.takeaway: (_) => const TakeawayDashboardScreen(),
+        AppRoutes.takeaway: (_) => const TakeawayIntroScreen(),
         AppRoutes.takeawayDashboard: (_) => const TakeawayDashboardScreen(),
         AppRoutes.takeawaySelectRestaurant: (_) =>
             const SelectTakeawayRestaurantScreen(),
@@ -133,7 +168,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.takeawaySuccess: (_) => const TakeawaySuccessScreen(),
 
         // ── Catering flow ──────────────────────────────────────────────────
-        AppRoutes.catering: (_) => const CateringDashboardScreen(),
+        AppRoutes.catering: (_) => const CateringIntroScreen(),
         AppRoutes.cateringDashboard: (_) => const CateringDashboardScreen(),
         AppRoutes.cateringNotice: (_) => const CateringNoticeScreen(),
         AppRoutes.cateringBooking: (_) => const CateringBookingScreen(),
@@ -141,7 +176,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.cateringSuccess: (_) => const CateringSuccessScreen(),
 
         // ── Food Planner flow ──────────────────────────────────────────────
-        AppRoutes.foodPlannerIntro: (_) => const FoodPlannerShellScreen(),
+        AppRoutes.foodPlannerIntro: (_) => const FoodPlannerIntroScreen(),
         AppRoutes.foodPlanner: (_) => const FoodPlannerShellScreen(),
         AppRoutes.foodPlannerSlot: (_) => const FoodPlannerSlotScreen(),
         AppRoutes.foodPlannerMenu: (_) => const FoodPlannerMenuScreen(),

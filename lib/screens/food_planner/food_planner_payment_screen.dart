@@ -6,6 +6,10 @@ import '../../routes/app_routes.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 
+import '../../models/payment_method.dart';
+import '../../widgets/app_banner.dart';
+import '../../widgets/payment_gateway_sheet.dart';
+
 /// Payment options screen for Food Planner matching Payment options.png and Payment options-1.png.
 class FoodPlannerPaymentScreen extends StatefulWidget {
   const FoodPlannerPaymentScreen({super.key});
@@ -18,9 +22,37 @@ class FoodPlannerPaymentScreen extends StatefulWidget {
 class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
   String _selectedPayment = 'axis_card';
 
+  void _onProceedToPay() {
+    PaymentMethod method = MockData.cards.first;
+    if (_selectedPayment == 'hdfc_card') {
+      method = MockData.cards.length > 1 ? MockData.cards[1] : MockData.cards.first;
+    } else if (_selectedPayment == 'gpay') {
+      method = MockData.upi.first;
+    } else if (_selectedPayment == 'phonepe') {
+      method = MockData.upi.length > 1 ? MockData.upi[1] : MockData.upi.first;
+    } else if (_selectedPayment == 'cod') {
+      method = MockData.cashOnDelivery;
+    }
+
+    PaymentGatewaySheet.show(
+      context: context,
+      amount: 92.0,
+      selectedMethod: method,
+      onPaymentSuccess: (txnId, mode) {
+        _placeOrder();
+      },
+    );
+  }
+
   void _placeOrder() {
     final ctrl = FoodPlannerController.instance;
     ctrl.confirmPlannedMeal(dish: MockData.plainDosa);
+
+    AppBanner.showSuccess(
+      context,
+      'Food planner meal confirmed & subscription active!',
+      title: 'Meal Planned',
+    );
 
     // Show success dialog matching image 1.png
     showDialog(
@@ -201,11 +233,10 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     _radioRow(
@@ -240,11 +271,10 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     _radioRow(
@@ -279,11 +309,10 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     _optionTile(title: 'Wallet', icon: Icons.wallet),
@@ -308,7 +337,7 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
             right: 20,
             bottom: 20,
             child: GestureDetector(
-              onTap: _placeOrder,
+              onTap: _onProceedToPay,
               child: Container(
                 height: 56,
                 decoration: BoxDecoration(

@@ -154,11 +154,10 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
     required String title,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         leading: Icon(icon, color: AppColors.textSecondary, size: 22),
         title: Text(

@@ -5,6 +5,7 @@ import '../../models/order_model.dart';
 import '../../services/order_service.dart';
 import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/customer_support_sheet.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
@@ -47,24 +48,59 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     ),
                   ),
                   SafeArea(
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Material(
-                          color: Colors.black.withOpacity(0.4),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => Navigator.of(context).maybePop(),
-                            child: const SizedBox(
-                              width: 42,
-                              height: 42,
-                              child: Icon(Icons.arrow_back_ios_new,
-                                  color: Colors.white, size: 18),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Material(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: const CircleBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).maybePop(),
+                              child: const SizedBox(
+                                width: 42,
+                                height: 42,
+                                child: Icon(Icons.arrow_back_ios_new,
+                                    color: Colors.white, size: 18),
+                              ),
                             ),
                           ),
-                        ),
+                          Material(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(20),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () {
+                                CustomerSupportSheet.show(
+                                  context: context,
+                                  orderId: orderId,
+                                  riderName: order?.deliveryPartnerName ?? MockData.deliveryPartnerName,
+                                  riderPhone: order?.deliveryPartnerPhone ?? MockData.deliveryPartnerPhone,
+                                );
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.headset_mic_rounded, color: AppColors.copper, size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'HELP',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -403,7 +439,13 @@ class _DeliveryPartnerCard extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.call, color: Colors.white, size: 20),
-              onPressed: () {},
+              onPressed: () {
+                CustomerSupportSheet.show(
+                  context: context,
+                  riderName: name,
+                  riderPhone: phone,
+                );
+              },
             ),
           ),
         ],

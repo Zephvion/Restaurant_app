@@ -5,11 +5,13 @@ import '../../models/payment_method.dart';
 import '../../routes/app_routes.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/checkout_widgets.dart';
 import '../../widgets/payment_brand_mark.dart';
+import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 
-/// "Payment Options" — pick a payment method (cards, UPI, Cash on Delivery).
+/// "Payment Options" — pick a payment method (cards, UPI, Net Banking, Wallet, Cash on Delivery).
 /// A PROCEED TO PAY button slides in once a method is selected.
 class PaymentOptionsScreen extends StatefulWidget {
   const PaymentOptionsScreen({super.key});
@@ -26,6 +28,22 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
 
   final CartController _cart = CartController.instance;
 
+  static const _netBankingMethod = PaymentMethod(
+    id: 'net_banking',
+    title: 'Net Banking',
+    subtitle: 'All Indian Banks Supported',
+    kind: PaymentKind.netBanking,
+    assetKind: 'netbanking',
+  );
+
+  static const _walletMethod = PaymentMethod(
+    id: 'wallet',
+    title: 'Digital Wallet',
+    subtitle: 'Paytm, PhonePe, Amazon Pay',
+    kind: PaymentKind.wallet,
+    assetKind: 'wallet',
+  );
+
   @override
   void initState() {
     super.initState();
@@ -35,23 +53,38 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
 
   PaymentMethod? get _selected {
     if (_selectedId == null) return null;
+    if (_selectedId == _netBankingMethod.id) return _netBankingMethod;
+    if (_selectedId == _walletMethod.id) return _walletMethod;
     for (final m in [..._cards, ..._upi, MockData.cashOnDelivery]) {
       if (m.id == _selectedId) return m;
     }
     return null;
   }
 
-  Future<void> _proceed() async {
+  void _proceed() {
     final method = _selected;
     if (method == null) return;
     _cart.selectPayment(method);
-    final order = await _cart.checkout();
-    if (mounted) {
-      Navigator.of(context).pushNamed(
-        AppRoutes.orderSuccess,
-        arguments: order.id,
-      );
-    }
+
+    PaymentGatewaySheet.show(
+      context: context,
+      amount: _cart.grandTotal,
+      selectedMethod: method,
+      onPaymentSuccess: (txnId, mode) async {
+        final order = await _cart.checkout();
+        if (mounted) {
+          AppBanner.showSuccess(
+            context,
+            'Payment successful via $mode! Order #${order.id} placed.',
+          );
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.orderSuccess,
+            (r) => r.settings.name == AppRoutes.home || r.isFirst,
+            arguments: order.id,
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -161,22 +194,8 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    _MoreOptionRow(
-                      icon: Icons.account_balance_wallet_outlined,
-                      label: 'Wallet',
-                      onTap: () => Navigator.of(context)
-                          .pushNamed(AppRoutes.paymentMethods),
-                    ),
-                    const Divider(
-                        height: 1, color: AppColors.border, indent: 56),
-                    _MoreOptionRow(
-                      icon: Icons.account_balance_outlined,
-                      label: 'Net Banking',
-                      onTap: () => Navigator.of(context)
-                          .pushNamed(AppRoutes.paymentMethods),
-                    ),
-                    const Divider(
-                        height: 1, color: AppColors.border, indent: 56),
+                    _radioTile(_walletMethod, divider: true),
+                    _radioTile(_netBankingMethod, divider: true),
                     _radioTile(MockData.cashOnDelivery, divider: false),
                   ],
                 ),

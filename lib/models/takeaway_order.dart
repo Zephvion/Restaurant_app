@@ -6,7 +6,6 @@ enum TakeawayStatus {
   preparing,
   packing,
   readyForTakeaway,
-  taken,
   taken;
 
   static TakeawayStatus fromString(String? value) {

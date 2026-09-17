@@ -2,7 +2,6 @@
 enum CateringStatus {
   notifiedParagon,
   call,
-  bookingConfirmed,
   bookingConfirmed;
 
   static CateringStatus fromString(String? value) {

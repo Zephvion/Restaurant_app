@@ -39,12 +39,12 @@ class FeaturedDishCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                height: 130,
+                height: 124,
                 width: double.infinity,
                 child: NetworkImageWithFallback(url: dish.imageUrl),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 10, 12),
+                padding: const EdgeInsets.fromLTRB(12, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -58,9 +58,9 @@ class FeaturedDishCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     DishBadges(dish: dish),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,

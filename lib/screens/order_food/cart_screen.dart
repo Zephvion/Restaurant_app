@@ -4,6 +4,8 @@ import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/address_picker_sheet.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/checkout_widgets.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/primary_button.dart';
@@ -13,13 +15,77 @@ import '../../widgets/primary_button.dart';
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
+  void _confirmClearCart(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Cancel & Clear Cart?',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to remove all items from your cart?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('NO', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              CartController.instance.clear();
+              AppBanner.showInfo(context, 'Cart has been cleared');
+            },
+            child: const Text('YES, CLEAR', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = CartController.instance;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Cart')),
+      appBar: AppBar(
+        title: const Text('Cart'),
+        actions: [
+          AnimatedBuilder(
+            animation: cart,
+            builder: (context, _) {
+              if (cart.isEmpty) return const SizedBox.shrink();
+              return TextButton.icon(
+                onPressed: () => _confirmClearCart(context),
+                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.accentRed),
+                label: const Text(
+                  'Clear Cart',
+                  style: TextStyle(
+                    color: AppColors.accentRed,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: AnimatedBuilder(
         animation: cart,
         builder: (context, _) {
@@ -100,6 +166,25 @@ class CartScreen extends StatelessWidget {
                 onPressed: () =>
                     Navigator.of(context).pushNamed(AppRoutes.billing),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _confirmClearCart(context),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  minimumSize: const Size.fromHeight(50),
+                ),
+                icon: const Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+                label: const Text(
+                  'Cancel Cart',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -108,73 +193,9 @@ class CartScreen extends StatelessWidget {
   }
 
   void _editAddress(BuildContext context) {
-    final cart = CartController.instance;
-    showModalBottomSheet<void>(
+    AddressPickerSheet.show(
       context: context,
-      backgroundColor: AppColors.backgroundElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Deliver to',
-                    style: Theme.of(sheetContext).textTheme.titleLarge),
-                const SizedBox(height: 16),
-                for (final address in MockData.addresses)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Material(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () {
-                          cart.selectAddress(address);
-                          Navigator.of(sheetContext).pop();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.location_on_outlined,
-                                  color: AppColors.copper),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(address.label,
-                                        style: const TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontWeight: FontWeight.w600,
-                                        )),
-                                    const SizedBox(height: 4),
-                                    Text(address.details,
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 13,
-                                        )),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+      onAddressSelected: (addr) => CartController.instance.selectAddress(addr),
     );
   }
 }

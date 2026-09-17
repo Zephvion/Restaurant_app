@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../state/catering_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import 'catering_booking_screen.dart' show CateringBookingArgs;
 
 /// "Notify the restaurant?" confirmation screen displaying the selected date and guest range.
@@ -21,15 +22,17 @@ class CateringNotifyScreen extends StatelessWidget {
     final formattedDate =
         '${months[args.date.month - 1]} ${args.date.day} , ${args.date.year}';
 
-    void proceed() {
-      CateringController.instance.placeOrder(
     Future<void> proceed() async {
       await CateringController.instance.placeOrder(
         date: args.date,
         guestRange: args.guestRange,
       );
-      Navigator.of(context).pushNamed(AppRoutes.cateringSuccess);
       if (context.mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Catering request submitted for ${args.guestRange} guests on $formattedDate!',
+          title: 'Request Submitted',
+        );
         Navigator.of(context).pushNamed(AppRoutes.cateringSuccess);
       }
     }

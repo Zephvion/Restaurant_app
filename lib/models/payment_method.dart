@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 /// The category of a saved payment method — drives which section it appears
 /// under on the payment screens.
-enum PaymentKind { card, upi, wallet, netBanking, cash }
 enum PaymentKind {
   card,
   upi,

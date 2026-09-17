@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/mock_data.dart';
+import '../models/address.dart';
 import '../models/user_profile.dart';
 import 'firebase_initializer.dart';
+import 'location_service.dart';
 import 'session_manager.dart';
 
 class AuthService {
@@ -56,13 +58,41 @@ class AuthService {
     }
   }
 
-  /// Sign up with Email and Password
+  /// Sign up with Email, Password and optional Delivery Address details
   Future<UserProfile> signUpWithEmail({
     required String email,
     required String password,
     required String displayName,
     required String phone,
+    String? addressDetails,
+    String? landmark,
+    String? cityArea,
   }) async {
+    final List<Address> addresses = [];
+    String deliveryArea = 'Palazhi , Calicut';
+    if (cityArea != null && cityArea.trim().isNotEmpty) {
+      deliveryArea = cityArea.trim();
+    }
+    if ((addressDetails != null && addressDetails.trim().isNotEmpty) ||
+        (landmark != null && landmark.trim().isNotEmpty)) {
+      final fullDetails = [
+        if (addressDetails != null && addressDetails.trim().isNotEmpty)
+          addressDetails.trim(),
+        if (landmark != null && landmark.trim().isNotEmpty)
+          'Near ${landmark.trim()}',
+        deliveryArea,
+      ].join(', ');
+      addresses.add(
+        Address(
+          id: 'addr_reg_${DateTime.now().millisecondsSinceEpoch}',
+          label: 'Home',
+          details: fullDetails,
+          isDefault: true,
+        ),
+      );
+      LocationService.instance.updateDeliveryArea(deliveryArea);
+    }
+
     if (FirebaseInitializer.isFirebaseReady) {
       try {
         final credential =
@@ -78,6 +108,8 @@ class AuthService {
           displayName: displayName,
           email: email.trim(),
           phone: phone.trim(),
+          defaultDeliveryArea: deliveryArea,
+          savedAddresses: addresses,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         );
@@ -103,6 +135,8 @@ class AuthService {
         displayName: displayName.isNotEmpty ? displayName : MockData.userName,
         email: email.isNotEmpty ? email : MockData.userEmail,
         phone: phone.isNotEmpty ? phone : MockData.userPhone,
+        defaultDeliveryArea: deliveryArea,
+        savedAddresses: addresses,
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
       );
@@ -114,6 +148,25 @@ class AuthService {
       );
       _authController.add(_currentUser);
       return profile;
+    }
+  }
+
+  /// Sends password reset email link to the user
+  Future<void> sendPasswordResetEmail(String email) async {
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty || !cleanEmail.contains('@')) {
+      throw Exception('Please provide a valid email address.');
+    }
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: cleanEmail);
+      } catch (e) {
+        debugPrint('FirebaseAuth sendPasswordResetEmail error: $e');
+        rethrow;
+      }
+    } else {
+      // Simulate realistic network delay
+      await Future.delayed(const Duration(milliseconds: 700));
     }
   }
 

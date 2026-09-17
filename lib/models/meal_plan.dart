@@ -101,7 +101,6 @@ class PlannedMeal {
 enum PlannerOrderStatus {
   orderAccepted,
   taken,
-  done,
   done;
 
   static PlannerOrderStatus fromString(String? value) {

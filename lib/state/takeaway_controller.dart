@@ -50,6 +50,8 @@ class TakeawayController extends ChangeNotifier {
   double get totalPrice =>
       _cart.values.fold(0.0, (sum, item) => sum + item.lineTotal);
 
+  double get grandTotal => totalPrice;
+
   bool get isCartEmpty => _cart.isEmpty;
 
   bool contains(Dish dish) => _cart.containsKey(dish.id);

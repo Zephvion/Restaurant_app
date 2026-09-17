@@ -45,27 +45,22 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY',
-        defaultValue: 'AIzaSyDemoWebApiKeyPlaceholder12345678'),
-    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID',
-        defaultValue: '1:1234567890:web:abcdef123456'),
-    messagingSenderId: _senderId,
-    projectId: _projectId,
-    authDomain: String.fromEnvironment('FIREBASE_WEB_AUTH_DOMAIN',
-        defaultValue: 'restaurant-app-paragon.firebaseapp.com'),
-    storageBucket: _storageBucket,
+    apiKey: 'AIzaSyDlZe0PUApI5KD2nRf4d74IotjzsAFGOA0',
+    appId: '1:854555269860:web:5772b4f24d9a3e6c206af1',
+    messagingSenderId: '854555269860',
+    projectId: 'restaurant-app-612ab',
+    authDomain: 'restaurant-app-612ab.firebaseapp.com',
+    storageBucket: 'restaurant-app-612ab.firebasestorage.app',
+    measurementId: 'G-5SYX5EJQ38',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY',
-        defaultValue: 'AIzaSyDemoAndroidApiKeyPlaceholder123456'),
-    appId: String.fromEnvironment('FIREBASE_ANDROID_APP_ID',
-        defaultValue: '1:1234567890:android:abcdef123456'),
-    messagingSenderId: _senderId,
-    projectId: _projectId,
-    storageBucket: _storageBucket,
+    apiKey: 'AIzaSyAqO_CvNkfEp-pqsRQKoDDa-pZbdOVPb80',
+    appId: '1:854555269860:android:5eb4f563f3dc3891206af1',
+    messagingSenderId: '854555269860',
+    projectId: 'restaurant-app-612ab',
+    storageBucket: 'restaurant-app-612ab.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY',
         defaultValue: 'AIzaSyDemoIosApiKeyPlaceholder12345678'),
@@ -90,4 +85,3 @@ class DefaultFirebaseOptions {
         defaultValue: 'com.example.restaurantApp'),
   );
 }
-

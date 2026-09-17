@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/checkout_widgets.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/primary_button.dart';
@@ -61,6 +62,15 @@ class BillingScreen extends StatelessWidget {
                     ],
                     const PanelDivider(),
                     AddressRow(address: cart.selectedAddress.details),
+                    AddressRow(
+                      address: cart.selectedAddress.details,
+                      onEdit: () {
+                        AddressPickerSheet.show(
+                          context: context,
+                          onAddressSelected: (addr) => cart.selectAddress(addr),
+                        );
+                      },
+                    ),
                     const PanelDivider(),
                     Row(
                       children: const [

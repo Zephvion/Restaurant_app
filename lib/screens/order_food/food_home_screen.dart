@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
+import '../../models/meal_plan.dart';
 import '../../models/menu_category.dart';
 import '../../models/promo_banner.dart';
 import '../../routes/app_routes.dart';
+import '../../services/location_service.dart';
+import '../../services/menu_service.dart';
 import '../../state/cart_controller.dart';
+import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/basket_bar.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/dish_card.dart';
@@ -14,8 +19,15 @@ import '../../widgets/menu_list_tile.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
-/// The main "Order Food" menu: delivery header, search, promo carousel,
-/// category tabs, featured dishes, category circles and the breakfast lists.
+enum DishSortOption {
+  popularity,
+  priceLowHigh,
+  priceHighLow,
+  rating,
+}
+
+/// The main "Order Food" menu: interactive delivery header, search, promo carousel,
+/// category tabs with dynamic filtering, sort options, clickable categories and dish rails.
 class FoodHomeScreen extends StatefulWidget {
   const FoodHomeScreen({super.key});
 
@@ -25,10 +37,13 @@ class FoodHomeScreen extends StatefulWidget {
 
 class _FoodHomeScreenState extends State<FoodHomeScreen> {
   final PageController _promoController = PageController(viewportFraction: 0.9);
-  int _promoPage = 0;
   int _selectedTab = 0;
+  int _promoPage = 0;
+  String _activeCategoryFilter = 'All';
+  DishSortOption _activeSort = DishSortOption.popularity;
 
   final CartController _cart = CartController.instance;
+  List<Dish> get _dishes => MenuService.instance.dishes;
 
   @override
   void dispose() {
@@ -37,14 +52,130 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 
   void _openProduct(Dish dish) {
-    Navigator.of(context)
-        .pushNamed(AppRoutes.productDetail, arguments: dish);
+    Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
   }
 
   void _add(Dish dish) => _cart.add(dish);
 
+  void _openAddressPicker() {
+    AddressPickerSheet.show(
+      context: context,
+      onAddressSelected: (addr) {
+        setState(() {}); // refresh delivery location header & fees
+      },
+    );
+  }
+
+  void _openSortModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Sort Dishes By',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _sortTile(ctx, 'Popularity (Default)', DishSortOption.popularity),
+              _sortTile(ctx, 'Price: Low to High', DishSortOption.priceLowHigh),
+              _sortTile(ctx, 'Price: High to Low', DishSortOption.priceHighLow),
+              _sortTile(ctx, 'Customer Rating (4.5+)', DishSortOption.rating),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sortTile(BuildContext ctx, String label, DishSortOption option) {
+    final selected = _activeSort == option;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppColors.copper : AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      trailing: selected
+          ? const Icon(Icons.check_circle_rounded, color: AppColors.copper, size: 20)
+          : const Icon(Icons.circle_outlined, color: AppColors.hint, size: 20),
+      onTap: () {
+        setState(() => _activeSort = option);
+        Navigator.of(ctx).pop();
+      },
+    );
+  }
+
+  List<Dish> _applyFiltersAndSort(List<Dish> source) {
+    var list = List<Dish>.from(source);
+
+    // Filter by Category Tab
+    if (_activeCategoryFilter != 'All' &&
+        _activeCategoryFilter.toLowerCase() != 'frequent order' &&
+        _activeCategoryFilter.isNotEmpty) {
+      final filter = _activeCategoryFilter.toLowerCase();
+      list = list.where((d) {
+        if (filter == 'veg') return d.isVeg;
+        final cat = d.category.toLowerCase();
+        if (filter == 'breakfast') return cat.contains('breakfast') || cat.contains('dosa') || cat.contains('idli');
+        if (filter == 'lunch') return cat.contains('lunch') || cat.contains('biriyani') || cat.contains('rice') || cat.contains('curry');
+        if (filter == 'dinner') return cat.contains('dinner') || cat.contains('roti') || cat.contains('starter');
+        if (filter == 'beverages') return cat.contains('beverage') || cat.contains('juice') || cat.contains('shake') || cat.contains('tea');
+        if (filter == 'desserts') return cat.contains('dessert') || cat.contains('sweet') || cat.contains('ice cream');
+        return cat.contains(filter) || d.name.toLowerCase().contains(filter);
+      }).toList();
+      if (list.isEmpty) list = List<Dish>.from(source);
+    }
+
+    // Sort
+    switch (_activeSort) {
+      case DishSortOption.priceLowHigh:
+        list.sort((a, b) => a.price.compareTo(b.price));
+        break;
+      case DishSortOption.priceHighLow:
+        list.sort((a, b) => b.price.compareTo(a.price));
+        break;
+      case DishSortOption.rating:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+      case DishSortOption.popularity:
+      default:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+    }
+
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredDishes = _applyFiltersAndSort(_dishes);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -70,9 +201,11 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
             const SizedBox(height: 14),
             _categoryTabs(),
             const SizedBox(height: 18),
-            _featuredRail(),
+            _featuredRail(filteredDishes),
             const SizedBox(height: 26),
             _categoryCircles(),
+            const SizedBox(height: 26),
+            _foodPlannerSection(),
             const SizedBox(height: 26),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -93,13 +226,21 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
       bottomNavigationBar: AnimatedBuilder(
         animation: _cart,
         builder: (context, _) {
-          if (_cart.isEmpty) {
-            return const ParagonBottomNav(current: ParagonTab.home);
-          }
-          return BasketBar(
-            itemCount: _cart.totalQuantity,
-            label: 'GO TO CART',
-            onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_cart.isNotEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: BasketBar(
+                    itemCount: _cart.totalQuantity,
+                    label: 'GO TO CART',
+                    onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+                  ),
+                ),
+              const ParagonBottomNav(current: ParagonTab.home),
+            ],
           );
         },
       ),
@@ -109,6 +250,8 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   // ---- Sections ----------------------------------------------------------
 
   Widget _header() {
+    final currentArea = LocationService.instance.currentDeliveryArea;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
       child: Row(
@@ -136,44 +279,47 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Deliver to',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+            child: GestureDetector(
+              onTap: _openAddressPicker,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Deliver to',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on,
-                        color: AppColors.accentRed, size: 16),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        MockData.deliveryArea,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on,
+                          color: AppColors.accentRed, size: 16),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          currentArea.isNotEmpty ? currentArea : MockData.deliveryArea,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down,
-                        color: AppColors.textPrimary, size: 18),
-                  ],
-                ),
-              ],
+                      const Icon(Icons.keyboard_arrow_down,
+                          color: AppColors.textPrimary, size: 18),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            color: AppColors.textPrimary,
+            icon: const Icon(Icons.notifications_none_rounded,
+                color: AppColors.textPrimary),
             onPressed: () =>
                 Navigator.of(context).pushNamed(AppRoutes.notifications),
           ),
@@ -187,21 +333,21 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
       onTap: () => Navigator.of(context).pushNamed(AppRoutes.search),
       child: Container(
         height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           children: [
-            const Expanded(
-              child: Text(
-                'Search for dishes',
-                style: TextStyle(color: AppColors.hint, fontSize: 14),
-              ),
+            const Icon(Icons.search, color: AppColors.textSecondary),
+            const SizedBox(width: 12),
+            Text(
+              'Search your dishes',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
             ),
-            const Icon(Icons.search, color: AppColors.textSecondary, size: 22),
           ],
         ),
       ),
@@ -212,33 +358,35 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 150,
+          height: 180,
           child: PageView.builder(
             controller: _promoController,
             itemCount: MockData.promos.length,
             onPageChanged: (i) => setState(() => _promoPage = i),
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: _PromoCard(promo: MockData.promos[i]),
-            ),
+            itemBuilder: (context, i) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _PromoCard(promo: MockData.promos[i]),
+              );
+            },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            MockData.promos.length,
-            (i) => AnimatedContainer(
+          children: List.generate(MockData.promos.length, (i) {
+            final active = i == _promoPage;
+            return AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: i == _promoPage ? 18 : 7,
-              height: 7,
+              width: active ? 18 : 6,
+              height: 6,
               decoration: BoxDecoration(
-                color: i == _promoPage ? AppColors.copper : AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(4),
+                color: active ? AppColors.accentRed : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(3),
               ),
-            ),
-          ),
+            );
+          }),
         ),
       ],
     );
@@ -255,20 +403,27 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
                 fontWeight: FontWeight.w700,
               ),
         ),
-        Row(
-          children: const [
-            Text(
-              'SORT BY',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                letterSpacing: 1,
-                fontWeight: FontWeight.w600,
-              ),
+        InkWell(
+          onTap: _openSortModal,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                Text(
+                  _activeSort == DishSortOption.popularity ? 'SORT BY' : 'SORTED',
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontSize: 12,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.swap_vert, color: AppColors.copper, size: 18),
+              ],
             ),
-            SizedBox(width: 6),
-            Icon(Icons.swap_vert, color: AppColors.textSecondary, size: 18),
-          ],
+          ),
         ),
       ],
     );
@@ -285,7 +440,12 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
         itemBuilder: (context, i) {
           final selected = i == _selectedTab;
           return GestureDetector(
-            onTap: () => setState(() => _selectedTab = i),
+            onTap: () {
+              setState(() {
+                _selectedTab = i;
+                _activeCategoryFilter = MockData.categoryTabs[i];
+              });
+            },
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -317,19 +477,20 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     );
   }
 
-  Widget _featuredRail() {
+  Widget _featuredRail(List<Dish> dishes) {
     return AnimatedBuilder(
       animation: _cart,
       builder: (context, _) {
+        final displayList = dishes.isNotEmpty ? dishes : MockData.frequentOrders;
         return SizedBox(
           height: 256,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: MockData.frequentOrders.length,
+            itemCount: displayList.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, i) {
-              final dish = MockData.frequentOrders[i];
+              final dish = displayList[i];
               return FeaturedDishCard(
                 dish: dish,
                 inCart: _cart.contains(dish),
@@ -356,8 +517,213 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           childAspectRatio: 0.78,
         ),
         itemCount: MockData.categories.length,
-        itemBuilder: (context, i) => _CategoryCircle(category: MockData.categories[i]),
+        itemBuilder: (context, i) {
+          final cat = MockData.categories[i];
+          return _CategoryCircle(
+            category: cat,
+            onTap: () {
+              setState(() {
+                _activeCategoryFilter = cat.name;
+                final tabIdx = MockData.categoryTabs.indexWhere(
+                    (t) => t.toLowerCase() == cat.name.toLowerCase());
+                if (tabIdx != -1) _selectedTab = tabIdx;
+              });
+            },
+          );
+        },
       ),
+    );
+  }
+
+  Widget _foodPlannerSection() {
+    final planner = FoodPlannerController.instance;
+    return AnimatedBuilder(
+      animation: planner,
+      builder: (context, _) {
+        final hasMeals = planner.plannedMeals.isNotEmpty;
+        final currentMeal = hasMeals ? planner.plannedMeals.first : null;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF2C1810),
+                  AppColors.backgroundElevated,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.copper.withOpacity(0.4)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.copper.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.calendar_month_rounded,
+                          color: AppColors.copper, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'FOOD PLANNER & MACROS',
+                            style: TextStyle(
+                              color: AppColors.copper,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Scheduled Meals & Calorie Tracking',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.maroon.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.maroon),
+                      ),
+                      child: const Text(
+                        '15% OFF',
+                        style: TextStyle(
+                          color: AppColors.accentRed,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (currentMeal != null) ...[
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: NetworkImageWithFallback(
+                            url: currentMeal.imageUrl,
+                            fallbackIcon: Icons.restaurant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Next Planned: ${currentMeal.dishName}',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${currentMeal.mealType.label.toUpperCase()} · ${currentMeal.timeSlot} · ${currentMeal.calories} kcal',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ] else ...[
+                  const Text(
+                    'Plan your weekly breakfast, lunch & dinner with zero hassle.',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.local_fire_department_rounded,
+                            size: 16, color: AppColors.copper),
+                        SizedBox(width: 4),
+                        Text(
+                          '2,000 kcal Target',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.maroon,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.foodPlanner),
+                      icon: const Icon(Icons.arrow_forward, size: 14),
+                      label: Text(
+                        hasMeals ? 'OPEN PLANNER' : 'START PLANNING',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -506,36 +872,41 @@ class _PromoCard extends StatelessWidget {
   }
 }
 
-/// A round category shortcut with its label.
+/// A round category shortcut with its label and tap callback.
 class _CategoryCircle extends StatelessWidget {
-  const _CategoryCircle({required this.category});
+  const _CategoryCircle({required this.category, required this.onTap});
 
   final MenuCategory category;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: ClipOval(
-              child: NetworkImageWithFallback(url: category.imageUrl),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Column(
+        children: [
+          Expanded(
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: ClipOval(
+                child: NetworkImageWithFallback(url: category.imageUrl),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          category.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          const SizedBox(height: 6),
+          Text(
+            category.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

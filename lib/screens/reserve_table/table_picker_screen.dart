@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../routes/app_routes.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import 'reservation_booking_screen.dart' show BookingArgs;
 
 /// Visual floor-plan showing 14 tables (with chair bumps).
@@ -30,6 +31,11 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       tableNumber: _selectedTable!,
     );
     if (mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Table #$_selectedTable successfully booked for ${args.seats} guests!',
+        title: 'Table Reserved',
+      );
       Navigator.of(context).pushNamed(AppRoutes.reservationSuccess);
     }
   }

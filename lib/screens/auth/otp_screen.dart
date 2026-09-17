@@ -4,6 +4,7 @@ import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/otp_input.dart';
 import '../../widgets/primary_button.dart';
 
@@ -23,18 +24,17 @@ class _OtpScreenState extends State<OtpScreen> {
 
   bool get _isComplete => _code.length == 4;
 
-  void _verify() {
   Future<void> _verify() async {
-    if (!_isComplete) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.home,
-      (route) => false,
-    );
 
     setState(() => _isLoading = true);
     try {
       await AuthService.instance.verifyOtp(_code);
       if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Phone verified & logged in successfully!',
+          title: 'Welcome',
+        );
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
@@ -42,11 +42,9 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('OTP verification failed: $e'),
-            backgroundColor: AppColors.accentRed,
-          ),
+        AppBanner.showError(
+          context,
+          'OTP verification failed: $e',
         );
       }
     } finally {
@@ -57,15 +55,11 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   void _resend() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.surfaceLight,
-          content: Text('A new OTP has been sent.'),
-        ),
-      );
+    AppBanner.showInfo(
+      context,
+      'A new OTP code has been sent.',
+      title: 'Code Sent',
+    );
   }
 
   @override
@@ -124,8 +118,6 @@ class _OtpScreenState extends State<OtpScreen> {
                 duration: const Duration(milliseconds: 250),
                 opacity: _isComplete ? 1 : 0,
                 child: IgnorePointer(
-                  ignoring: !_isComplete,
-                  child: PrimaryButton(label: 'Sign In', onPressed: _verify),
                   ignoring: !_isComplete || _isLoading,
                   child: PrimaryButton(
                     label: _isLoading ? 'Verifying...' : 'Sign In',

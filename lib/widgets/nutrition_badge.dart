@@ -46,15 +46,16 @@ class DishBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: compact ? 8 : 14,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         NutritionBadge(
           icon: Icons.local_fire_department_outlined,
           label: '${dish.kcal} kcal',
           compact: compact,
         ),
-        SizedBox(width: compact ? 10 : 16),
         NutritionBadge(
           icon: Icons.scale_outlined,
           label: '${dish.grams} gm',

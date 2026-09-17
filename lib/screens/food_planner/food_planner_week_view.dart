@@ -382,7 +382,7 @@ class _PopulatedMealsRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 330,
+      height: 340,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -401,7 +401,7 @@ class _PopulatedMealsRail extends StatelessWidget {
                 // Dish Image Card with edit pencil
                 Container(
                   width: 170,
-                  height: 230,
+                  height: 215,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(18),
@@ -487,24 +487,36 @@ class _PopulatedMealsRail extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Icon(Icons.local_fire_department_outlined,
-                        size: 13, color: AppColors.textSecondary),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${meal.calories} kcal',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 11),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_outlined,
+                            size: 13, color: AppColors.textSecondary),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${meal.calories} kcal',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.scale_outlined,
-                        size: 13, color: AppColors.textSecondary),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${meal.weightGm} gm',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 11),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.scale_outlined,
+                            size: 13, color: AppColors.textSecondary),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${meal.weightGm} gm',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
                     ),
                   ],
                 ),

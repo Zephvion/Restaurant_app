@@ -9,8 +9,6 @@ import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
-/// Account — profile header plus an accordion of settings sections (address,
-/// order history, payments, table reservation, food planner, contact, logout).
 /// Account — live profile header, saved addresses, and settings sections.
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -39,20 +37,6 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [
-            _headerRow(context),
-            const SizedBox(height: 22),
-            _profile(context),
-            const SizedBox(height: 26),
-            _AccountExpansion(
-              icon: Icons.location_on_outlined,
-              title: 'Address',
     return StreamBuilder<UserProfile?>(
       stream: AuthService.instance.authStateChanges,
       initialData: AuthService.instance.currentUser,
@@ -78,7 +62,6 @@ class AccountScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
-                for (final a in MockData.addresses) _addressItem(a),
                 _headerRow(context),
                 const SizedBox(height: 22),
                 _profile(
@@ -139,53 +122,6 @@ class AccountScreen extends StatelessWidget {
                 ),
               ],
             ),
-            _AccountLink(
-              icon: Icons.receipt_long_outlined,
-              title: 'Order history',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.previousOrder),
-            ),
-            _AccountLink(
-              icon: Icons.credit_card,
-              title: 'Payments',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.paymentMethods),
-            ),
-            _AccountExpansion(
-              icon: Icons.event_seat_outlined,
-              title: 'Table Reservation',
-              children: [_reservationItem()],
-            ),
-            _AccountExpansion(
-              icon: Icons.restaurant_menu,
-              title: 'Food Planner',
-              children: [
-                _plannerItem(context, 'Today'),
-                _plannerItem(context, 'This Week'),
-                _plannerItem(context, 'Next Week'),
-              ],
-            ),
-            _AccountExpansion(
-              icon: Icons.headset_mic_outlined,
-              title: 'Contact Us',
-              children: [
-                _contactLine(Icons.call, MockData.deliveryPartnerPhone),
-                const SizedBox(height: 10),
-                _contactLine(Icons.email_outlined, 'support@paragon.com'),
-              ],
-            ),
-            _AccountLink(
-              icon: Icons.logout,
-              title: 'Logout',
-              danger: true,
-              onTap: () => Navigator.of(context)
-                  .pushNamedAndRemoveUntil(AppRoutes.login, (r) => false),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar:
-          const ParagonBottomNav(current: ParagonTab.account),
           ),
           bottomNavigationBar:
               const ParagonBottomNav(current: ParagonTab.account),
@@ -230,7 +166,6 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _profile(BuildContext context) {
   Widget _profile(
     BuildContext context, {
     required String name,
@@ -245,7 +180,6 @@ class AccountScreen extends StatelessWidget {
             width: 76,
             height: 76,
             child: NetworkImageWithFallback(
-              url: MockData.userAvatar,
               url: photoUrl,
               fallbackIcon: Icons.person,
             ),
@@ -256,14 +190,10 @@ class AccountScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(MockData.userName,
-                  style: Theme.of(context).textTheme.titleLarge),
               Text(name, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 6),
-              _editableLine(MockData.userPhone),
               _editableLine(phone),
               const SizedBox(height: 4),
-              _editableLine(MockData.userEmail),
               _editableLine(email),
             ],
           ),
@@ -440,37 +370,36 @@ class _AccountExpansion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: AppColors.backgroundElevated,
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          iconColor: AppColors.copper,
-          collapsedIconColor: AppColors.textSecondary,
-          leading: Icon(icon, color: AppColors.copper, size: 22),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            iconColor: AppColors.copper,
+            collapsedIconColor: AppColors.textSecondary,
+            leading: Icon(icon, color: AppColors.copper, size: 22),
+            title: Text(
+              title,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            children: children,
           ),
-          children: children,
         ),
       ),
     );
   }
 }
 
-/// A single tappable settings row (navigates rather than expands).
 /// A single tappable settings row.
 class _AccountLink extends StatelessWidget {
   const _AccountLink({
@@ -490,26 +419,26 @@ class _AccountLink extends StatelessWidget {
     final Color accent = danger ? AppColors.accentRed : AppColors.copper;
     final Color textColor =
         danger ? AppColors.accentRed : AppColors.textPrimary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: AppColors.backgroundElevated,
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: accent, size: 22),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(icon, color: accent, size: 22),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          trailing:
+              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ),
-        trailing:
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       ),
     );
   }

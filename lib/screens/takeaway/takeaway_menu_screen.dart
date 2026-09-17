@@ -5,8 +5,10 @@ import '../../models/dish.dart';
 import '../../routes/app_routes.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/nutrition_badge.dart';
+import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 
 /// The Takeaway ordering menu: category tabs, dishes with +/- quantity controls,
@@ -30,6 +32,23 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     if (_ctrl.isCartEmpty) return;
     _ctrl.placeOrder();
     Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+
+    PaymentGatewaySheet.show(
+      context: context,
+      amount: _ctrl.grandTotal,
+      selectedMethod: MockData.upi.first,
+      onPaymentSuccess: (txnId, mode) {
+        _ctrl.placeOrder();
+        if (mounted) {
+          AppBanner.showSuccess(
+            context,
+            'Takeaway order placed successfully via $mode!',
+            title: 'Order Confirmed',
+          );
+          Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+        }
+      },
+    );
   }
 
   @override

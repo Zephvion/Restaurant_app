@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../routes/app_routes.dart';
 import '../state/cart_controller.dart';
 import '../theme/app_colors.dart';
+import 'address_picker_sheet.dart';
 
 /// Which tab is currently active in the floating bottom navigation bar.
 enum ParagonTab { home, location, cart, account }
@@ -36,6 +37,12 @@ class ParagonBottomNav extends StatelessWidget {
               content: Text('Choose a delivery location'),
             ),
           );
+        AddressPickerSheet.show(
+          context: context,
+          onAddressSelected: (addr) {
+            CartController.instance.selectAddress(addr);
+          },
+        );
         break;
       case ParagonTab.cart:
         Navigator.of(context).pushNamed(AppRoutes.cart);
