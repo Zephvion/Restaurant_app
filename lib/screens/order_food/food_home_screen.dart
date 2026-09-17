@@ -56,6 +56,13 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
   }
 
+  void _openCategory(String category) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.categoryListing,
+      arguments: category,
+    );
+  }
+
   void _add(Dish dish) => _cart.add(dish);
 
   void _openAddressPicker() {
@@ -482,29 +489,34 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
         itemCount: MockData.categoryTabs.length,
         separatorBuilder: (_, __) => const SizedBox(width: 22),
         itemBuilder: (context, i) {
-          final selected = i == _selectedTab;
+          final isFrequent = i == 0;
           return GestureDetector(
             onTap: () {
-              setState(() {
-                _selectedTab = i;
-                _activeCategoryFilter = MockData.categoryTabs[i];
-              });
+              if (isFrequent) {
+                setState(() {
+                  _selectedTab = 0;
+                  _activeCategoryFilter = 'All';
+                });
+              } else {
+                _openCategory(MockData.categoryTabs[i]);
+              }
             },
+            behavior: HitTestBehavior.opaque,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   MockData.categoryTabs[i],
                   style: TextStyle(
-                    color: selected
+                    color: isFrequent
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
                     fontSize: 15,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isFrequent ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 6),
-                if (selected)
+                if (isFrequent)
                   Container(
                     width: 22,
                     height: 3,
@@ -525,7 +537,8 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     return AnimatedBuilder(
       animation: _cart,
       builder: (context, _) {
-        final displayList = dishes.isNotEmpty ? dishes : MockData.frequentOrders;
+        final displayList =
+            dishes.isNotEmpty ? dishes : MockData.frequentOrders;
         return SizedBox(
           height: 256,
           child: ListView.separated(
@@ -550,29 +563,22 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
 
   Widget _categoryCircles() {
     return SizedBox(
-      height: 210,
+      height: 195,
       child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 0.78,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.82,
         ),
         itemCount: MockData.categories.length,
         itemBuilder: (context, i) {
           final cat = MockData.categories[i];
           return _CategoryCircle(
             category: cat,
-            onTap: () {
-              setState(() {
-                _activeCategoryFilter = cat.name;
-                final tabIdx = MockData.categoryTabs.indexWhere(
-                    (t) => t.toLowerCase() == cat.name.toLowerCase());
-                if (tabIdx != -1) _selectedTab = tabIdx;
-              });
-            },
+            onTap: () => _openCategory(cat.name),
           );
         },
       ),
@@ -918,23 +924,40 @@ class _PromoCard extends StatelessWidget {
 
 /// A round category shortcut with its label and tap callback.
 class _CategoryCircle extends StatelessWidget {
-  const _CategoryCircle({required this.category, required this.onTap});
+  const _CategoryCircle({
+    required this.category,
+    this.onTap,
+  });
 
   final MenuCategory category;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
+      behavior: HitTestBehavior.opaque,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: ClipOval(
-                child: NetworkImageWithFallback(url: category.imageUrl),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: NetworkImageWithFallback(
+                url: category.imageUrl,
+                fit: BoxFit.cover,
               ),
             ),
           ),

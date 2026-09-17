@@ -100,17 +100,20 @@ class _SignupScreenState extends State<SignupScreen> {
             : 'Palazhi , Calicut',
       );
 
+      final phone = _phoneController.text.trim().isNotEmpty
+          ? _phoneController.text.trim()
+          : '+91 9874563210';
+      final generatedOtp = AuthService.instance.generateAndSendOtp(phone: phone, length: 4);
+
       if (mounted) {
         AppBanner.showSuccess(
           context,
-          'Account created! Please verify the OTP sent to your phone.',
+          'Account created! SMS sent with OTP: $generatedOtp',
           title: 'Welcome to PARAGON',
         );
         Navigator.of(context).pushNamed(
           AppRoutes.otp,
-          arguments: _phoneController.text.trim().isNotEmpty
-              ? _phoneController.text.trim()
-              : '+91 9874563210',
+          arguments: phone,
         );
       }
     } catch (e) {

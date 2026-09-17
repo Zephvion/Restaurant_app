@@ -110,7 +110,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                   constraints: BoxConstraints(
                     maxHeight: _isDrawerOpen
                         ? MediaQuery.of(context).size.height * 0.54
-                        : 76,
+                        : 80,
                   ),
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
@@ -125,26 +125,43 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                         onTap: () =>
                             setState(() => _isDrawerOpen = !_isDrawerOpen),
                         behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Icon(
-                                _isDrawerOpen
-                                    ? Icons.keyboard_arrow_down
-                                    : Icons.keyboard_arrow_up,
-                                color: AppColors.textSecondary,
-                                size: 22,
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Todays food calorie intake',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                              Container(
+                                width: 36,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.hint.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Todays food calorie intake',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    _isDrawerOpen
+                                        ? Icons.keyboard_arrow_down
+                                        : Icons.keyboard_arrow_up,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ],
                               ),
                             ],
                           ),

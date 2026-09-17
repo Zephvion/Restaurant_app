@@ -8,7 +8,7 @@ import '../../widgets/app_banner.dart';
 import '../../widgets/payment_gateway_sheet.dart';
 import 'reservation_booking_screen.dart' show BookingArgs;
 
-/// A restaurant table configuration with capacity, shape, and section details.
+/// A restaurant table configuration with capacity, shape, section, and availability.
 class RestaurantTable {
   final int number;
   final int capacity;
@@ -29,9 +29,9 @@ class RestaurantTable {
   });
 }
 
-/// 10/10 Floor Plan & Table Reservation System.
-/// Classified into 2-seater, 4-seater, 6-seater, and 8-10 VIP tables with interactive
-/// modal representations, multi-table combination engine, and integrated payment gateway.
+/// 10/10 Floor Plan & Table Allocation System.
+/// Highlights standalone tables containing the exact required seats (e.g. 4-seater tables for 4 guests).
+/// Automatically switches to smart multi-table combination ONLY when no standalone matching tables are available.
 class TablePickerScreen extends StatefulWidget {
   const TablePickerScreen({super.key});
 
@@ -49,6 +49,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 2,
       title: 'Cozy Window Booth 1',
       section: 'Window View',
+      isAvailable: true,
       description: 'Intimate setting with panoramic city skyline view.',
       perks: ['Window View', 'Dim Lighting', 'Couples Favorite'],
     ),
@@ -57,6 +58,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 2,
       title: 'Cozy Window Booth 2',
       section: 'Window View',
+      isAvailable: true,
       description: 'Quiet romantic table next to the glass facade.',
       perks: ['Window View', 'Soft Ambience'],
     ),
@@ -65,6 +67,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 2,
       title: 'Garden Terrace 1',
       section: 'Terrace Garden',
+      isAvailable: true,
       description: 'Open-air balcony dining with fresh natural breeze.',
       perks: ['Outdoor', 'Garden View', 'Quiet Zone'],
     ),
@@ -73,42 +76,47 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 2,
       title: 'Garden Terrace 2',
       section: 'Terrace Garden',
+      isAvailable: true,
       description: 'Comfortable terrace booth overlooking landscaped gardens.',
       perks: ['Outdoor', 'Garden Breeze'],
     ),
 
-    // 4-Seaters
+    // 4-Seaters (With 4 chairs on all 4 sides)
     const RestaurantTable(
       number: 5,
       capacity: 4,
       title: 'Family Dining A',
       section: 'Main Dining Floor',
-      description: 'Spacious central booth for families and small groups.',
-      perks: ['Central AC', 'High Chairs Available', 'Combinable'],
+      isAvailable: true,
+      description: 'Spacious central 4-seat booth with 4 comfortable dining chairs.',
+      perks: ['4 Chairs', 'Central AC', 'Best for 4 Guests'],
     ),
     const RestaurantTable(
       number: 6,
       capacity: 4,
       title: 'Family Dining B',
       section: 'Main Dining Floor',
-      description: 'Next to Family Dining A, ideal for combining large families.',
-      perks: ['Central AC', 'Combinable with T-5'],
+      isAvailable: true,
+      description: '4-seater dining booth with high backrests and central view.',
+      perks: ['4 Chairs', 'Central AC', 'Family Choice'],
     ),
     const RestaurantTable(
       number: 7,
       capacity: 4,
       title: 'Family Dining C',
       section: 'Main Dining Floor',
-      description: 'Spacious table with easy access to buffet stations.',
-      perks: ['Buffet Access', 'Spacious Seating'],
+      isAvailable: true,
+      description: '4-seat table with direct, easy access to buffet stations.',
+      perks: ['4 Chairs', 'Buffet Access', 'Spacious Seating'],
     ),
     const RestaurantTable(
       number: 8,
       capacity: 4,
       title: 'Family Dining D',
       section: 'Main Dining Floor',
-      description: 'Comfortable corner table offering extra privacy.',
-      perks: ['Semi-Private', 'Central AC'],
+      isAvailable: true,
+      description: 'Quiet 4-seat corner table offering pleasant semi-private dining.',
+      perks: ['4 Chairs', 'Semi-Private', 'Central AC'],
     ),
 
     // 6-Seaters
@@ -117,16 +125,18 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 6,
       title: 'Banquet Lounge 1',
       section: 'Central Lounge',
-      description: 'Circular banquet table for friends and corporate lunch.',
-      perks: ['Round Table', 'Lounge Cushions', 'Group Dining'],
+      isAvailable: true,
+      description: 'Circular banquet table with 6 cushioned chairs for groups.',
+      perks: ['6 Chairs', 'Round Table', 'Lounge Cushions'],
     ),
     const RestaurantTable(
       number: 10,
       capacity: 6,
       title: 'Banquet Lounge 2',
       section: 'Central Lounge',
-      description: 'Premium circular dining booth for celebrations.',
-      perks: ['Round Table', 'Celebration Setup'],
+      isAvailable: true,
+      description: 'Premium circular 6-seat dining booth for celebrations.',
+      perks: ['6 Chairs', 'Round Table', 'Celebration Setup'],
     ),
 
     // 8-10 Seaters / VIP
@@ -135,21 +145,37 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       capacity: 8,
       title: 'Royal VIP Suite',
       section: 'VIP Private Lounge',
-      description: 'Dedicated private dining area with exclusive butler service.',
-      perks: ['Dedicated Waiter', 'Private Music Controls', 'VIP Cutlery'],
+      isAvailable: true,
+      description: 'Dedicated private dining area with 8 VIP chairs and butler service.',
+      perks: ['8 Chairs', 'Dedicated Waiter', 'VIP Cutlery'],
     ),
     const RestaurantTable(
       number: 12,
       capacity: 10,
       title: 'Grand Executive Table',
       section: 'Penthouse Hall',
-      description: 'Expansive boardroom-style long table for large gatherings.',
+      isAvailable: true,
+      description: 'Expansive boardroom-style long table with 10 chairs for large parties.',
       perks: ['10 Chairs', 'Chef Specials', 'Private Hall'],
     ),
   ];
 
   BookingArgs get _args =>
       ModalRoute.of(context)!.settings.arguments as BookingArgs;
+
+  /// Check if there is any available standalone table that directly fits the requested party size
+  bool get _hasDirectStandaloneMatch {
+    final guests = _args.seats;
+    return _allTables.any(
+      (t) => t.isAvailable && t.capacity >= guests && t.capacity <= guests + 1,
+    );
+  }
+
+  /// Whether a specific table is a direct match for the user's guest count
+  bool _isDirectMatch(RestaurantTable table) {
+    final guests = _args.seats;
+    return table.isAvailable && table.capacity >= guests && table.capacity <= guests + 1;
+  }
 
   int get _totalSelectedCapacity {
     int cap = 0;
@@ -172,11 +198,14 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
   void _showTableDetailsModal(RestaurantTable table) {
     final guestCount = _args.seats;
     final isSelected = _selectedTables.contains(table.number);
-    final capacityShortfall = guestCount - table.capacity;
+    final isDirectMatch = _isDirectMatch(table);
+    final hasDirectAvailable = _hasDirectStandaloneMatch;
 
-    // Find a candidate combinable table if needed
+    // Combining logic is ONLY triggered if there are NO standalone matching tables available
+    // or if the chosen table has fewer seats than guestCount and no standalone matching table exists
     RestaurantTable? combinableCandidate;
-    if (capacityShortfall > 0) {
+    final capacityShortfall = guestCount - table.capacity;
+    if (capacityShortfall > 0 && !hasDirectAvailable) {
       combinableCandidate = _allTables.firstWhere(
         (t) => t.number != table.number && t.isAvailable && !_selectedTables.contains(t.number),
         orElse: () => table,
@@ -213,39 +242,45 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Table #${table.number} — ${table.title}',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Table #${table.number} — ${table.title}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Section: ${table.section}',
-                      style: const TextStyle(
-                        color: AppColors.copper,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 3),
+                      Text(
+                        'Section: ${table.section}',
+                        style: const TextStyle(
+                          color: AppColors.copper,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.maroon.withOpacity(0.3),
+                    color: isDirectMatch
+                        ? AppColors.copper.withValues(alpha: 0.25)
+                        : AppColors.maroon.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.maroon),
+                    border: Border.all(
+                      color: isDirectMatch ? AppColors.copper : AppColors.maroon,
+                    ),
                   ),
                   child: Text(
-                    '${table.capacity} SEATS',
-                    style: const TextStyle(
-                      color: AppColors.accentRed,
+                    '${table.capacity} CHAIRS',
+                    style: TextStyle(
+                      color: isDirectMatch ? AppColors.copper : AppColors.accentRed,
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -253,7 +288,39 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Direct Fit Announcement for Standalone Tables
+            if (isDirectMatch) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Color(0xFF22C55E), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Perfect Match! Standalone table with ${table.capacity} chairs for your $guestCount guests.',
+                        style: const TextStyle(
+                          color: Color(0xFF22C55E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
             Text(
               table.description,
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
@@ -279,70 +346,65 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Combination recommendation card if table is smaller than required guests
-            if (capacityShortfall > 0 && combinableCandidate != null) ...[
-              Builder(
-                builder: (context) {
-                  final cand = combinableCandidate!;
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.copper.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.copper.withOpacity(0.4)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(Icons.auto_awesome, color: AppColors.copper, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Smart Table Combination Suggestion',
-                              style: TextStyle(
-                                color: AppColors.copper,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
+            // Multi-Table Combination (ONLY if no standalone matching table exists)
+            if (!hasDirectAvailable && capacityShortfall > 0 && combinableCandidate != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.copper.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.copper.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.auto_awesome, color: AppColors.copper, size: 18),
+                        SizedBox(width: 8),
                         Text(
-                          'You have $guestCount guests. Table #${table.number} has ${table.capacity} seats. Combine with Table #${cand.number} (${cand.capacity} seats) for a total of ${table.capacity + cand.capacity} seats.',
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.copper,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          'No Single Matching Table Free — Combine Tables',
+                          style: TextStyle(
+                            color: AppColors.copper,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
                           ),
-                          icon: const Icon(Icons.link, size: 16),
-                          label: Text(
-                            'COMBINE TABLE #${table.number} + #${cand.number}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _selectedTables.add(table.number);
-                              _selectedTables.add(cand.number);
-                            });
-                            Navigator.of(ctx).pop();
-                            AppBanner.showSuccess(
-                              context,
-                              'Combined Table #${table.number} & #${cand.number} (${table.capacity + cand.capacity} seats)!',
-                              title: 'Tables Combined',
-                            );
-                          },
                         ),
                       ],
                     ),
-                  );
-                },
+                    const SizedBox(height: 6),
+                    Text(
+                      'Combine Table #${table.number} (${table.capacity} seats) + Table #${combinableCandidate.number} (${combinableCandidate.capacity} seats) for a total of ${table.capacity + combinableCandidate.capacity} seats.',
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.copper,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.link, size: 16),
+                      label: Text(
+                        'COMBINE TABLE #${table.number} + #${combinableCandidate.number}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _selectedTables.add(table.number);
+                          _selectedTables.add(combinableCandidate!.number);
+                        });
+                        Navigator.of(ctx).pop();
+                        AppBanner.showSuccess(
+                          context,
+                          'Combined Table #${table.number} & #${combinableCandidate.number} (${table.capacity + combinableCandidate.capacity} seats)!',
+                          title: 'Tables Combined',
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -416,6 +478,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
     final args = _args;
     final totalCap = _totalSelectedCapacity;
     final isEnoughCapacity = totalCap >= args.seats;
+    final hasDirectMatch = _hasDirectStandaloneMatch;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -462,45 +525,90 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Capacity Category Filter Pills ──────────────────────────
+            // ── Dynamic Recommendation Banner ───────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: hasDirectMatch
+                      ? AppColors.copper.withValues(alpha: 0.14)
+                      : AppColors.maroon.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: hasDirectMatch
+                        ? AppColors.copper.withValues(alpha: 0.4)
+                        : AppColors.maroon.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      hasDirectMatch ? Icons.stars_rounded : Icons.info_outline,
+                      color: hasDirectMatch ? AppColors.copper : AppColors.accentRed,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        hasDirectMatch
+                            ? 'Highlighted standalone ${args.seats}-seat tables below are ready for your party.'
+                            : 'No single ${args.seats}-seat table is free. Tap tables to combine adjacent seats.',
+                        style: TextStyle(
+                          color: hasDirectMatch ? AppColors.textPrimary : AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Capacity Category Filter / Legend ───────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
+                    _legendItem(AppColors.copper, 'Best Match (${args.seats}P)'),
                     _legendItem(const Color(0xFF22C55E), 'Available'),
-                    _legendItem(AppColors.copper, 'Selected'),
                     _legendItem(AppColors.hint, 'Occupied'),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // ── Interactive Floor Plan ──────────────────────────────────
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
-                  childAspectRatio: 0.88,
+                  childAspectRatio: 0.86,
                 ),
                 itemCount: _allTables.length,
                 itemBuilder: (context, i) {
                   final table = _allTables[i];
                   final isSelected = _selectedTables.contains(table.number);
+                  final isBestMatch = _isDirectMatch(table);
+
                   return _InteractiveTableTile(
                     table: table,
                     isSelected: isSelected,
+                    isBestMatch: isBestMatch,
                     onTap: () => _onTableTap(table),
                   );
                 },
@@ -517,7 +625,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                   border: const Border(top: BorderSide(color: AppColors.border)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       blurRadius: 16,
                       offset: const Offset(0, -4),
                     ),
@@ -554,7 +662,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.copper.withOpacity(0.15),
+                            color: AppColors.copper.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
@@ -607,7 +715,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -619,22 +727,36 @@ class _InteractiveTableTile extends StatelessWidget {
   const _InteractiveTableTile({
     required this.table,
     required this.isSelected,
+    required this.isBestMatch,
     required this.onTap,
   });
 
   final RestaurantTable table;
   final bool isSelected;
+  final bool isBestMatch;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isSelected
-        ? AppColors.copper
-        : (table.isAvailable ? AppColors.border : AppColors.hint.withOpacity(0.3));
+    Color borderColor;
+    if (isSelected) {
+      borderColor = AppColors.copper;
+    } else if (isBestMatch) {
+      borderColor = AppColors.copper.withValues(alpha: 0.7);
+    } else if (table.isAvailable) {
+      borderColor = AppColors.border;
+    } else {
+      borderColor = AppColors.hint.withValues(alpha: 0.3);
+    }
 
-    final bgColor = isSelected
-        ? AppColors.copper.withOpacity(0.18)
-        : AppColors.surface;
+    Color bgColor;
+    if (isSelected) {
+      bgColor = AppColors.copper.withValues(alpha: 0.22);
+    } else if (isBestMatch) {
+      bgColor = AppColors.copper.withValues(alpha: 0.08);
+    } else {
+      bgColor = AppColors.surface;
+    }
 
     return GestureDetector(
       onTap: onTap,
@@ -643,22 +765,36 @@ class _InteractiveTableTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+          border: Border.all(
+            color: borderColor,
+            width: isSelected ? 2.2 : (isBestMatch ? 1.6 : 1),
+          ),
+          boxShadow: isBestMatch || isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.copper.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Graphical chairs around table
-            _buildChairsVisual(table.capacity, isSelected),
+            // Graphical chairs around table perimeter
+            _buildChairsVisual(table.capacity, isSelected || isBestMatch),
 
             // Inner Table Surface
             Container(
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 shape: table.capacity >= 6 ? BoxShape.rectangle : BoxShape.circle,
                 borderRadius: table.capacity >= 6 ? BorderRadius.circular(12) : null,
-                color: isSelected ? AppColors.copper : AppColors.surfaceLight,
+                color: isSelected
+                    ? AppColors.copper
+                    : (isBestMatch ? AppColors.copper.withValues(alpha: 0.3) : AppColors.surfaceLight),
               ),
               alignment: Alignment.center,
               child: Column(
@@ -673,23 +809,45 @@ class _InteractiveTableTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${table.capacity}P',
+                    '${table.capacity} Chairs',
                     style: TextStyle(
-                      color: isSelected ? Colors.black87 : AppColors.textSecondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? Colors.black87
+                          : (isBestMatch ? AppColors.copper : AppColors.textSecondary),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Top check indicator if selected
+            // Top check indicator if selected or match badge
             if (isSelected)
               const Positioned(
                 top: 6,
                 right: 6,
                 child: Icon(Icons.check_circle, size: 16, color: AppColors.copper),
+              )
+            else if (isBestMatch)
+              Positioned(
+                top: 5,
+                right: 5,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.copper,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'MATCH',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
           ],
         ),
@@ -697,8 +855,10 @@ class _InteractiveTableTile extends StatelessWidget {
     );
   }
 
-  Widget _buildChairsVisual(int capacity, bool isSelected) {
-    final chairColor = isSelected ? AppColors.copper : AppColors.hint.withOpacity(0.5);
+  Widget _buildChairsVisual(int capacity, bool isHighlighted) {
+    final chairColor = isHighlighted
+        ? AppColors.copper
+        : AppColors.hint.withValues(alpha: 0.5);
 
     if (capacity == 2) {
       return Column(
@@ -710,6 +870,7 @@ class _InteractiveTableTile extends StatelessWidget {
         ],
       );
     } else if (capacity == 4) {
+      // 4 distinct chairs around table (Top, Bottom, Left, Right)
       return Stack(
         children: [
           Align(alignment: Alignment.topCenter, child: _chairDot(chairColor, horizontal: true)),
@@ -719,7 +880,7 @@ class _InteractiveTableTile extends StatelessWidget {
         ],
       );
     } else {
-      // 6 or 8+ chairs
+      // 6 or 8+ chairs surrounding table
       return Stack(
         children: [
           Align(alignment: Alignment.topCenter, child: _chairDot(chairColor, horizontal: true)),

@@ -17,6 +17,7 @@ class AppRoutes {
   // Order Food flow.
   static const String orderFood = '/order-food'; // full-bleed intro
   static const String foodHome = '/food-home'; // main menu
+  static const String categoryListing = '/category-listing'; // arg: String (category name)
   static const String productDetail = '/product'; // arg: Dish
   static const String cart = '/cart';
   static const String billing = '/billing';

@@ -10,11 +10,13 @@ class OtpInput extends StatefulWidget {
   const OtpInput({
     super.key,
     this.length = 4,
+    this.value,
     this.onChanged,
     this.onCompleted,
   });
 
   final int length;
+  final String? value;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onCompleted;
 
@@ -31,6 +33,28 @@ class _OtpInputState extends State<OtpInput> {
     super.initState();
     _controllers = List.generate(widget.length, (_) => TextEditingController());
     _nodes = List.generate(widget.length, (_) => FocusNode());
+    if (widget.value != null && widget.value!.isNotEmpty) {
+      _applyValue(widget.value!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant OtpInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != null && widget.value != oldWidget.value && widget.value != _code) {
+      _applyValue(widget.value!);
+    }
+  }
+
+  void _applyValue(String val) {
+    final chars = val.split('');
+    for (int i = 0; i < widget.length; i++) {
+      if (i < chars.length) {
+        _controllers[i].text = chars[i];
+      } else {
+        _controllers[i].clear();
+      }
+    }
   }
 
   @override
