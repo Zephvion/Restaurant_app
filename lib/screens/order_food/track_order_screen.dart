@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/mock_data.dart';
 import '../../theme/app_colors.dart';
@@ -270,6 +271,16 @@ class _StepBar extends StatelessWidget {
 class _DeliveryPartnerCard extends StatelessWidget {
   const _DeliveryPartnerCard();
 
+  void _handleCall() async {
+    final uri = Uri(
+      scheme: 'tel',
+      path: MockData.deliveryPartnerPhone.replaceAll(' ', ''),
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -313,14 +324,18 @@ class _DeliveryPartnerCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.accentRed,
-              shape: BoxShape.circle,
+          Material(
+            color: AppColors.accentRed,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: _handleCall,
+              child: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(Icons.call, color: Colors.white, size: 20),
+              ),
             ),
-            child: const Icon(Icons.call, color: Colors.white, size: 20),
           ),
         ],
       ),

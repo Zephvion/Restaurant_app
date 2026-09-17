@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
+  url_launcher: ^6.2.5
   # Typography that matches the Figma (Quicksand for display, Poppins for body).
   # Fonts are fetched on first run; see README if you need a fully offline build.
   google_fonts: ^6.2.1

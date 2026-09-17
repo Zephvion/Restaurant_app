@@ -234,19 +234,19 @@ class MockData {
     id: 'meals',
     name: 'Meals',
     price: 80,
-    imageUrl: 'assets/images/order/extracted/cat_meals_1.png',
+    imageUrl: 'assets/images/foodplanner/extracted/card_meals.png',
     kcal: 620,
     grams: 550,
     isVeg: true,
     rating: 4.8,
-    category: 'Frequent order',
+    category: 'Meals',
     description:
         'A traditional Kerala sadya-style plate — rice with an assortment of '
         'curries, pickles, thoran and payasam served on a banana leaf.',
     ingredients: [
-      'Steamed matta rice',
-      'Sambar, avial, thoran and pickle',
-      'Papadam and a sweet payasam',
+        'Steamed matta rice',
+        'Sambar, avial, thoran and pickle',
+        'Papadam and a sweet payasam',
     ],
     carbs: 90,
     fat: 18,
@@ -257,7 +257,8 @@ class MockData {
     id: 'orange_juice',
     name: 'Fresh Juice - Orange',
     price: 110,
-    imageUrl: 'assets/images/order/extracted/thumb_appam.png',
+    imageUrl:
+        'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
     kcal: 110,
     grams: 250,
     isVeg: true,
@@ -372,12 +373,328 @@ class MockData {
     ),
   ];
 
+  // ---- Category-specific dishes ------------------------------------------
+
+  static const List<Dish> chickenDishes = [
+    Dish(
+      id: 'chicken_biriyani',
+      name: 'Chicken Biriyani',
+      price: 220,
+      imageUrl: 'assets/images/order/extracted/cat_chicken.png',
+      kcal: 580,
+      grams: 450,
+      isVeg: false,
+      rating: 4.8,
+      category: 'Chicken',
+      description: 'Fragrant basmati rice layered with tender, spice-marinated chicken pieces, slow-cooked in dum style.',
+      ingredients: ['Basmati rice', 'Chicken marinated in yoghurt & spices', 'Saffron & fried onions'],
+      carbs: 60,
+      fat: 22,
+      protein: 28,
+    ),
+    Dish(
+      id: 'chicken_curry',
+      name: 'Chicken Curry',
+      price: 180,
+      imageUrl: 'assets/images/order/extracted/cat_chicken.png',
+      kcal: 420,
+      grams: 350,
+      isVeg: false,
+      rating: 4.6,
+      category: 'Chicken',
+      description: 'Tender chicken pieces simmered in a rich, aromatic gravy with Kerala spices.',
+      ingredients: ['Chicken', 'Coconut milk gravy', 'Kerala spice blend'],
+      carbs: 15,
+      fat: 20,
+      protein: 32,
+    ),
+  ];
+
+  static const List<Dish> biriyaniDishes = [
+    Dish(
+      id: 'veg_biriyani',
+      name: 'Veg Biriyani',
+      price: 160,
+      imageUrl: 'assets/images/order/extracted/cat_biryani_1.png',
+      kcal: 450,
+      grams: 400,
+      isVeg: true,
+      rating: 4.5,
+      category: 'Biriyani',
+      description: 'Aromatic basmati rice with mixed vegetables, layered and slow-cooked with saffron.',
+      ingredients: ['Basmati rice', 'Mixed vegetables', 'Saffron & whole spices'],
+      carbs: 65,
+      fat: 12,
+      protein: 10,
+    ),
+    Dish(
+      id: 'mutton_biriyani',
+      name: 'Mutton Biriyani',
+      price: 280,
+      imageUrl: 'assets/images/order/extracted/cat_biryani_2.png',
+      kcal: 650,
+      grams: 500,
+      isVeg: false,
+      rating: 4.9,
+      category: 'Biriyani',
+      description: 'Premium mutton pieces with fragrant rice, prepared in authentic Malabar style.',
+      ingredients: ['Basmati rice', 'Tender mutton', 'Malabar spice blend & ghee'],
+      carbs: 55,
+      fat: 28,
+      protein: 35,
+    ),
+  ];
+
+  static const List<Dish> fishDishes = [
+    Dish(
+      id: 'fish_curry',
+      name: 'Fish Curry',
+      price: 200,
+      imageUrl: 'assets/images/order/extracted/cat_fish.png',
+      kcal: 380,
+      grams: 350,
+      isVeg: false,
+      rating: 4.7,
+      category: 'Fish',
+      description: 'Fresh fish in a tangy Kerala-style curry with raw mango and coconut.',
+      ingredients: ['Fresh fish', 'Raw mango', 'Coconut & kokum gravy'],
+      carbs: 12,
+      fat: 18,
+      protein: 30,
+    ),
+    Dish(
+      id: 'fish_fry',
+      name: 'Fish Fry',
+      price: 220,
+      imageUrl: 'assets/images/order/extracted/cat_fish.png',
+      kcal: 350,
+      grams: 250,
+      isVeg: false,
+      rating: 4.8,
+      category: 'Fish',
+      description: 'Marinated fish fillet, shallow-fried to a crispy golden finish.',
+      ingredients: ['Fish fillet', 'Chilli-turmeric marinade', 'Curry leaves & shallots'],
+      carbs: 8,
+      fat: 20,
+      protein: 28,
+    ),
+  ];
+
+  static const List<Dish> vegDishes = [
+    Dish(
+      id: 'chappathi',
+      name: 'Chappathi',
+      subtitle: '3 nos',
+      price: 70,
+      imageUrl: 'assets/images/foodplanner/extracted/card_chappathi.png',
+      kcal: 240,
+      grams: 180,
+      isVeg: true,
+      rating: 4.6,
+      category: 'Veg',
+      description: 'Soft, layered whole-wheat chappathis served with veg kurma.',
+      ingredients: ['Whole-wheat flour', 'Ghee', 'Veg kurma'],
+      carbs: 38,
+      fat: 6,
+      protein: 7,
+    ),
+    Dish(
+      id: 'avial',
+      name: 'Avial',
+      price: 120,
+      imageUrl: 'assets/images/order/extracted/cat_veg_rice.png',
+      kcal: 280,
+      grams: 300,
+      isVeg: true,
+      rating: 4.5,
+      category: 'Veg',
+      description: 'Mixed vegetables in a coconut-yoghurt sauce, a Kerala sadya staple.',
+      ingredients: ['Mixed vegetables', 'Coconut paste', 'Yoghurt & curry leaves'],
+      carbs: 30,
+      fat: 14,
+      protein: 6,
+    ),
+    Dish(
+      id: 'sambar_rice',
+      name: 'Sambar Rice',
+      price: 100,
+      imageUrl: 'assets/images/order/extracted/cat_veg_rice.png',
+      kcal: 380,
+      grams: 400,
+      isVeg: true,
+      rating: 4.4,
+      category: 'Veg',
+      description: 'Hot steamed rice served with a generous helping of vegetable sambar.',
+      ingredients: ['Steamed rice', 'Toor dal sambar', 'Mixed vegetables & tamarind'],
+      carbs: 65,
+      fat: 8,
+      protein: 12,
+    ),
+  ];
+
+  static const List<Dish> eggDishes = [
+    Dish(
+      id: 'egg_curry',
+      name: 'Egg Curry',
+      price: 120,
+      imageUrl: 'assets/images/order/extracted/cat_meals_2.png',
+      kcal: 320,
+      grams: 300,
+      isVeg: false,
+      rating: 4.5,
+      category: 'Egg',
+      description: 'Boiled eggs in a rich, spiced onion-tomato gravy.',
+      ingredients: ['Boiled eggs', 'Onion-tomato gravy', 'Garam masala'],
+      carbs: 12,
+      fat: 18,
+      protein: 16,
+    ),
+    Dish(
+      id: 'egg_roast',
+      name: 'Egg Roast',
+      price: 140,
+      imageUrl: 'assets/images/order/extracted/cat_meals_2.png',
+      kcal: 340,
+      grams: 280,
+      isVeg: false,
+      rating: 4.6,
+      category: 'Egg',
+      description: 'Kerala-style egg roast with a thick, spicy masala coating.',
+      ingredients: ['Eggs', 'Shallots & curry leaves', 'Kerala spice roast'],
+      carbs: 10,
+      fat: 20,
+      protein: 18,
+    ),
+  ];
+
+  static const List<Dish> mealsDishes = [
+    Dish(
+      id: 'veg_meals',
+      name: 'Veg Meals',
+      price: 130,
+      imageUrl: 'assets/images/foodplanner/extracted/card_meals.png',
+      kcal: 620,
+      grams: 550,
+      isVeg: true,
+      rating: 4.8,
+      category: 'Meals',
+      description:
+          'A traditional Kerala sadya-style plate — rice with an assortment of '
+          'curries, pickles, thoran and payasam served on a banana leaf.',
+      ingredients: [
+        'Steamed matta rice',
+        'Sambar, avial, thoran and pickle',
+        'Papadam and a sweet payasam',
+      ],
+      carbs: 90,
+      fat: 18,
+      protein: 15,
+    ),
+    Dish(
+      id: 'non_veg_meals',
+      name: 'Non-Veg Meals',
+      price: 180,
+      imageUrl: 'assets/images/foodplanner/extracted/card_meals.png',
+      kcal: 750,
+      grams: 600,
+      isVeg: false,
+      rating: 4.8,
+      category: 'Meals',
+      description: 'Full non-veg thali with rice, chicken curry, fish fry, sambar and payasam.',
+      ingredients: ['Steamed rice', 'Chicken curry & fish fry', 'Sambar, thoran & payasam'],
+      carbs: 85,
+      fat: 25,
+      protein: 30,
+    ),
+  ];
+
+  static const List<Dish> vegRiceDishes = [
+    Dish(
+      id: 'lemon_rice',
+      name: 'Lemon Rice',
+      price: 90,
+      imageUrl: 'assets/images/order/extracted/cat_veg_rice.png',
+      kcal: 320,
+      grams: 350,
+      isVeg: true,
+      rating: 4.3,
+      category: 'Veg Rice',
+      description: 'Tangy, tempered rice with lemon, peanuts and curry leaves.',
+      ingredients: ['Steamed rice', 'Lemon juice & turmeric', 'Peanuts & curry leaves'],
+      carbs: 55,
+      fat: 8,
+      protein: 6,
+    ),
+    Dish(
+      id: 'ghee_rice',
+      name: 'Ghee Rice',
+      price: 110,
+      imageUrl: 'assets/images/order/extracted/cat_veg_rice.png',
+      kcal: 400,
+      grams: 380,
+      isVeg: true,
+      rating: 4.6,
+      category: 'Veg Rice',
+      description: 'Fragrant basmati rice cooked with pure ghee and whole spices.',
+      ingredients: ['Basmati rice', 'Pure ghee', 'Cardamom, cloves & cinnamon'],
+      carbs: 60,
+      fat: 15,
+      protein: 7,
+    ),
+  ];
+
   /// All dishes combined for easy lookup.
   static const List<Dish> dishes = [
     ...frequentOrders,
     ...combinationBreakfast,
     ...recommendedBreakfast,
+    ...chickenDishes,
+    ...biriyaniDishes,
+    ...fishDishes,
+    ...vegDishes,
+    ...eggDishes,
+    ...mealsDishes,
+    ...vegRiceDishes,
   ];
+
+  /// Helper to get all dishes belonging to a category without duplicating data.
+  static List<Dish> getDishesForCategory(String category) {
+    final cat = category.toLowerCase().trim();
+    if (cat.isEmpty || cat == 'all' || cat == 'frequent order') {
+      return dishes;
+    }
+    return dishes.where((dish) {
+      final dishCat = dish.category.toLowerCase().trim();
+      if (dishCat == cat) return true;
+      if (cat == 'veg' && dish.isVeg) return true;
+      if (cat == 'breakfast' &&
+          (dishCat == 'breakfast' ||
+              dish.id == 'plain_dosa' ||
+              dish.id == 'kuzhipaniyaram')) {
+        return true;
+      }
+      if (cat == 'meals' && (dishCat == 'meals' || dish.id == 'meals')) {
+        return true;
+      }
+      if (cat == 'biriyani' && dish.name.toLowerCase().contains('biriyani')) {
+        return true;
+      }
+      if (cat == 'chicken' && dish.name.toLowerCase().contains('chicken')) {
+        return true;
+      }
+      if (cat == 'fish' && dish.name.toLowerCase().contains('fish')) {
+        return true;
+      }
+      if (cat == 'egg' && dish.name.toLowerCase().contains('egg')) {
+        return true;
+      }
+      if (cat == 'veg rice' &&
+          (dishCat == 'veg rice' || dish.name.toLowerCase().contains('rice'))) {
+        return true;
+      }
+      return false;
+    }).toList();
+  }
 
   // ---- Addresses ---------------------------------------------------------
 

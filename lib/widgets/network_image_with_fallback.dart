@@ -10,11 +10,13 @@ class NetworkImageWithFallback extends StatelessWidget {
     required this.url,
     this.fit = BoxFit.cover,
     this.fallbackIcon = Icons.restaurant_menu,
+    this.filterQuality = FilterQuality.medium,
   });
 
   final String url;
   final BoxFit fit;
   final IconData fallbackIcon;
+  final FilterQuality filterQuality;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,7 @@ class NetworkImageWithFallback extends StatelessWidget {
       return Image.asset(
         url,
         fit: fit,
+        filterQuality: filterQuality,
         errorBuilder: (context, error, stackTrace) {
           return _Placeholder(icon: fallbackIcon, showSpinner: false);
         },
@@ -31,6 +34,7 @@ class NetworkImageWithFallback extends StatelessWidget {
     return Image.network(
       url,
       fit: fit,
+      filterQuality: filterQuality,
       gaplessPlayback: true,
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;

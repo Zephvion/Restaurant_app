@@ -10,6 +10,7 @@ import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/order_food/account_screen.dart';
 import 'screens/order_food/billing_screen.dart';
 import 'screens/order_food/cart_screen.dart';
+import 'screens/order_food/category_listing_screen.dart';
 import 'screens/order_food/food_home_screen.dart';
 import 'screens/order_food/notifications_screen.dart';
 import 'screens/order_food/order_food_intro_screen.dart';
@@ -83,11 +84,12 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.otp: (_) => const OtpScreen(),
 
         // ── Home ──────────────────────────────────────────────────────────
-        AppRoutes.home: (_) => const FoodHomeScreen(),
+        AppRoutes.home: (_) => const HomeScreen(),
 
         // ── Order Food flow ───────────────────────────────────────────────
         AppRoutes.orderFood: (_) => const FoodHomeScreen(),
         AppRoutes.foodHome: (_) => const FoodHomeScreen(),
+        AppRoutes.categoryListing: (_) => const CategoryListingScreen(),
         AppRoutes.productDetail: (_) => const ProductDetailScreen(),
         AppRoutes.cart: (_) => const CartScreen(),
         AppRoutes.billing: (_) => const BillingScreen(),
