@@ -210,9 +210,14 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
             _categoryTabs(),
             const SizedBox(height: 18),
             _featuredRail(filteredDishes),
-            const SizedBox(height: 26),
+            const SizedBox(height: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _sectionHeader('Explore by Category'),
+            ),
+            const SizedBox(height: 14),
             _categoryCircles(),
-            const SizedBox(height: 26),
+            const SizedBox(height: 30),
             _foodPlannerSection(),
             const SizedBox(height: 26),
             Padding(
@@ -562,16 +567,16 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 
   Widget _categoryCircles() {
-    return SizedBox(
-      height: 195,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.82,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.78,
         ),
         itemCount: MockData.categories.length,
         itemBuilder: (context, i) {
@@ -934,45 +939,57 @@ class _CategoryCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surface,
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.8),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipOval(
-              child: NetworkImageWithFallback(
-                url: category.imageUrl,
-                fit: BoxFit.cover,
+                child: ClipOval(
+                  child: NetworkImageWithFallback(
+                    url: category.imageUrl,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                category.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            category.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
