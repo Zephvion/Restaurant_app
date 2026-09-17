@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
@@ -10,6 +11,7 @@ import '../../widgets/primary_button.dart';
 
 /// "Create a new account" sign-up screen. Frontend-only: valid input routes to
 /// the OTP verification screen.
+/// "Create a new account" sign-up screen wired to Firebase AuthService.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -23,6 +25,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _email = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -39,12 +42,53 @@ class _SignupScreenState extends State<SignupScreen> {
       Navigator.of(context).pushNamed(
         AppRoutes.otp,
         arguments: phone.isEmpty ? MockData.demoPhoneNumber : phone,
+  Future<void> _register() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.signUpWithEmail(
+        email: _email.text.trim(),
+        password: _password.text,
+        displayName: _name.text.trim(),
+        phone: _phone.text.trim(),
       );
+
+      if (mounted) {
+        Navigator.of(context).pushNamed(
+          AppRoutes.otp,
+          arguments: _phone.text.trim().isNotEmpty
+              ? _phone.text.trim()
+              : '+91 9874563210',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _signInWithGoogle() {
     showGoogleAccountPickerSheet(context);
+    showGoogleAccountPickerSheet(
+      context,
+      onSuccess: () {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+      },
+    );
   }
 
   @override
@@ -120,10 +164,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 SizedBox(height: h * 0.06),
                 PrimaryButton(label: 'Sign In', onPressed: _register),
+                PrimaryButton(
+                  label: _isLoading ? 'Creating account...' : 'Sign Up',
+                  onPressed: _isLoading ? null : _register,
+                ),
                 const SizedBox(height: 20),
                 GoogleSignInButton(
                   label: 'Sign in with google',
                   onPressed: _signInWithGoogle,
+                  onPressed: _isLoading ? null : _signInWithGoogle,
                 ),
                 SizedBox(height: h * 0.04),
                 _LoginPrompt(onTap: () => Navigator.of(context).maybePop()),

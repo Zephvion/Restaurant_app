@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to verify user authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if the caller owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── Users Collection ──────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Dishes & Catalog (Public Read, Admin Write) ───────────────
+    match /dishes/{dishId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /promos/{promoId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // ── Orders ───────────────────────────────────────────────────
+    match /orders/{orderId} {
+      // User can create, read, and stream their own orders
+      allow create: if isAuthenticated();
+      allow read, update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+    }
+
+    // ── Table Reservations ───────────────────────────────────────
+    match /reservations/{reservationId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+    }
+
+    // ── Takeaway Orders ──────────────────────────────────────────
+    match /takeaway_orders/{takeawayId} {
+      allow create: if isAuthenticated();
+      allow read, update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+    }
+
+    // ── Catering Orders ──────────────────────────────────────────
+    match /catering_orders/{cateringId} {
+      allow create: if isAuthenticated();
+      allow read, update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+    }
+
+    // ── Food Planner & Meal Plans ────────────────────────────────
+    match /meal_plans/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── In-App Notifications ─────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+    }
+  }
+}
+

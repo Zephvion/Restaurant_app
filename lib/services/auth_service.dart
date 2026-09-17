@@ -1,0 +1,275 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+
+import '../data/mock_data.dart';
+import '../models/user_profile.dart';
+import 'firebase_initializer.dart';
+import 'session_manager.dart';
+
+class AuthService {
+  AuthService._();
+  static final AuthService instance = AuthService._();
+
+  final _authController = StreamController<UserProfile?>.broadcast();
+  Stream<UserProfile?> get authStateChanges => _authController.stream;
+
+  UserProfile? _currentUser;
+  UserProfile? get currentUser => _currentUser;
+
+  bool get isAuthenticated => _currentUser != null;
+
+  /// Initializes authentication state from persistent session / cache.
+  Future<void> init() async {
+    final cachedProfile = SessionManager.instance.getCachedUserProfile();
+    if (cachedProfile != null) {
+      _currentUser = cachedProfile;
+      _authController.add(_currentUser);
+    }
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+        if (user == null) {
+          if (!SessionManager.instance.isLoggedIn) {
+            _currentUser = null;
+            _authController.add(null);
+          }
+        } else {
+          final profile = await fetchUserProfile(user.uid) ??
+              UserProfile(
+                uid: user.uid,
+                displayName: user.displayName ?? MockData.userName,
+                email: user.email ?? MockData.userEmail,
+                phone: user.phoneNumber ?? MockData.userPhone,
+                photoUrl: user.photoURL ?? MockData.userAvatar,
+              );
+          _currentUser = profile;
+          await SessionManager.instance.saveSession(
+            token: await user.getIdToken() ?? 'token_${user.uid}',
+            userId: user.uid,
+            profile: profile,
+          );
+          _authController.add(_currentUser);
+        }
+      });
+    }
+  }
+
+  /// Sign up with Email and Password
+  Future<UserProfile> signUpWithEmail({
+    required String email,
+    required String password,
+    required String displayName,
+    required String phone,
+  }) async {
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        final credential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+        final user = credential.user!;
+        await user.updateDisplayName(displayName);
+
+        final profile = UserProfile(
+          uid: user.uid,
+          displayName: displayName,
+          email: email.trim(),
+          phone: phone.trim(),
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+        );
+
+        await _saveProfileToFirestore(profile);
+        _currentUser = profile;
+        await SessionManager.instance.saveSession(
+          token: await user.getIdToken() ?? 'token_${user.uid}',
+          userId: user.uid,
+          profile: profile,
+        );
+        _authController.add(_currentUser);
+        return profile;
+      } catch (e) {
+        debugPrint('FirebaseAuth signUp error: $e');
+        rethrow;
+      }
+    } else {
+      // Fallback local persistence
+      final mockUid = 'usr_${DateTime.now().millisecondsSinceEpoch}';
+      final profile = UserProfile(
+        uid: mockUid,
+        displayName: displayName.isNotEmpty ? displayName : MockData.userName,
+        email: email.isNotEmpty ? email : MockData.userEmail,
+        phone: phone.isNotEmpty ? phone : MockData.userPhone,
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+      );
+      _currentUser = profile;
+      await SessionManager.instance.saveSession(
+        token: 'mock_token_$mockUid',
+        userId: mockUid,
+        profile: profile,
+      );
+      _authController.add(_currentUser);
+      return profile;
+    }
+  }
+
+  /// Sign in with Email and Password
+  Future<UserProfile> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        final credential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+        final user = credential.user!;
+        final profile = await fetchUserProfile(user.uid) ??
+            UserProfile(
+              uid: user.uid,
+              displayName: user.displayName ?? MockData.userName,
+              email: user.email ?? email,
+              phone: user.phoneNumber ?? MockData.userPhone,
+            );
+
+        _currentUser = profile;
+        await SessionManager.instance.saveSession(
+          token: await user.getIdToken() ?? 'token_${user.uid}',
+          userId: user.uid,
+          profile: profile,
+        );
+        _authController.add(_currentUser);
+        return profile;
+      } catch (e) {
+        debugPrint('FirebaseAuth signIn error: $e');
+        rethrow;
+      }
+    } else {
+      // Fallback local persistence
+      final mockUid = SessionManager.instance.currentUserId ?? 'usr_demo_101';
+      final profile = SessionManager.instance.getCachedUserProfile() ??
+          UserProfile(
+            uid: mockUid,
+            displayName: MockData.userName,
+            email: email.isNotEmpty ? email : MockData.userEmail,
+            phone: MockData.userPhone,
+            lastLoginAt: DateTime.now(),
+          );
+      _currentUser = profile;
+      await SessionManager.instance.saveSession(
+        token: 'mock_token_$mockUid',
+        userId: mockUid,
+        profile: profile,
+      );
+      _authController.add(_currentUser);
+      return profile;
+    }
+  }
+
+  /// Google Sign In / Fast Sign In
+  Future<UserProfile> signInWithGoogle() async {
+    final mockUid = 'usr_google_${DateTime.now().millisecondsSinceEpoch}';
+    final profile = UserProfile(
+      uid: mockUid,
+      displayName: MockData.userName,
+      email: MockData.userEmail,
+      phone: MockData.userPhone,
+      photoUrl: MockData.userAvatar,
+      lastLoginAt: DateTime.now(),
+    );
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      await _saveProfileToFirestore(profile);
+    }
+
+    _currentUser = profile;
+    await SessionManager.instance.saveSession(
+      token: 'google_token_$mockUid',
+      userId: mockUid,
+      profile: profile,
+    );
+    _authController.add(_currentUser);
+    return profile;
+  }
+
+  /// Phone OTP Verification
+  Future<UserProfile> verifyOtp(String code) async {
+    final mockUid = 'usr_phone_${DateTime.now().millisecondsSinceEpoch}';
+    final profile = UserProfile(
+      uid: mockUid,
+      displayName: MockData.userName,
+      email: MockData.userEmail,
+      phone: MockData.demoPhoneNumber,
+      photoUrl: MockData.userAvatar,
+      lastLoginAt: DateTime.now(),
+    );
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      await _saveProfileToFirestore(profile);
+    }
+
+    _currentUser = profile;
+    await SessionManager.instance.saveSession(
+      token: 'otp_token_$mockUid',
+      userId: mockUid,
+      profile: profile,
+    );
+    _authController.add(_currentUser);
+    return profile;
+  }
+
+  /// Update User Profile
+  Future<void> updateProfile(UserProfile profile) async {
+    _currentUser = profile;
+    await SessionManager.instance.saveUserProfile(profile);
+    if (FirebaseInitializer.isFirebaseReady) {
+      await _saveProfileToFirestore(profile);
+    }
+    _authController.add(_currentUser);
+  }
+
+  /// Sign out
+  Future<void> signOut() async {
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (_) {}
+    }
+    _currentUser = null;
+    await SessionManager.instance.clearSession();
+    _authController.add(null);
+  }
+
+  Future<UserProfile?> fetchUserProfile(String uid) async {
+    if (!FirebaseInitializer.isFirebaseReady) return null;
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserProfile.fromMap(doc.data()!, uid: uid);
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profile from Firestore: $e');
+    }
+    return null;
+  }
+
+  Future<void> _saveProfileToFirestore(UserProfile profile) async {
+    if (!FirebaseInitializer.isFirebaseReady) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(profile.uid)
+          .set(profile.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving user profile to Firestore: $e');
+    }
+  }
+}
+

@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
 import '../../models/address.dart';
+import '../../models/user_profile.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
 /// Account — profile header plus an accordion of settings sections (address,
 /// order history, payments, table reservation, food planner, contact, logout).
+/// Account — live profile header, saved addresses, and settings sections.
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
@@ -22,6 +25,16 @@ class AccountScreen extends StatelessWidget {
           content: Text('$what — coming soon'),
         ),
       );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await AuthService.instance.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -40,8 +53,90 @@ class AccountScreen extends StatelessWidget {
             _AccountExpansion(
               icon: Icons.location_on_outlined,
               title: 'Address',
+    return StreamBuilder<UserProfile?>(
+      stream: AuthService.instance.authStateChanges,
+      initialData: AuthService.instance.currentUser,
+      builder: (context, snapshot) {
+        final profile = snapshot.data;
+        final displayName = profile?.displayName.isNotEmpty == true
+            ? profile!.displayName
+            : MockData.userName;
+        final phone = profile?.phone.isNotEmpty == true
+            ? profile!.phone
+            : MockData.userPhone;
+        final email = profile?.email.isNotEmpty == true
+            ? profile!.email
+            : MockData.userEmail;
+        final photoUrl = profile?.photoUrl.isNotEmpty == true
+            ? profile!.photoUrl
+            : MockData.userAvatar;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
                 for (final a in MockData.addresses) _addressItem(a),
+                _headerRow(context),
+                const SizedBox(height: 22),
+                _profile(
+                  context,
+                  name: displayName,
+                  phone: phone,
+                  email: email,
+                  photoUrl: photoUrl,
+                ),
+                const SizedBox(height: 26),
+                _AccountExpansion(
+                  icon: Icons.location_on_outlined,
+                  title: 'Address',
+                  children: [
+                    for (final a in MockData.addresses) _addressItem(a),
+                  ],
+                ),
+                _AccountLink(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Order history',
+                  onTap: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.previousOrder),
+                ),
+                _AccountLink(
+                  icon: Icons.credit_card,
+                  title: 'Payments',
+                  onTap: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.paymentMethods),
+                ),
+                _AccountExpansion(
+                  icon: Icons.event_seat_outlined,
+                  title: 'Table Reservation',
+                  children: [_reservationItem()],
+                ),
+                _AccountExpansion(
+                  icon: Icons.restaurant_menu,
+                  title: 'Food Planner',
+                  children: [
+                    _plannerItem(context, 'Today'),
+                    _plannerItem(context, 'This Week'),
+                    _plannerItem(context, 'Next Week'),
+                  ],
+                ),
+                _AccountExpansion(
+                  icon: Icons.headset_mic_outlined,
+                  title: 'Contact Us',
+                  children: [
+                    _contactLine(Icons.call, MockData.deliveryPartnerPhone),
+                    const SizedBox(height: 10),
+                    _contactLine(Icons.email_outlined, 'support@paragon.com'),
+                  ],
+                ),
+                _AccountLink(
+                  icon: Icons.logout,
+                  title: 'Logout',
+                  danger: true,
+                  onTap: () => _logout(context),
+                ),
               ],
             ),
             _AccountLink(
@@ -91,6 +186,11 @@ class AccountScreen extends StatelessWidget {
       ),
       bottomNavigationBar:
           const ParagonBottomNav(current: ParagonTab.account),
+          ),
+          bottomNavigationBar:
+              const ParagonBottomNav(current: ParagonTab.account),
+        );
+      },
     );
   }
 
@@ -131,6 +231,13 @@ class AccountScreen extends StatelessWidget {
   }
 
   Widget _profile(BuildContext context) {
+  Widget _profile(
+    BuildContext context, {
+    required String name,
+    required String phone,
+    required String email,
+    required String photoUrl,
+  }) {
     return Row(
       children: [
         ClipOval(
@@ -139,6 +246,7 @@ class AccountScreen extends StatelessWidget {
             height: 76,
             child: NetworkImageWithFallback(
               url: MockData.userAvatar,
+              url: photoUrl,
               fallbackIcon: Icons.person,
             ),
           ),
@@ -150,10 +258,13 @@ class AccountScreen extends StatelessWidget {
             children: [
               Text(MockData.userName,
                   style: Theme.of(context).textTheme.titleLarge),
+              Text(name, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 6),
               _editableLine(MockData.userPhone),
+              _editableLine(phone),
               const SizedBox(height: 4),
               _editableLine(MockData.userEmail),
+              _editableLine(email),
             ],
           ),
         ),
@@ -360,6 +471,7 @@ class _AccountExpansion extends StatelessWidget {
 }
 
 /// A single tappable settings row (navigates rather than expands).
+/// A single tappable settings row.
 class _AccountLink extends StatelessWidget {
   const _AccountLink({
     required this.icon,

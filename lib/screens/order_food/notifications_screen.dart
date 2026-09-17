@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/app_notification.dart';
 import '../../routes/app_routes.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
-/// Notifications — order status updates (each with a "Track order" shortcut)
-/// and a promotional offer card.
+/// Notifications — order status updates from Firebase NotificationService and promotional offer cards.
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
@@ -16,19 +16,29 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Notifications')),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        itemCount: MockData.notifications.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (context, i) {
-          final n = MockData.notifications[i];
-          if (n.isPromo) {
-            return _PromoNotification(text: n.promoText ?? '');
-          }
-          return _OrderNotification(
-            notification: n,
-            onTrack: () =>
-                Navigator.of(context).pushNamed(AppRoutes.trackOrder),
+      body: StreamBuilder<List<AppNotification>>(
+        stream: NotificationService.instance.streamNotifications(),
+        initialData: NotificationService.instance.notifications,
+        builder: (context, snapshot) {
+          final notifications = snapshot.data ?? MockData.notifications;
+
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            itemCount: notifications.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            itemBuilder: (context, i) {
+              final n = notifications[i];
+              if (n.isPromo) {
+                return _PromoNotification(text: n.promoText ?? '');
+              }
+              return _OrderNotification(
+                notification: n,
+                onTrack: () => Navigator.of(context).pushNamed(
+                  AppRoutes.trackOrder,
+                  arguments: n.orderId,
+                ),
+              );
+            },
           );
         },
       ),
@@ -110,9 +120,9 @@ class _OrderNotification extends StatelessWidget {
                 GestureDetector(
                   onTap: onTrack,
                   behavior: HitTestBehavior.opaque,
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.location_on,
                           color: AppColors.copper, size: 18),
                       SizedBox(width: 6),

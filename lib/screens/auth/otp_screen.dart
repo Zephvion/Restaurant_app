@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/otp_input.dart';
 import '../../widgets/primary_button.dart';
 
 /// "Verify OTP!" screen with a 4-digit code entry. The Sign In button appears
 /// once all four digits are entered (matching the Figma states).
+/// "Verify OTP!" screen wired to Firebase AuthService.
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
 
@@ -17,15 +19,41 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   String _code = '';
+  bool _isLoading = false;
 
   bool get _isComplete => _code.length == 4;
 
   void _verify() {
+  Future<void> _verify() async {
     if (!_isComplete) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.home,
       (route) => false,
     );
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.verifyOtp(_code);
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OTP verification failed: $e'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _resend() {
@@ -98,6 +126,11 @@ class _OtpScreenState extends State<OtpScreen> {
                 child: IgnorePointer(
                   ignoring: !_isComplete,
                   child: PrimaryButton(label: 'Sign In', onPressed: _verify),
+                  ignoring: !_isComplete || _isLoading,
+                  child: PrimaryButton(
+                    label: _isLoading ? 'Verifying...' : 'Sign In',
+                    onPressed: _verify,
+                  ),
                 ),
               ),
             ),

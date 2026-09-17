@@ -51,7 +51,14 @@ import 'screens/takeaway/takeaway_success_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+import 'services/auth_service.dart';
+import 'services/firebase_initializer.dart';
+import 'services/menu_service.dart';
+import 'services/notification_service.dart';
+import 'services/order_service.dart';
+import 'services/session_manager.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -61,6 +68,15 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Initialize Firebase and session/backend services
+  await FirebaseInitializer.initialize();
+  await SessionManager.instance.init();
+  await AuthService.instance.init();
+  await MenuService.instance.init();
+  await OrderService.instance.init();
+  await NotificationService.instance.init();
+
   runApp(const ParagonApp());
 }
 

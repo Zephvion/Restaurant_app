@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/primary_button.dart';
 
-/// "Welcome Back!" login screen. Frontend-only: any non-empty credentials
-/// pass and route to the home screen.
+/// "Welcome Back!" login screen connected to Firebase AuthService.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _identifier = TextEditingController();
   final _password = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -28,17 +29,52 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState?.validate() ?? false) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.home,
-        (route) => false,
+  Future<void> _login() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.signInWithEmail(
+        email: _identifier.text.trim(),
+        password: _password.text,
       );
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _loginWithGoogle() {
-    showGoogleAccountPickerSheet(context);
+    showGoogleAccountPickerSheet(
+      context,
+      onAccountSelected: () async {
+        setState(() => _isLoading = true);
+        await AuthService.instance.signInWithGoogle();
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.home,
+            (route) => false,
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -88,11 +124,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       (v == null || v.isEmpty) ? 'Required' : null,
                 ),
                 SizedBox(height: h * 0.22),
-                PrimaryButton(label: 'Login', onPressed: _login),
+                PrimaryButton(
+                  label: _isLoading ? 'Logging in...' : 'Login',
+                  onPressed: _isLoading ? null : _login,
+                ),
                 const SizedBox(height: 20),
                 GoogleSignInButton(
                   label: 'Login with google',
-                  onPressed: _loginWithGoogle,
+                  onPressed: _isLoading ? null : _loginWithGoogle,
                 ),
                 SizedBox(height: h * 0.05),
                 _SignUpPrompt(

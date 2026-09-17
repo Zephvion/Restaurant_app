@@ -41,11 +41,17 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     return null;
   }
 
-  void _proceed() {
+  Future<void> _proceed() async {
     final method = _selected;
     if (method == null) return;
     _cart.selectPayment(method);
-    Navigator.of(context).pushNamed(AppRoutes.orderSuccess);
+    final order = await _cart.checkout();
+    if (mounted) {
+      Navigator.of(context).pushNamed(
+        AppRoutes.orderSuccess,
+        arguments: order.id,
+      );
+    }
   }
 
   @override

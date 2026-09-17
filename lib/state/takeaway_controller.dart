@@ -1,17 +1,20 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../models/cart_item.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../models/takeaway_order.dart';
+import '../services/auth_service.dart';
+import '../services/takeaway_service.dart';
 
 /// Singleton [ChangeNotifier] for managing the Take Away flow:
 /// - Selecting a branch
 /// - Managing the takeaway basket
 /// - Placing takeaway orders & tracking order statuses
 class TakeawayController extends ChangeNotifier {
-  TakeawayController._();
+  TakeawayController._() {
+    _init();
+  }
   static final TakeawayController instance = TakeawayController._();
 
   final List<TakeawayOrder> _orders = [];
@@ -22,6 +25,15 @@ class TakeawayController extends ChangeNotifier {
   bool get hasNoOrders => _orders.isEmpty;
 
   Restaurant? get selectedRestaurant => _selectedRestaurant;
+
+  Future<void> _init() async {
+    final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
+    final items = await TakeawayService.instance.getUserTakeaways(uid);
+    _orders
+      ..clear()
+      ..addAll(items);
+    notifyListeners();
+  }
 
   void selectRestaurant(Restaurant restaurant) {
     _selectedRestaurant = restaurant;
@@ -79,19 +91,15 @@ class TakeawayController extends ChangeNotifier {
 
   // ── Place Order ─────────────────────────────────────────────────────────────
 
-  TakeawayOrder placeOrder({Restaurant? restaurantOverride}) {
+  Future<TakeawayOrder> placeOrder({Restaurant? restaurantOverride}) async {
     final restaurant = restaurantOverride ?? _selectedRestaurant;
     if (restaurant == null) {
       throw StateError('Cannot place takeaway order without a selected restaurant');
     }
 
-    final randId = 'ID${1000 + Random().nextInt(9000)}';
-    final order = TakeawayOrder(
-      id: randId,
+    final order = await TakeawayService.instance.placeTakeawayOrder(
       restaurant: restaurant,
       items: _cart.values.toList(),
-      status: TakeawayStatus.readyForTakeaway,
-      createdAt: DateTime.now(),
     );
 
     _orders.insert(0, order);

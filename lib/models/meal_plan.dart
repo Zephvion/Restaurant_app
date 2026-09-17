@@ -16,6 +16,18 @@ extension MealTypeExt on MealType {
         return 'DINNER';
     }
   }
+
+  static MealType fromString(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'lunch':
+        return MealType.lunch;
+      case 'dinner':
+        return MealType.dinner;
+      case 'breakfast':
+      default:
+        return MealType.breakfast;
+    }
+  }
 }
 
 /// A planned meal on a specific day in the Food Planner.
@@ -49,6 +61,40 @@ class PlannedMeal {
   final int protein;
   final int carbs;
   final int fat;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'dayOffset': dayOffset,
+        'mealType': mealType.name,
+        'timeSlot': timeSlot,
+        'location': location,
+        'dishName': dishName,
+        'imageUrl': imageUrl,
+        'calories': calories,
+        'weightGm': weightGm,
+        'price': price,
+        'protein': protein,
+        'carbs': carbs,
+        'fat': fat,
+      };
+
+  factory PlannedMeal.fromMap(Map<String, dynamic> map, {String? id}) {
+    return PlannedMeal(
+      id: id ?? (map['id'] as String? ?? ''),
+      dayOffset: (map['dayOffset'] as num?)?.toInt() ?? 0,
+      mealType: MealTypeExt.fromString(map['mealType'] as String?),
+      timeSlot: map['timeSlot'] as String? ?? '7:30AM',
+      location: map['location'] as String? ?? 'HOME',
+      dishName: map['dishName'] as String? ?? '',
+      imageUrl: map['imageUrl'] as String? ?? '',
+      calories: (map['calories'] as num?)?.toInt() ?? 320,
+      weightGm: (map['weightGm'] as num?)?.toInt() ?? 300,
+      price: (map['price'] as num?)?.toDouble() ?? 80.0,
+      protein: (map['protein'] as num?)?.toInt() ?? 50,
+      carbs: (map['carbs'] as num?)?.toInt() ?? 50,
+      fat: (map['fat'] as num?)?.toInt() ?? 50,
+    );
+  }
 }
 
 /// Order tracking status for Food Planner active deliveries.
@@ -56,6 +102,20 @@ enum PlannerOrderStatus {
   orderAccepted,
   taken,
   done,
+  done;
+
+  static PlannerOrderStatus fromString(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'taken':
+        return PlannerOrderStatus.taken;
+      case 'done':
+        return PlannerOrderStatus.done;
+      case 'orderaccepted':
+      case 'order_accepted':
+      default:
+        return PlannerOrderStatus.orderAccepted;
+    }
+  }
 }
 
 /// An active or historical order placed through the Food Planner.
@@ -87,6 +147,41 @@ class PlannerTrackOrder {
   final double deliveryFee;
 
   double get grandTotal => subtotal + deliveryFee;
+
+  Map<String, dynamic> toMap() => {
+        'orderId': orderId,
+        'etaMins': etaMins,
+        'status': status.name,
+        'driverName': driverName,
+        'driverPhone': driverPhone,
+        'driverPhotoUrl': driverPhotoUrl,
+        'paymentLabel': paymentLabel,
+        'deliveryTimeWindow': deliveryTimeWindow,
+        'items': items.map((e) => e.toMap()).toList(),
+        'subtotal': subtotal,
+        'deliveryFee': deliveryFee,
+      };
+
+  factory PlannerTrackOrder.fromMap(Map<String, dynamic> map) {
+    final rawItems = map['items'] as List<dynamic>? ?? [];
+    final items = rawItems
+        .map((e) => PlannerOrderItem.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
+    return PlannerTrackOrder(
+      orderId: map['orderId'] as String? ?? '',
+      etaMins: (map['etaMins'] as num?)?.toInt() ?? 15,
+      status: PlannerOrderStatus.fromString(map['status'] as String?),
+      driverName: map['driverName'] as String? ?? 'John Doe',
+      driverPhone: map['driverPhone'] as String? ?? '+91 987654321',
+      driverPhotoUrl: map['driverPhotoUrl'] as String? ?? '',
+      paymentLabel: map['paymentLabel'] as String? ?? '',
+      deliveryTimeWindow: map['deliveryTimeWindow'] as String? ?? '',
+      items: items,
+      subtotal: (map['subtotal'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee: (map['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
 }
 
 class PlannerOrderItem {
@@ -99,6 +194,20 @@ class PlannerOrderItem {
   final String name;
   final int quantity;
   final double price;
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'quantity': quantity,
+        'price': price,
+      };
+
+  factory PlannerOrderItem.fromMap(Map<String, dynamic> map) {
+    return PlannerOrderItem(
+      name: map['name'] as String? ?? '',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
 }
 
 /// User's daily calorie targets & statistics.
@@ -130,6 +239,24 @@ class CalorieStats {
       proteinG: proteinG ?? this.proteinG,
       carbsG: carbsG ?? this.carbsG,
       fatG: fatG ?? this.fatG,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'targetKcal': targetKcal,
+        'remainingKcal': remainingKcal,
+        'proteinG': proteinG,
+        'carbsG': carbsG,
+        'fatG': fatG,
+      };
+
+  factory CalorieStats.fromMap(Map<String, dynamic> map) {
+    return CalorieStats(
+      targetKcal: (map['targetKcal'] as num?)?.toInt() ?? 2000,
+      remainingKcal: (map['remainingKcal'] as num?)?.toInt() ?? 800,
+      proteinG: (map['proteinG'] as num?)?.toInt() ?? 50,
+      carbsG: (map['carbsG'] as num?)?.toInt() ?? 75,
+      fatG: (map['fatG'] as num?)?.toInt() ?? 100,
     );
   }
 }

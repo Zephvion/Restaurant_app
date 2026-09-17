@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
+import '../../models/order_model.dart';
+import '../../services/order_service.dart';
+import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
-/// Track Order — a stylised delivery map with a tracking panel that expands to
-/// reveal the delivery partner, order id, payment, timing and item breakdown.
+/// Track Order — a stylised delivery map with a tracking panel that connects
+/// to the real-time Firebase OrderService stream.
 class TrackOrderScreen extends StatefulWidget {
   const TrackOrderScreen({super.key});
 
@@ -19,74 +22,105 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxH = constraints.maxHeight;
-          final sheetHeight = _expanded ? maxH * 0.78 : 280.0;
-          return Stack(
-            children: [
-              const Positioned.fill(child: _MapBackground()),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Material(
-                      color: Colors.black.withOpacity(0.4),
-                      shape: const CircleBorder(),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => Navigator.of(context).maybePop(),
-                        child: const SizedBox(
-                          width: 42,
-                          height: 42,
-                          child: Icon(Icons.arrow_back_ios_new,
-                              color: Colors.white, size: 18),
+    final routeOrderId = ModalRoute.of(context)?.settings.arguments as String?;
+    final orderId = routeOrderId ??
+        SessionManager.instance.activeOrderId ??
+        MockData.orderId;
+
+    return StreamBuilder<OrderModel?>(
+      stream: OrderService.instance.streamOrder(orderId),
+      builder: (context, snapshot) {
+        final order = snapshot.data;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxH = constraints.maxHeight;
+              final sheetHeight = _expanded ? maxH * 0.78 : 280.0;
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: _MapBackground(
+                      riderLat: order?.riderLat ?? 11.2588,
+                      riderLng: order?.riderLng ?? 75.7804,
+                    ),
+                  ),
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Material(
+                          color: Colors.black.withOpacity(0.4),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).maybePop(),
+                            child: const SizedBox(
+                              width: 42,
+                              height: 42,
+                              child: Icon(Icons.arrow_back_ios_new,
+                                  color: Colors.white, size: 18),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  height: sheetHeight,
-                  decoration: const BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(28)),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      height: sheetHeight,
+                      decoration: const BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(28)),
+                      ),
+                      child: _TrackingSheet(
+                        expanded: _expanded,
+                        order: order,
+                        orderId: orderId,
+                        onToggle: () => setState(() => _expanded = !_expanded),
+                      ),
+                    ),
                   ),
-                  child: _TrackingSheet(
-                    expanded: _expanded,
-                    onToggle: () => setState(() => _expanded = !_expanded),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-      bottomNavigationBar: const ParagonBottomNav(current: ParagonTab.location),
+                ],
+              );
+            },
+          ),
+          bottomNavigationBar:
+              const ParagonBottomNav(current: ParagonTab.location),
+        );
+      },
     );
   }
 }
 
 /// The scrollable tracking details inside the bottom sheet.
 class _TrackingSheet extends StatelessWidget {
-  const _TrackingSheet({required this.expanded, required this.onToggle});
+  const _TrackingSheet({
+    required this.expanded,
+    required this.onToggle,
+    required this.order,
+    required this.orderId,
+  });
 
   final bool expanded;
   final VoidCallback onToggle;
+  final OrderModel? order;
+  final String orderId;
 
   @override
   Widget build(BuildContext context) {
+    final eta = order?.estimatedDeliveryMinutes ?? 15;
+    final status = order?.status ?? OrderStatus.accepted;
+    final items = order?.items ?? [];
+
     return Column(
       children: [
         GestureDetector(
@@ -117,7 +151,7 @@ class _TrackingSheet extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '15:00',
+                      '$eta:00',
                       style: Theme.of(context)
                           .textTheme
                           .headlineMedium
@@ -132,24 +166,28 @@ class _TrackingSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const _TrackStepper(),
+                _TrackStepper(status: status),
                 const SizedBox(height: 24),
-                const _DeliveryPartnerCard(),
+                _DeliveryPartnerCard(
+                  name: order?.deliveryPartnerName ?? MockData.deliveryPartnerName,
+                  phone: order?.deliveryPartnerPhone ?? MockData.deliveryPartnerPhone,
+                  photoUrl: order?.deliveryPartnerPhotoUrl,
+                ),
                 const SizedBox(height: 18),
-                const _InfoLine(
+                _InfoLine(
                   icon: Icons.receipt_long_outlined,
                   label: 'Order ID',
-                  value: MockData.orderId,
+                  value: order?.id ?? orderId,
                 ),
-                const _InfoLine(
+                _InfoLine(
                   icon: Icons.credit_card,
                   label: 'Payment',
-                  value: 'Card Payment Ending with *8754',
+                  value: order?.paymentMethodLabel ?? 'Card Payment Ending with *8754',
                 ),
-                const _InfoLine(
+                _InfoLine(
                   icon: Icons.access_time,
                   label: 'Delivery time',
-                  value: 'Home  ·  7:30 AM - 8:00 AM',
+                  value: '${order?.deliveryAddress.label ?? "Home"}  ·  7:30 AM - 8:00 AM',
                 ),
                 const SizedBox(height: 22),
                 Text(
@@ -160,16 +198,38 @@ class _TrackingSheet extends StatelessWidget {
                       ?.copyWith(fontSize: 17),
                 ),
                 const SizedBox(height: 14),
-                const _OrderLine(qty: 1, name: 'Plain Dosa', price: 80),
-                const SizedBox(height: 12),
-                const _OrderLine(
-                    qty: 1, name: 'Fresh Juice - Orange', price: 110),
+                if (items.isNotEmpty) ...[
+                  for (final item in items)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _OrderLine(
+                        qty: item.quantity,
+                        name: item.name,
+                        price: item.lineTotal.toInt(),
+                      ),
+                    ),
+                ] else ...[
+                  const _OrderLine(qty: 1, name: 'Plain Dosa', price: 80),
+                  const SizedBox(height: 12),
+                  const _OrderLine(
+                      qty: 1, name: 'Fresh Juice - Orange', price: 110),
+                ],
                 const Divider(color: AppColors.border, height: 30),
-                const _TotalLine(label: 'Sub Total', value: '₹190'),
+                _TotalLine(
+                  label: 'Sub Total',
+                  value: '₹${(order?.subtotal ?? 190).toInt()}',
+                ),
                 const SizedBox(height: 8),
-                const _TotalLine(label: 'Delivery fee', value: '₹30'),
+                _TotalLine(
+                  label: 'Delivery fee',
+                  value: '₹${(order?.deliveryFee ?? 30).toInt()}',
+                ),
                 const SizedBox(height: 8),
-                const _TotalLine(label: 'Total', value: '₹220', bold: true),
+                _TotalLine(
+                  label: 'Total',
+                  value: '₹${(order?.grandTotal ?? 220).toInt()}',
+                  bold: true,
+                ),
               ],
             ),
           ),
@@ -180,17 +240,30 @@ class _TrackingSheet extends StatelessWidget {
 }
 
 class _TrackStepper extends StatelessWidget {
-  const _TrackStepper();
+  const _TrackStepper({this.status = OrderStatus.accepted});
+
+  final OrderStatus status;
 
   @override
   Widget build(BuildContext context) {
+    final isAccepted = status == OrderStatus.accepted ||
+        status == OrderStatus.taken ||
+        status == OrderStatus.outForDelivery ||
+        status == OrderStatus.delivered;
+
+    final isTaken = status == OrderStatus.taken ||
+        status == OrderStatus.outForDelivery ||
+        status == OrderStatus.delivered;
+
+    final isDone = status == OrderStatus.delivered;
+
     return Row(
-      children: const [
-        _Step(label: 'Order accepted', done: true, first: true),
-        _StepBar(done: true),
-        _Step(label: 'Taken', done: true),
-        _StepBar(done: false),
-        _Step(label: 'Done', done: false, last: true),
+      children: [
+        _Step(label: 'Order accepted', done: isAccepted, first: true),
+        _StepBar(done: isTaken),
+        _Step(label: 'Taken', done: isTaken),
+        _StepBar(done: isDone),
+        _Step(label: 'Done', done: isDone, last: true),
       ],
     );
   }
@@ -268,7 +341,15 @@ class _StepBar extends StatelessWidget {
 }
 
 class _DeliveryPartnerCard extends StatelessWidget {
-  const _DeliveryPartnerCard();
+  const _DeliveryPartnerCard({
+    required this.name,
+    required this.phone,
+    this.photoUrl,
+  });
+
+  final String name;
+  final String phone;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -285,7 +366,7 @@ class _DeliveryPartnerCard extends StatelessWidget {
               width: 48,
               height: 48,
               child: NetworkImageWithFallback(
-                url:
+                url: photoUrl ??
                     'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=120&q=70',
                 fallbackIcon: Icons.person,
               ),
@@ -295,20 +376,20 @@ class _DeliveryPartnerCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  MockData.deliveryPartnerName,
-                  style: TextStyle(
+                  name,
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  MockData.deliveryPartnerPhone,
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  phone,
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -317,10 +398,13 @@ class _DeliveryPartnerCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: const BoxDecoration(
-              color: AppColors.accentRed,
+              color: AppColors.copper,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.call, color: Colors.white, size: 20),
+            child: IconButton(
+              icon: const Icon(Icons.call, color: Colors.white, size: 20),
+              onPressed: () {},
+            ),
           ),
         ],
       ),
@@ -342,26 +426,25 @@ class _InfoLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.textSecondary, size: 20),
+          Icon(icon, color: AppColors.hint, size: 20),
           const SizedBox(width: 12),
           Text(
-            '$label:  ',
+            label,
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13,
+              fontSize: 14,
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -390,17 +473,14 @@ class _OrderLine extends StatelessWidget {
           style: const TextStyle(
             color: AppColors.copper,
             fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             name,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
           ),
         ),
         Text(
@@ -444,7 +524,10 @@ class _TotalLine extends StatelessWidget {
 /// A stylised dark map: faint street grid, a red delivery route and markers
 /// for the restaurant, the rider and the destination.
 class _MapBackground extends StatelessWidget {
-  const _MapBackground();
+  const _MapBackground({this.riderLat = 11.2588, this.riderLng = 75.7804});
+
+  final double riderLat;
+  final double riderLng;
 
   @override
   Widget build(BuildContext context) {

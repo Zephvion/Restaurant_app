@@ -23,10 +23,15 @@ class CateringNotifyScreen extends StatelessWidget {
 
     void proceed() {
       CateringController.instance.placeOrder(
+    Future<void> proceed() async {
+      await CateringController.instance.placeOrder(
         date: args.date,
         guestRange: args.guestRange,
       );
       Navigator.of(context).pushNamed(AppRoutes.cateringSuccess);
+      if (context.mounted) {
+        Navigator.of(context).pushNamed(AppRoutes.cateringSuccess);
+      }
     }
 
     return Scaffold(

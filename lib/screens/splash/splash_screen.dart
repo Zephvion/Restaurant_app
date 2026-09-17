@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/paragon_logo.dart';
 
@@ -33,6 +34,11 @@ class _SplashScreenState extends State<SplashScreen>
     _timer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+      if (SessionManager.instance.isLoggedIn) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+      }
     });
   }
 

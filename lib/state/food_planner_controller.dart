@@ -4,12 +4,14 @@ import '../data/food_planner_assets.dart';
 import '../data/mock_data.dart';
 import '../models/dish.dart';
 import '../models/meal_plan.dart';
+import '../services/food_planner_service.dart';
 
 /// Singleton [ChangeNotifier] for managing the entire Food Planner workflow,
 /// including meal plans, calorie targets, tracking, and cart.
 class FoodPlannerController extends ChangeNotifier {
   FoodPlannerController._() {
     _initDefaults();
+    _loadFromFirestore();
   }
 
   static final FoodPlannerController instance = FoodPlannerController._();
@@ -55,6 +57,16 @@ class FoodPlannerController extends ChangeNotifier {
     return total;
   }
 
+  Future<void> _loadFromFirestore() async {
+    final remotePlans = await FoodPlannerService.instance.fetchUserMealPlans();
+    if (remotePlans != null && remotePlans.isNotEmpty) {
+      _plannedMeals
+        ..clear()
+        ..addAll(remotePlans);
+      notifyListeners();
+    }
+  }
+
   void _initDefaults() {
     _calorieStats = CalorieStats(
       targetKcal: 2000,
@@ -83,6 +95,7 @@ class FoodPlannerController extends ChangeNotifier {
     );
 
     // Populate default planned meals across the week so every day has rich visuals
+    // Populate default planned meals across the week
     final defaultDayPlans = [
       // Day 0: Jan 2 (Tue)
       [
@@ -428,7 +441,7 @@ class FoodPlannerController extends ChangeNotifier {
         m.dayOffset == _selectedDayOffset &&
         m.mealType == _currentSlotMealType);
 
-    _plannedMeals.add(PlannedMeal(
+    final newMeal = PlannedMeal(
       id: 'pm_${DateTime.now().millisecondsSinceEpoch}',
       dayOffset: _selectedDayOffset,
       mealType: _currentSlotMealType,
@@ -439,7 +452,10 @@ class FoodPlannerController extends ChangeNotifier {
       calories: 320,
       weightGm: 300,
       price: dish.price,
-    ));
+    );
+
+    _plannedMeals.add(newMeal);
+    FoodPlannerService.instance.savePlannedMeals(_plannedMeals);
 
     clearBasket();
     notifyListeners();
@@ -450,6 +466,7 @@ class FoodPlannerController extends ChangeNotifier {
       targetKcal: kcal,
       remainingKcal: kcal - 1000 > 0 ? kcal - 1000 : kcal,
     );
+    FoodPlannerService.instance.saveCalorieStats(_calorieStats);
     notifyListeners();
   }
 

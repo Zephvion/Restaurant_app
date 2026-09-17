@@ -50,9 +50,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
   }
 
   void _track() {
+    final orderId = ModalRoute.of(context)?.settings.arguments as String?;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.trackOrder,
       (route) => route.settings.name == AppRoutes.home || route.isFirst,
+      arguments: orderId,
     );
   }
 

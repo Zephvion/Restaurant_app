@@ -4,7 +4,11 @@ import '../data/mock_data.dart';
 import '../models/address.dart';
 import '../models/cart_item.dart';
 import '../models/dish.dart';
+import '../models/order_model.dart';
 import '../models/payment_method.dart';
+import '../services/location_service.dart';
+import '../services/order_service.dart';
+import '../services/session_manager.dart';
 
 /// In-app basket + checkout state for the Order Food flow.
 ///
@@ -12,7 +16,9 @@ import '../models/payment_method.dart';
 /// stays dependency-free. Screens listen with `AnimatedBuilder(animation:
 /// CartController.instance, …)` and rebuild when the basket changes.
 class CartController extends ChangeNotifier {
-  CartController._();
+  CartController._() {
+    _initFromSession();
+  }
 
   /// Shared, app-wide instance.
   static final CartController instance = CartController._();
@@ -20,19 +26,29 @@ class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
 
   /// Currently selected delivery address (defaults to the first saved one).
+  /// Currently selected delivery address.
   Address selectedAddress = MockData.addresses.first;
 
   /// Currently selected payment method (defaults to the first saved card).
+  /// Currently selected payment method.
   PaymentMethod selectedPayment = MockData.paymentMethods.first;
 
   /// An applied coupon code, if any.
   String? appliedCoupon;
+
+  void _initFromSession() {
+    final cachedAddr = SessionManager.instance.getSelectedAddress();
+    if (cachedAddr != null) {
+      selectedAddress = cachedAddr;
+    }
+  }
 
   List<CartItem> get items => List.unmodifiable(_items);
 
   bool get isEmpty => _items.isEmpty;
 
   /// Number of distinct dishes in the basket (drives the cart badge).
+  /// Number of distinct dishes in the basket.
   int get distinctCount => _items.length;
 
   /// Total number of units across all dishes.
@@ -98,6 +114,7 @@ class CartController extends ChangeNotifier {
 
   void selectAddress(Address address) {
     selectedAddress = address;
+    SessionManager.instance.saveSelectedAddress(address);
     notifyListeners();
   }
 
@@ -118,15 +135,36 @@ class CartController extends ChangeNotifier {
       _items.fold(0.0, (sum, item) => sum + item.lineTotal);
 
   /// Flat GST at 15% of the subtotal (mock, rounded to whole rupees).
+  /// Flat GST at 15% of the subtotal.
   double get gst => (subtotal * 0.15).roundToDouble();
 
-  /// Flat delivery partner fee for the mocked 8 km distance.
-  double get deliveryFee => isEmpty ? 0 : 30;
+  /// Delivery partner fee calculated dynamically based on distance.
+  double get deliveryFee => isEmpty
+      ? 0
+      : LocationService.instance.calculateDeliveryFee(selectedAddress);
 
   /// A small mock discount applied when any coupon is active.
-  double get discount => appliedCoupon == null ? 0 : (subtotal * 0.10).roundToDouble();
+  double get discount =>
+      appliedCoupon == null ? 0 : (subtotal * 0.10).roundToDouble();
 
   double get grandTotal => subtotal + gst + deliveryFee - discount;
+
+  /// Places order via [OrderService] and clears cart
+  Future<OrderModel> checkout() async {
+    final order = await OrderService.instance.placeOrder(
+      items: List.from(_items),
+      address: selectedAddress,
+      payment: selectedPayment,
+      subtotal: subtotal,
+      gst: gst,
+      deliveryFee: deliveryFee,
+      discount: discount,
+      grandTotal: grandTotal,
+      coupon: appliedCoupon,
+    );
+    clear();
+    return order;
+  }
 
   CartItem? _find(Dish dish) {
     for (final item in _items) {

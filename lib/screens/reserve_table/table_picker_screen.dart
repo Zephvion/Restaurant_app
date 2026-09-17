@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
@@ -21,18 +20,18 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
   BookingArgs get _args =>
       ModalRoute.of(context)!.settings.arguments as BookingArgs;
 
-  void _confirmTable() {
+  Future<void> _confirmTable() async {
     final args = _args;
-    final reservation = Reservation(
-      id: 'res_${DateTime.now().millisecondsSinceEpoch}',
+    await ReservationController.instance.createReservation(
       restaurant: args.restaurant,
       date: args.date,
       timeSlot: args.timeSlot,
       seats: args.seats,
       tableNumber: _selectedTable!,
     );
-    ReservationController.instance.add(reservation);
-    Navigator.of(context).pushNamed(AppRoutes.reservationSuccess);
+    if (mounted) {
+      Navigator.of(context).pushNamed(AppRoutes.reservationSuccess);
+    }
   }
 
   @override
