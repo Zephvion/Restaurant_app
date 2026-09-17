@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restaurant_app/data/mock_data.dart';
-import 'package:restaurant_app/main.dart';
 import 'package:restaurant_app/routes/app_routes.dart';
 import 'package:restaurant_app/screens/order_food/category_listing_screen.dart';
 import 'package:restaurant_app/state/cart_controller.dart';
@@ -17,8 +16,8 @@ void main() {
       expect(meals.isNotEmpty, isTrue);
       for (final dish in meals) {
         expect(dish.category == 'Meals' || dish.id == 'meals', isTrue);
-        // Verify meals uses high-res card_meals.png
-        expect(dish.imageUrl.contains('card_meals.png'), isTrue);
+        // Verify meals uses high-res card_meals.webp
+        expect(dish.imageUrl.contains('card_meals.webp'), isTrue);
       }
 
       final chicken = MockData.getDishesForCategory('Chicken');
@@ -50,9 +49,9 @@ void main() {
     });
 
     test('TEST: High resolution images are used for food items', () {
-      expect(MockData.meals.imageUrl, 'assets/images/foodplanner/extracted/card_meals.png');
-      expect(MockData.plainDosa.imageUrl, 'assets/images/order/extracted/featured_dosa.png');
-      expect(MockData.kuzhipaniyaram.imageUrl, 'assets/images/order/extracted/featured_kuzhi.png');
+      expect(MockData.meals.imageUrl, 'assets/images/foodplanner/extracted/card_meals.webp');
+      expect(MockData.plainDosa.imageUrl, 'assets/images/order/extracted/featured_dosa.webp');
+      expect(MockData.kuzhipaniyaram.imageUrl, 'assets/images/order/extracted/featured_kuzhi.webp');
       // Verify juice does not use thumb_appam
       expect(MockData.freshJuiceOrange.imageUrl.contains('thumb_appam'), isFalse);
     });
