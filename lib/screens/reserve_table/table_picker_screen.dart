@@ -395,7 +395,6 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: () {
-                // Simulator shortcut for user testing
                 TableLockService.instance.simulateInstantTimeout(table.number);
                 Navigator.of(ctx).pop();
               },
@@ -585,65 +584,70 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
 
             // Multi-Table Combination (ONLY if no standalone matching table exists)
             if (!hasDirectAvailable && capacityShortfall > 0 && combinableCandidate != null) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.copper.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.copper.withValues(alpha: 0.4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.auto_awesome, color: AppColors.copper, size: 18),
-                        SizedBox(width: 8),
+              Builder(
+                builder: (context) {
+                  final cand = combinableCandidate!;
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.copper.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.copper.withValues(alpha: 0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.auto_awesome, color: AppColors.copper, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'No Single Matching Table Free — Combine Tables',
+                              style: TextStyle(
+                                color: AppColors.copper,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
                         Text(
-                          'No Single Matching Table Free — Combine Tables',
-                          style: TextStyle(
-                            color: AppColors.copper,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                          'Combine Table #${table.number} (${table.capacity} seats) + Table #${cand.number} (${cand.capacity} seats) for a total of ${table.capacity + cand.capacity} seats.',
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.copper,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
+                          icon: const Icon(Icons.link, size: 16),
+                          label: Text(
+                            'COMBINE TABLE #${table.number} + #${cand.number}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _selectedTables.add(table.number);
+                              _selectedTables.add(cand.number);
+                            });
+                            TableLockService.instance.acquireLock(table.number);
+                            TableLockService.instance.acquireLock(cand.number);
+                            Navigator.of(ctx).pop();
+                            AppBanner.showSuccess(
+                              context,
+                              'Combined Table #${table.number} & #${cand.number} (${table.capacity + cand.capacity} seats)!',
+                              title: 'Tables Combined',
+                            );
+                          },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Combine Table #${table.number} (${table.capacity} seats) + Table #${combinableCandidate.number} (${combinableCandidate.capacity} seats) for a total of ${table.capacity + combinableCandidate.capacity} seats.',
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.copper,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.link, size: 16),
-                      label: Text(
-                        'COMBINE TABLE #${table.number} + #${combinableCandidate.number}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _selectedTables.add(table.number);
-                          _selectedTables.add(combinableCandidate!.number);
-                        });
-                        TableLockService.instance.acquireLock(table.number);
-                        TableLockService.instance.acquireLock(combinableCandidate.number);
-                        Navigator.of(ctx).pop();
-                        AppBanner.showSuccess(
-                          context,
-                          'Combined Table #${table.number} & #${combinableCandidate.number} (${table.capacity + combinableCandidate.capacity} seats)!',
-                          title: 'Tables Combined',
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
             ],
