@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../data/mock_data.dart';
 import '../models/address.dart';
@@ -17,6 +18,7 @@ class OrderService {
 
   final Map<String, OrderModel> _localOrders = {};
   final Map<String, StreamController<OrderModel>> _orderStreams = {};
+  final _uuid = const Uuid();
 
   Future<void> init() async {
     // Populate an initial default mock order for tracking demo
@@ -226,3 +228,4 @@ class OrderService {
     }
   }
 }
+

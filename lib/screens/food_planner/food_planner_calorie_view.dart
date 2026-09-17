@@ -18,13 +18,27 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
   String _selectedDateTab = 'Today';
   bool _isDrawerOpen = true;
 
-  final List<String> _dateTabs = [
-    'Dec 29',
-    'Yesterday',
-    'Today',
-    'Jan 1',
-    'Jan 2',
-  ];
+  late final List<String> _dateTabs;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final minus2 = now.subtract(const Duration(days: 2));
+    final plus2 = now.add(const Duration(days: 2));
+
+    _dateTabs = [
+      '${months[minus2.month - 1]} ${minus2.day}',
+      'Yesterday',
+      'Today',
+      'Tomorrow',
+      '${months[plus2.month - 1]} ${plus2.day}',
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,8 +109,8 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                   curve: Curves.easeInOut,
                   constraints: BoxConstraints(
                     maxHeight: _isDrawerOpen
-                        ? MediaQuery.of(context).size.height * 0.52
-                        : 64,
+                        ? MediaQuery.of(context).size.height * 0.54
+                        : 76,
                   ),
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
@@ -104,6 +118,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                         BorderRadius.vertical(top: Radius.circular(28)),
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Header / toggle handle
                       GestureDetector(
@@ -111,22 +126,23 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                             setState(() => _isDrawerOpen = !_isDrawerOpen),
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _isDrawerOpen
                                     ? Icons.keyboard_arrow_down
                                     : Icons.keyboard_arrow_up,
                                 color: AppColors.textSecondary,
-                                size: 24,
+                                size: 22,
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               const Text(
                                 'Todays food calorie intake',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -137,7 +153,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                       if (_isDrawerOpen)
                         Expanded(
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                             children: const [
                               _MealCalorieTile(
                                 period: 'BREAKFAST',
@@ -472,11 +488,12 @@ class _MealCalorieTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _miniBar(value: '$protein', label: 'Protien', color: Colors.amber),
-                      _miniBar(value: '$carbs', label: 'Carbs', color: Colors.amber),
-                      _miniBar(value: '$fat', label: 'Fat', color: AppColors.accentRed),
+                      Expanded(child: _miniBar(value: '$protein', label: 'Protein', color: Colors.amber)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _miniBar(value: '$carbs', label: 'Carbs', color: Colors.amber)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _miniBar(value: '$fat', label: 'Fat', color: AppColors.accentRed)),
                     ],
                   ),
                 ],
@@ -504,25 +521,33 @@ class _MealCalorieTile extends StatelessWidget {
               fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 2),
-        Container(
-          width: 48,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: 30,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Container(
+              width: constraints.maxWidth,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: 0.65,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 2),
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
               color: AppColors.textSecondary, fontSize: 9),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/food_planner_assets.dart';
 import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
@@ -77,9 +78,9 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Hello, Arti!',
-                        style: TextStyle(
+                      Text(
+                        'Hello, ${AuthService.instance.currentUser?.displayName.trim().isNotEmpty == true ? AuthService.instance.currentUser!.displayName.trim() : (AuthService.instance.currentUser?.email.contains('@') == true ? AuthService.instance.currentUser!.email.split('@').first : "Valued Guest")}!',
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -97,36 +98,52 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                       const SizedBox(height: 24),
 
                       // ── Month / Range Row ──────────────────────────────
-                      Row(
-                        children: [
-                          if (!hasSelectedDay)
-                            const Expanded(
-                              child: Text(
-                                'Select a date to start planning your meal',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            )
-                          else
-                            const Spacer(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                      Builder(
+                        builder: (context) {
+                          final now = DateTime.now();
+                          const months = [
+                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                          ];
+                          final startMonth = months[now.month - 1];
+                          final endDay = now.add(const Duration(days: 6));
+                          final endMonth = months[endDay.month - 1];
+                          final rangeStr = startMonth == endMonth
+                              ? '$startMonth ${now.day} - ${endDay.day}'
+                              : '$startMonth ${now.day} - $endMonth ${endDay.day}';
+
+                          return Row(
                             children: [
-                              Text(
-                                hasSelectedDay ? 'Jan 2 - 8' : 'Jan',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
+                              if (!hasSelectedDay)
+                                const Expanded(
+                                  child: Text(
+                                    'Select a date to start planning your meal',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                )
+                              else
+                                const Spacer(),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    hasSelectedDay ? rangeStr : startMonth,
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.arrow_forward_ios,
+                                      size: 11, color: AppColors.textSecondary),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_ios,
-                                  size: 11, color: AppColors.textSecondary),
                             ],
-                          ),
-                        ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 14),
 
@@ -311,12 +328,16 @@ class _DateStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const days = ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon'];
+    final now = DateTime.now();
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: List.generate(7, (i) {
           final isSelected = selectedOffset == i;
+          final date = now.add(Duration(days: i));
+          final dayName = dayNames[date.weekday - 1];
+
           return GestureDetector(
             onTap: () => onSelect(i),
             child: AnimatedContainer(
@@ -332,21 +353,21 @@ class _DateStrip extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${i + 2}',
+                    '${date.day}',
                     style: TextStyle(
                       color: isSelected ? Colors.white : AppColors.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (isSelected)
-                    Text(
-                      days[i],
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
+                  Text(
+                    dayName,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white70 : AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
+                  ),
                 ],
               ),
             ),

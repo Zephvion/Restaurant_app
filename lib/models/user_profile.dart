@@ -11,6 +11,7 @@ class UserProfile {
   final String defaultDeliveryArea;
   final List<Address> savedAddresses;
   final List<PaymentMethod> savedPaymentMethods;
+  final List<String> orderHistory;
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
 
@@ -23,6 +24,7 @@ class UserProfile {
     this.defaultDeliveryArea = 'Palazhi , Calicut',
     this.savedAddresses = const [],
     this.savedPaymentMethods = const [],
+    this.orderHistory = const [],
     this.createdAt,
     this.lastLoginAt,
   });
@@ -36,6 +38,7 @@ class UserProfile {
     String? defaultDeliveryArea,
     List<Address>? savedAddresses,
     List<PaymentMethod>? savedPaymentMethods,
+    List<String>? orderHistory,
     DateTime? createdAt,
     DateTime? lastLoginAt,
   }) {
@@ -48,6 +51,7 @@ class UserProfile {
       defaultDeliveryArea: defaultDeliveryArea ?? this.defaultDeliveryArea,
       savedAddresses: savedAddresses ?? this.savedAddresses,
       savedPaymentMethods: savedPaymentMethods ?? this.savedPaymentMethods,
+      orderHistory: orderHistory ?? this.orderHistory,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
@@ -61,6 +65,7 @@ class UserProfile {
       'phone': phone,
       'photoUrl': photoUrl,
       'defaultDeliveryArea': defaultDeliveryArea,
+      'orderHistory': orderHistory,
       'createdAt': createdAt?.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
     };
@@ -75,6 +80,10 @@ class UserProfile {
       photoUrl: map['photoUrl'] as String? ?? '',
       defaultDeliveryArea:
           map['defaultDeliveryArea'] as String? ?? 'Palazhi , Calicut',
+      orderHistory: (map['orderHistory'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'].toString())
           : null,

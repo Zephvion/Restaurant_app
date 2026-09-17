@@ -132,9 +132,11 @@ class AuthService {
       final mockUid = 'usr_${DateTime.now().millisecondsSinceEpoch}';
       final profile = UserProfile(
         uid: mockUid,
-        displayName: displayName.isNotEmpty ? displayName : MockData.userName,
-        email: email.isNotEmpty ? email : MockData.userEmail,
-        phone: phone.isNotEmpty ? phone : MockData.userPhone,
+        displayName: displayName.isNotEmpty
+            ? displayName
+            : (email.contains('@') ? email.split('@').first : 'Valued Guest'),
+        email: email.isNotEmpty ? email : 'guest@paragon.com',
+        phone: phone.isNotEmpty ? phone : '+91 9874563210',
         defaultDeliveryArea: deliveryArea,
         savedAddresses: addresses,
         createdAt: DateTime.now(),
@@ -206,12 +208,13 @@ class AuthService {
     } else {
       // Fallback local persistence
       final mockUid = SessionManager.instance.currentUserId ?? 'usr_demo_101';
+      final fallbackName = email.contains('@') ? email.split('@').first : 'Guest User';
       final profile = SessionManager.instance.getCachedUserProfile() ??
           UserProfile(
             uid: mockUid,
-            displayName: MockData.userName,
-            email: email.isNotEmpty ? email : MockData.userEmail,
-            phone: MockData.userPhone,
+            displayName: fallbackName,
+            email: email.isNotEmpty ? email : 'guest@paragon.com',
+            phone: '+91 9874563210',
             lastLoginAt: DateTime.now(),
           );
       _currentUser = profile;
@@ -230,10 +233,9 @@ class AuthService {
     final mockUid = 'usr_google_${DateTime.now().millisecondsSinceEpoch}';
     final profile = UserProfile(
       uid: mockUid,
-      displayName: MockData.userName,
-      email: MockData.userEmail,
-      phone: MockData.userPhone,
-      photoUrl: MockData.userAvatar,
+      displayName: 'Google User',
+      email: 'user.google@gmail.com',
+      phone: '+91 9874563210',
       lastLoginAt: DateTime.now(),
     );
 
@@ -256,10 +258,9 @@ class AuthService {
     final mockUid = 'usr_phone_${DateTime.now().millisecondsSinceEpoch}';
     final profile = UserProfile(
       uid: mockUid,
-      displayName: MockData.userName,
-      email: MockData.userEmail,
-      phone: MockData.demoPhoneNumber,
-      photoUrl: MockData.userAvatar,
+      displayName: 'Mobile User',
+      email: 'mobile.user@paragon.com',
+      phone: '+91 9874563210',
       lastLoginAt: DateTime.now(),
     );
 

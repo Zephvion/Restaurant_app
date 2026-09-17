@@ -6,6 +6,7 @@ import '../../models/meal_plan.dart';
 import '../../models/menu_category.dart';
 import '../../models/promo_banner.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../services/location_service.dart';
 import '../../services/menu_service.dart';
 import '../../state/cart_controller.dart';
@@ -251,6 +252,10 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
 
   Widget _header() {
     final currentArea = LocationService.instance.currentDeliveryArea;
+    final user = AuthService.instance.currentUser;
+    final userInitial = user?.displayName.trim().isNotEmpty == true
+        ? user!.displayName.trim()[0].toUpperCase()
+        : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
@@ -267,13 +272,27 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
               }
             },
           ),
-          ClipOval(
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: NetworkImageWithFallback(
-                url: MockData.userAvatar,
-                fallbackIcon: Icons.person,
+          GestureDetector(
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.account),
+            child: ClipOval(
+              child: Container(
+                width: 40,
+                height: 40,
+                color: AppColors.maroon,
+                alignment: Alignment.center,
+                child: (user?.photoUrl.trim().isNotEmpty == true)
+                    ? NetworkImageWithFallback(
+                        url: user!.photoUrl.trim(),
+                        fallbackIcon: Icons.person,
+                      )
+                    : Text(
+                        userInitial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -316,6 +335,31 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
                 ],
               ),
             ),
+          ),
+          // ── Dedicated Track Live Order Button ─────────────────────────
+          IconButton(
+            tooltip: 'Track Live Order',
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.delivery_dining_outlined,
+                    color: AppColors.copper, size: 24),
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentRed,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () =>
+                Navigator.of(context).pushNamed(AppRoutes.trackOrder),
           ),
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded,

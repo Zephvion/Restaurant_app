@@ -22,30 +22,30 @@ class PreviousOrderScreen extends StatefulWidget {
 }
 
 class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
-  OrderModel? _lastOrder;
+  List<OrderModel> _orders = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadPreviousOrder();
+    _loadOrders();
   }
 
-  Future<void> _loadPreviousOrder() async {
+  Future<void> _loadOrders() async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
     final orders = await OrderService.instance.getUserOrders(uid);
     if (mounted) {
       setState(() {
-        _lastOrder = orders.isNotEmpty ? orders.first : null;
+        _orders = orders;
         _isLoading = false;
       });
     }
   }
 
-  void _reorder(BuildContext context) {
+  void _reorderOrder(BuildContext context, OrderModel order) {
     final cart = CartController.instance;
-    if (_lastOrder != null && _lastOrder!.items.isNotEmpty) {
-      for (final item in _lastOrder!.items) {
+    if (order.items.isNotEmpty) {
+      for (final item in order.items) {
         final dish = MenuService.instance.findDishById(item.dishId) ??
             MockData.dishes.firstWhere(
               (d) => d.id == item.dishId,
@@ -69,94 +69,188 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
       );
     }
 
-    final order = _lastOrder;
-    final address = order?.deliveryAddress ?? MockData.addresses.first;
-    final subtotal = order?.subtotal ?? 130.0;
-    final gst = order?.gst ?? 20.0;
-    final fee = order?.deliveryFee ?? 30.0;
-    final total = order?.grandTotal ?? 180.0;
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Previous Order')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        children: [
-          RoundedPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Order summary',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontSize: 17),
-                ),
-                const SizedBox(height: 16),
-                if (order != null && order.items.isNotEmpty) ...[
-                  for (final item in order.items) ...[
-                    OrderSummaryRow(
-                      imageUrl: item.imageUrl,
-                      name: item.name,
-                      quantity: item.quantity,
-                      price: item.lineTotal,
+      appBar: AppBar(title: const Text('Order History')),
+      body: _orders.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.receipt_long_outlined,
+                      size: 64, color: AppColors.textSecondary),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No previous orders found',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 14),
-                  ],
-                ] else ...[
-                  OrderSummaryRow(
-                    imageUrl: MockData.plainDosa.imageUrl,
-                    name: 'Plain Dosa',
-                    quantity: 1,
-                    price: 50,
                   ),
-                  const SizedBox(height: 14),
-                  OrderSummaryRow(
-                    imageUrl: MockData.meals.imageUrl,
-                    name: 'Meals',
-                    quantity: 1,
-                    price: 80,
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Explore our menu and place your first delicious order!',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.maroon,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () =>
+                        Navigator.of(context).pushReplacementNamed(AppRoutes.foodHome),
+                    child: const Text('Browse Menu', style: TextStyle(color: Colors.white)),
                   ),
                 ],
-                const PanelDivider(),
-                AddressRow(address: address.details),
-                const PanelDivider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Rate',
-                      style: TextStyle(
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              itemCount: _orders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                final order = _orders[index];
+                return _buildOrderCard(context, order);
+              },
+            ),
+    );
+  }
+
+  Widget _buildOrderCard(BuildContext context, OrderModel order) {
+    final statusColor = order.status == OrderStatus.delivered
+        ? Colors.green
+        : (order.status == OrderStatus.cancelled ? Colors.red : AppColors.copper);
+
+    return RoundedPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order #${order.id}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${order.createdAt.day}/${order.createdAt.month}/${order.createdAt.year} · ${order.items.length} items',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: statusColor.withOpacity(0.4)),
+                ),
+                child: Text(
+                  order.status.name.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const PanelDivider(),
+          for (final item in order.items) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    '${item.quantity}x',
+                    style: const TextStyle(
+                      color: AppColors.copper,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
                       ),
                     ),
-                    PriceText(price: subtotal, size: 17),
-                  ],
+                  ),
+                  PriceText(price: item.lineTotal, size: 14),
+                ],
+              ),
+            ),
+          ],
+          const PanelDivider(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total Amount Paid',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
+              ),
+              PriceText(price: order.grandTotal, size: 16),
+            ],
           ),
-          const SizedBox(height: 18),
-          RoundedPanel(
-            child: Column(
-              children: [
-                PriceLine(label: 'Subtotal', value: subtotal),
-                const SizedBox(height: 12),
-                PriceLine(label: 'GST', value: gst),
-                const SizedBox(height: 12),
-                PriceLine(label: 'Delivery partner fee for 8km', value: fee),
-                const PanelDivider(),
-                PriceLine(label: 'Grand Total', value: total, emphasized: true),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-          PrimaryButton(
-            label: 'Order Now',
-            onPressed: () => _reorder(context),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.copper,
+                    side: const BorderSide(color: AppColors.copper),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.near_me_outlined, size: 16),
+                  label: const Text('Track Order', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRoutes.trackOrder,
+                      arguments: order.id,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.maroon,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.replay_rounded, size: 16),
+                  label: const Text('Reorder', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  onPressed: () => _reorderOrder(context, order),
+                ),
+              ),
+            ],
           ),
         ],
       ),
