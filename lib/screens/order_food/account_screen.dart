@@ -5,34 +5,43 @@ import '../../models/address.dart';
 import '../../models/user_profile.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/address_picker_sheet.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
-/// Account — live profile header, saved addresses, and settings sections.
+/// Account — live registered user profile, saved addresses, reservations, and settings.
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
-
-  void _soon(BuildContext context, String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.surfaceLight,
-          content: Text('$what — coming soon'),
-        ),
-      );
-  }
 
   Future<void> _logout(BuildContext context) async {
     await AuthService.instance.signOut();
     if (context.mounted) {
+      AppBanner.showInfo(
+        context,
+        'You have been logged out.',
+        title: 'Logged Out',
+      );
       Navigator.of(context).pushNamedAndRemoveUntil(
         AppRoutes.login,
         (route) => false,
       );
     }
+  }
+
+  void _openAddressPicker(BuildContext context) {
+    AddressPickerSheet.show(
+      context: context,
+      onAddressSelected: (addr) {
+        AppBanner.showSuccess(
+          context,
+          'Selected delivery address: ${addr.label}',
+          title: 'Address Updated',
+        );
+      },
+    );
   }
 
   @override
@@ -41,19 +50,31 @@ class AccountScreen extends StatelessWidget {
       stream: AuthService.instance.authStateChanges,
       initialData: AuthService.instance.currentUser,
       builder: (context, snapshot) {
-        final profile = snapshot.data;
-        final displayName = profile?.displayName.isNotEmpty == true
-            ? profile!.displayName
-            : MockData.userName;
-        final phone = profile?.phone.isNotEmpty == true
-            ? profile!.phone
-            : MockData.userPhone;
-        final email = profile?.email.isNotEmpty == true
-            ? profile!.email
-            : MockData.userEmail;
-        final photoUrl = profile?.photoUrl.isNotEmpty == true
-            ? profile!.photoUrl
+        final profile = snapshot.data ?? AuthService.instance.currentUser;
+        
+        // Priority: Registered user name -> Email user part -> 'Valued Guest'
+        final String displayName;
+        if (profile != null && profile.displayName.trim().isNotEmpty) {
+          displayName = profile.displayName.trim();
+        } else if (profile != null && profile.email.contains('@')) {
+          displayName = profile.email.split('@').first;
+        } else {
+          displayName = 'Valued Guest';
+        }
+
+        final phone = (profile != null && profile.phone.trim().isNotEmpty)
+            ? profile.phone.trim()
+            : '+91 9874563210';
+        final email = (profile != null && profile.email.trim().isNotEmpty)
+            ? profile.email.trim()
+            : 'guest@paragon.com';
+        final photoUrl = (profile != null && profile.photoUrl.trim().isNotEmpty)
+            ? profile.photoUrl.trim()
             : MockData.userAvatar;
+
+        final savedAddresses = (profile != null && profile.savedAddresses.isNotEmpty)
+            ? profile.savedAddresses
+            : MockData.addresses;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -72,48 +93,110 @@ class AccountScreen extends StatelessWidget {
                   photoUrl: photoUrl,
                 ),
                 const SizedBox(height: 26),
+
+                // ── Addresses ────────────────────────────────────────────────
                 _AccountExpansion(
                   icon: Icons.location_on_outlined,
-                  title: 'Address',
+                  title: 'Saved Delivery Addresses',
                   children: [
-                    for (final a in MockData.addresses) _addressItem(a),
+                    for (final a in savedAddresses) _addressItem(a),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _openAddressPicker(context),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.copper.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.copper.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.add_location_alt_outlined, color: AppColors.copper, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Add / Change Delivery Location',
+                              style: TextStyle(
+                                color: AppColors.copper,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+
+                // ── Order History ────────────────────────────────────────────
                 _AccountLink(
                   icon: Icons.receipt_long_outlined,
-                  title: 'Order history',
+                  title: 'Order History',
                   onTap: () =>
                       Navigator.of(context).pushNamed(AppRoutes.previousOrder),
                 ),
+
+                // ── Payments ─────────────────────────────────────────────────
                 _AccountLink(
                   icon: Icons.credit_card,
-                  title: 'Payments',
+                  title: 'Payment Methods & Cards',
                   onTap: () =>
                       Navigator.of(context).pushNamed(AppRoutes.paymentMethods),
                 ),
+
+                // ── Table Reservations ───────────────────────────────────────
                 _AccountExpansion(
                   icon: Icons.event_seat_outlined,
-                  title: 'Table Reservation',
-                  children: [_reservationItem()],
+                  title: 'Table Reservations',
+                  children: [
+                    _reservationSection(context),
+                  ],
                 ),
+
+                // ── Food Planner ─────────────────────────────────────────────
                 _AccountExpansion(
                   icon: Icons.restaurant_menu,
-                  title: 'Food Planner',
+                  title: 'Food Planner & Diet Schedules',
                   children: [
-                    _plannerItem(context, 'Today'),
-                    _plannerItem(context, 'This Week'),
-                    _plannerItem(context, 'Next Week'),
+                    _plannerItem(context, 'Today\'s Meal Plan', 'View current daily macros'),
+                    _plannerItem(context, 'Weekly Food Schedule', 'Plan breakfast, lunch & dinner'),
+                    _plannerItem(context, 'Calorie Calculator', 'Calculate personal target macros'),
                   ],
                 ),
+
+                // ── Contact Us ───────────────────────────────────────────────
                 _AccountExpansion(
                   icon: Icons.headset_mic_outlined,
-                  title: 'Contact Us',
+                  title: 'Customer Support & Hotline',
                   children: [
-                    _contactLine(Icons.call, MockData.deliveryPartnerPhone),
+                    _contactLine(
+                      context,
+                      Icons.call,
+                      'Hotline: +91 98470 12345',
+                      onTap: () => AppBanner.showInfo(
+                        context,
+                        'Connecting to Paragon customer helpline...',
+                        title: 'Support Call',
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    _contactLine(Icons.email_outlined, 'support@paragon.com'),
+                    _contactLine(
+                      context,
+                      Icons.email_outlined,
+                      'Email: care@paragonrestaurant.com',
+                      onTap: () => AppBanner.showInfo(
+                        context,
+                        'Opening email client for care@paragonrestaurant.com',
+                        title: 'Email Support',
+                      ),
+                    ),
                   ],
                 ),
+
+                // ── Logout ───────────────────────────────────────────────────
                 _AccountLink(
                   icon: Icons.logout,
                   title: 'Logout',
@@ -190,11 +273,16 @@ class AccountScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                name,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
               const SizedBox(height: 6),
-              _editableLine(phone),
+              _displayLine(phone, Icons.phone_android),
               const SizedBox(height: 4),
-              _editableLine(email),
+              _displayLine(email, Icons.email_outlined),
             ],
           ),
         ),
@@ -202,9 +290,11 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _editableLine(String value) {
+  Widget _displayLine(String value, IconData icon) {
     return Row(
       children: [
+        Icon(icon, size: 13, color: AppColors.copper),
+        const SizedBox(width: 6),
         Flexible(
           child: Text(
             value,
@@ -214,8 +304,6 @@ class AccountScreen extends StatelessWidget {
                 color: AppColors.textSecondary, fontSize: 13),
           ),
         ),
-        const SizedBox(width: 6),
-        const Icon(Icons.edit_outlined, size: 13, color: AppColors.copper),
       ],
     );
   }
@@ -270,68 +358,129 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _reservationItem() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.maroon,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              '6',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
+  Widget _reservationSection(BuildContext context) {
+    final reservations = ReservationController.instance.reservations;
+    if (reservations.isNotEmpty) {
+      final latest = reservations.first;
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.maroon,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${latest.seats}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Table #${latest.tableNumber} · ${latest.timeSlot}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      )),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${latest.restaurant.name} · ${latest.seats} Guests',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'No upcoming reservations',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.maroon,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text('Upcoming reservation',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
-              SizedBox(height: 3),
-              Text('January 2, 2023',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  )),
-            ],
-          ),
-        ],
-      ),
+          onPressed: () =>
+              Navigator.of(context).pushNamed(AppRoutes.reserveDashboard),
+          child: const Text('Book Table',
+              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+        ),
+      ],
     );
   }
 
-  Widget _plannerItem(BuildContext context, String label) {
+  Widget _plannerItem(BuildContext context, String label, String subtitle) {
     return InkWell(
-      onTap: () => _soon(context, label),
+      onTap: () {
+        AppBanner.showSuccess(
+          context,
+          'Opening $label...',
+          title: 'Food Planner',
+        );
+        Navigator.of(context).pushNamed(AppRoutes.foodPlanner);
+      },
+      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today,
-                size: 16, color: AppColors.textSecondary),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.copper.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.calendar_month, size: 16, color: AppColors.copper),
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
             const Icon(Icons.chevron_right,
@@ -342,16 +491,26 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _contactLine(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.copper),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+  Widget _contactLine(BuildContext context, IconData icon, String text, {required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.copper),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              ),
+            ),
+            const Icon(Icons.open_in_new, size: 14, color: AppColors.textSecondary),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

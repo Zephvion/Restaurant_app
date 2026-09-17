@@ -13,6 +13,7 @@ import 'package:restaurant_app/screens/takeaway/takeaway_dashboard_screen.dart';
 import 'package:restaurant_app/screens/catering/catering_dashboard_screen.dart';
 import 'package:restaurant_app/screens/food_planner/food_planner_shell_screen.dart';
 import 'package:restaurant_app/screens/order_food/account_screen.dart';
+import 'package:restaurant_app/screens/order_food/payment_methods_screen.dart';
 
 void main() {
   testWidgets('Full App Navigation and Screen Rendering Test', (tester) async {
@@ -109,6 +110,15 @@ void main() {
     expect(find.text('Payment Options'), findsOneWidget);
     expect(find.text('Credit & Debit Cards'), findsOneWidget);
     expect(find.text('Net Banking'), findsOneWidget);
+
+    // 12. Test Payment Methods Screen (Profile Manage Payments)
+    await tester.pumpWidget(
+      const MaterialApp(home: PaymentMethodsScreen()),
+    );
+    expect(find.text('Manage Payment Methods'), findsOneWidget);
+    expect(find.text('Add New Card'), findsOneWidget);
+    expect(find.text('Add New UPI ID'), findsOneWidget);
+    expect(find.text('Link New Wallet'), findsOneWidget);
   });
 }
 

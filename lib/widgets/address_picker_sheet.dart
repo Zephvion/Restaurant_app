@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../models/address.dart';
+import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../services/session_manager.dart';
 import '../theme/app_colors.dart';
+import 'app_banner.dart';
 
 /// Interactive address & location chooser bottom sheet.
+/// Supports saved address selection, custom address creation with full persistence,
+/// and live simulated GPS location detection.
 class AddressPickerSheet extends StatefulWidget {
   const AddressPickerSheet({
     super.key,
@@ -35,18 +39,30 @@ class AddressPickerSheet extends StatefulWidget {
 
 class _AddressPickerSheetState extends State<AddressPickerSheet> {
   bool _isDetectingGps = false;
-  final _customAddressCtrl = TextEditingController();
-  final _labelCtrl = TextEditingController(text: 'Other');
+  final _flatNoCtrl = TextEditingController();
+  final _landmarkCtrl = TextEditingController();
+  final _areaCtrl = TextEditingController(text: 'Palazhi, Calicut');
+  final _labelCtrl = TextEditingController(text: 'Home');
   bool _showAddCustom = false;
 
   @override
   void dispose() {
-    _customAddressCtrl.dispose();
+    _flatNoCtrl.dispose();
+    _landmarkCtrl.dispose();
+    _areaCtrl.dispose();
     _labelCtrl.dispose();
     super.dispose();
   }
 
-  void _select(Address addr) async {
+  List<Address> _getLiveAddresses() {
+    final user = AuthService.instance.currentUser;
+    if (user != null && user.savedAddresses.isNotEmpty) {
+      return user.savedAddresses;
+    }
+    return MockData.addresses;
+  }
+
+  Future<void> _select(Address addr) async {
     await SessionManager.instance.saveSelectedAddress(addr);
     await LocationService.instance.updateDeliveryArea('${addr.label} - ${addr.details.split(',').first}');
     if (mounted) {
@@ -57,35 +73,81 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
 
   Future<void> _detectCurrentLocation() async {
     setState(() => _isDetectingGps = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     final currentGpsAddr = Address(
-      label: 'Current Location',
-      details: 'Mavoor Road, Near KSRTC Terminal, Calicut, 673001',
-      lat: 11.2590,
-      lng: 75.7865,
+      id: 'addr_gps_${DateTime.now().millisecondsSinceEpoch}',
+      label: 'Live Location',
+      details: 'Hilite Mall Road, Near Cyber Park, Palazhi, Calicut, 673014',
+      lat: 11.2588,
+      lng: 75.7804,
+      isDefault: true,
     );
+
+    // Save to user profile if logged in
+    final user = AuthService.instance.currentUser;
+    if (user != null) {
+      final updatedList = List<Address>.from(user.savedAddresses)..insert(0, currentGpsAddr);
+      await AuthService.instance.updateProfile(user.copyWith(savedAddresses: updatedList));
+    }
 
     if (mounted) {
       setState(() => _isDetectingGps = false);
+      AppBanner.showSuccess(
+        context,
+        'GPS Location resolved: Hilite Mall Road, Palazhi',
+        title: 'Location Detected',
+      );
       _select(currentGpsAddr);
     }
   }
 
-  void _saveCustomAddress() {
-    if (_customAddressCtrl.text.trim().isEmpty) return;
+  Future<void> _saveCustomAddress() async {
+    final flat = _flatNoCtrl.text.trim();
+    final landmark = _landmarkCtrl.text.trim();
+    final area = _areaCtrl.text.trim();
+    final label = _labelCtrl.text.trim();
+
+    if (flat.isEmpty || area.isEmpty) {
+      AppBanner.showError(context, 'Please enter flat/house number and area.');
+      return;
+    }
+
+    final fullDetails = [
+      flat,
+      if (landmark.isNotEmpty) 'Near $landmark',
+      area,
+    ].join(', ');
+
     final customAddr = Address(
-      label: _labelCtrl.text.trim().isNotEmpty ? _labelCtrl.text.trim() : 'Custom',
-      details: _customAddressCtrl.text.trim(),
-      lat: 11.2600,
-      lng: 75.7800,
+      id: 'addr_custom_${DateTime.now().millisecondsSinceEpoch}',
+      label: label.isNotEmpty ? label : 'Other',
+      details: fullDetails,
+      lat: 11.2595,
+      lng: 75.7820,
     );
-    _select(customAddr);
+
+    // Save to UserProfile
+    final user = AuthService.instance.currentUser;
+    if (user != null) {
+      final updatedList = List<Address>.from(user.savedAddresses)..add(customAddr);
+      await AuthService.instance.updateProfile(user.copyWith(savedAddresses: updatedList));
+    }
+
+    if (mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Saved "$label" address successfully!',
+        title: 'Address Saved',
+      );
+      _select(customAddr);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentSelected = SessionManager.instance.getSelectedAddress();
+    final addresses = _getLiveAddresses();
 
     return Container(
       decoration: const BoxDecoration(
@@ -129,7 +191,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                     Icon(Icons.location_on, color: AppColors.accentRed, size: 22),
                     SizedBox(width: 8),
                     Text(
-                      'Choose Delivery Location',
+                      'Select Delivery Location',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 17,
@@ -153,7 +215,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.accentRed.withValues(alpha: 0.15),
+                          color: AppColors.accentRed.withOpacity(0.15),
                           shape: BoxShape.circle,
                         ),
                         child: _isDetectingGps
@@ -172,7 +234,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'Use Current Location',
+                              'Use Current GPS Location',
                               style: TextStyle(
                                 color: AppColors.accentRed,
                                 fontWeight: FontWeight.w700,
@@ -181,7 +243,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Using GPS / Device Geolocation',
+                              'Hilite Mall Road, Palazhi, Calicut',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 12,
@@ -212,7 +274,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                 ),
               ),
 
-              for (final addr in MockData.addresses) ...[
+              for (final addr in addresses) ...[
                 _buildAddressTile(addr, isSelected: currentSelected?.label == addr.label),
               ],
 
@@ -233,7 +295,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                           'Add New Delivery Address',
                           style: TextStyle(
                             color: AppColors.copper,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 14,
                           ),
                         ),
@@ -255,19 +317,29 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Text(
-                          'Enter New Address',
+                          'Enter Full Address Details',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
                           ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            _labelChip('Home'),
+                            const SizedBox(width: 8),
+                            _labelChip('Office'),
+                            const SizedBox(width: 8),
+                            _labelChip('Other'),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         TextField(
-                          controller: _labelCtrl,
+                          controller: _flatNoCtrl,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: InputDecoration(
-                            labelText: 'Label (e.g. Friends House, Hotel)',
+                            labelText: 'Flat / House / Apartment No.',
                             labelStyle: const TextStyle(color: AppColors.textSecondary),
                             filled: true,
                             fillColor: AppColors.backgroundElevated,
@@ -279,11 +351,25 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                         ),
                         const SizedBox(height: 10),
                         TextField(
-                          controller: _customAddressCtrl,
-                          maxLines: 2,
+                          controller: _landmarkCtrl,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: InputDecoration(
-                            labelText: 'Full Address Details',
+                            labelText: 'Landmark (e.g. Near Metro, Behind Temple)',
+                            labelStyle: const TextStyle(color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.backgroundElevated,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _areaCtrl,
+                          style: const TextStyle(color: AppColors.textPrimary),
+                          decoration: InputDecoration(
+                            labelText: 'City / Area',
                             labelStyle: const TextStyle(color: AppColors.textSecondary),
                             filled: true,
                             fillColor: AppColors.backgroundElevated,
@@ -324,6 +410,24 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _labelChip(String label) {
+    final selected = _labelCtrl.text == label;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      selectedColor: AppColors.copper,
+      backgroundColor: AppColors.backgroundElevated,
+      labelStyle: TextStyle(
+        color: selected ? Colors.black : AppColors.textPrimary,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        fontSize: 12,
+      ),
+      onSelected: (val) {
+        if (val) setState(() => _labelCtrl.text = label);
+      },
     );
   }
 
@@ -377,4 +481,3 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
     );
   }
 }
-
