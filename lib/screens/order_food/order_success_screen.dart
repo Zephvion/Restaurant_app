@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
@@ -7,8 +6,8 @@ import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 
 /// Order confirmation screen: a celebratory green check with confetti, the
-/// "Your order is placed" message and a Track order button. Placing the order
-/// clears the basket.
+/// "Your order is placed" message, and dual redirection buttons (Redirect to Dashboard vs Track Order).
+/// Matches Figma design.
 class OrderSuccessScreen extends StatefulWidget {
   const OrderSuccessScreen({super.key});
 
@@ -42,14 +41,14 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     super.dispose();
   }
 
-  void _close() {
+  void _redirectToDashboard() {
     Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.foodHome,
-      (route) => route.settings.name == AppRoutes.home || route.isFirst,
+      AppRoutes.home,
+      (route) => false,
     );
   }
 
-  void _track() {
+  void _trackOrder() {
     final orderId = ModalRoute.of(context)?.settings.arguments as String?;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.trackOrder,
@@ -60,92 +59,149 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
+    final orderId = ModalRoute.of(context)?.settings.arguments as String?;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: AppColors.textPrimary),
-                onPressed: _close,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                  onPressed: _redirectToDashboard,
+                ),
               ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: 240,
-              height: 240,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Faint cutlery watermark.
-                  Icon(
-                    Icons.restaurant,
-                    size: 150,
-                    color: AppColors.surfaceLight.withOpacity(0.4),
-                  ),
-                  // Confetti.
-                  const Positioned.fill(child: _Confetti()),
-                  // Animated green check.
-                  ScaleTransition(
-                    scale: _scale,
-                    child: Container(
-                      width: 108,
-                      height: 108,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF3FA34D),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 64),
+              const Spacer(flex: 2),
+              SizedBox(
+                width: 220,
+                height: 220,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Cutlery watermark background
+                    Icon(
+                      Icons.restaurant,
+                      size: 130,
+                      color: AppColors.surfaceLight.withOpacity(0.35),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 36),
-            Text(
-              'Success',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Your order is placed',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: Material(
-                  color: AppColors.copper,
-                  borderRadius: BorderRadius.circular(30),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: _track,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.location_on, color: Colors.white, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'Track order',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                    // Confetti particles
+                    const Positioned.fill(child: _Confetti()),
+                    // Animated green check
+                    ScaleTransition(
+                      scale: _scale,
+                      child: Container(
+                        width: 96,
+                        height: 96,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF3FA34D),
+                          shape: BoxShape.circle,
                         ),
-                      ],
+                        child: const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 56,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                'Success',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Your order is placed',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+              ),
+              if (orderId != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    'ORDER ID: #$orderId',
+                    style: const TextStyle(
+                      color: AppColors.copper,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
+              ],
+              const Spacer(flex: 3),
+
+              // ── Dual Redirection Buttons ─────────────────────────────────
+              // 1. Track Order Button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.copper,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.location_on_rounded, size: 20),
+                  label: const Text(
+                    'TRACK ORDER',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  onPressed: _trackOrder,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+
+              // 2. Redirect to Dashboard Button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.border, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  icon: const Icon(Icons.dashboard_outlined, size: 20),
+                  label: const Text(
+                    'REDIRECT TO DASHBOARD',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  onPressed: _redirectToDashboard,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -176,29 +232,26 @@ class _ConfettiPainter extends CustomPainter {
 
     for (var i = 0; i < 26; i++) {
       final angle = rand.nextDouble() * 2 * math.pi;
-      final radius = 78 + rand.nextDouble() * 42;
+      final radius = 72 + rand.nextDouble() * 38;
       final pos = center +
           Offset(math.cos(angle) * radius, math.sin(angle) * radius);
       final color = colors[i % colors.length];
       final paint = Paint()..color = color;
 
       if (i % 3 == 0) {
-        // Small star-ish dot.
-        canvas.drawCircle(pos, 3.2, paint);
+        canvas.drawCircle(pos, 3.0, paint);
       } else if (i % 3 == 1) {
-        // Short dash.
         paint
-          ..strokeWidth = 3
+          ..strokeWidth = 2.8
           ..strokeCap = StrokeCap.round;
-        final d = Offset(math.cos(angle), math.sin(angle)) * 7;
+        final d = Offset(math.cos(angle), math.sin(angle)) * 6;
         canvas.drawLine(pos - d, pos + d, paint);
       } else {
-        // Tiny square.
         canvas.save();
         canvas.translate(pos.dx, pos.dy);
         canvas.rotate(angle);
         canvas.drawRect(
-          Rect.fromCenter(center: Offset.zero, width: 6, height: 6),
+          Rect.fromCenter(center: Offset.zero, width: 5.5, height: 5.5),
           paint,
         );
         canvas.restore();

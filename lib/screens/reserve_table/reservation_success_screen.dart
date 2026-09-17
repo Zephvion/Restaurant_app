@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_colors.dart';
 
 /// Success overlay displayed after confirming a table reservation.
-/// Shows a green checkmark with confetti, then dismisses back to the dashboard.
+/// Matches Figma design: Animated green checkmark burst with confetti,
+/// reservation breakdown, and dual redirection buttons (Redirect to Dashboard vs View Reservations).
 class ReservationSuccessScreen extends StatefulWidget {
   const ReservationSuccessScreen({super.key});
 
@@ -24,7 +26,9 @@ class _ReservationSuccessScreenState extends State<ReservationSuccessScreen>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
@@ -36,81 +40,186 @@ class _ReservationSuccessScreenState extends State<ReservationSuccessScreen>
     super.dispose();
   }
 
-  void _close() {
-    // Pop back to dashboard (clear the booking stack)
+  void _redirectToDashboard() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.home,
+      (route) => false,
+    );
+  }
+
+  void _viewReservations() {
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.reserveDashboard,
-      (route) => route.settings.name == AppRoutes.home,
+      (route) => route.settings.name == AppRoutes.home || route.isFirst,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final res = ModalRoute.of(context)?.settings.arguments as Reservation?;
+
     return Scaffold(
-      backgroundColor: AppColors.background.withValues(alpha: 0.92),
-      body: Stack(
-        children: [
-          // ── Close button ─────────────────────────────────────────────
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textPrimary),
-              onPressed: _close,
-            ),
-          ),
-          // ── Main content ─────────────────────────────────────────────
-          FadeTransition(
-            opacity: _fade,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Success',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Your table is reserved',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  // ── Animated checkmark ───────────────────────────────
-                  ScaleTransition(
-                    scale: _scale,
-                    child: const _CheckmarkBurst(),
-                  ),
-                  const SizedBox(height: 48),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      'NOTE: Reservation is only for 1 hour',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
+      backgroundColor: AppColors.background.withValues(alpha: 0.95),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // ── Top Close button ─────────────────────────────────────────────
+            Positioned(
+              top: 8,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                onPressed: _redirectToDashboard,
               ),
             ),
-          ),
-        ],
+            // ── Main Content ─────────────────────────────────────────────────
+            FadeTransition(
+              opacity: _fade,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 2),
+                    const Text(
+                      'Success',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Your table is reserved',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+
+                    // ── Animated checkmark burst ───────────────────────────────
+                    ScaleTransition(
+                      scale: _scale,
+                      child: const _CheckmarkBurst(),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ── Reservation Details Card ───────────────────────────────
+                    if (res != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              res.restaurant.name,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Table #${res.tableNumber} · ${res.seats} Guests · ${res.timeSlot}',
+                              style: const TextStyle(
+                                color: AppColors.copper,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'NOTE: Reservation is only for 1 hour',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    const Spacer(flex: 3),
+
+                    // ── Dual Redirection Buttons ───────────────────────────────
+                    // 1. View Reservations
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.copper,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.table_restaurant_rounded, size: 20),
+                        label: const Text(
+                          'VIEW RESERVATIONS',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        onPressed: _viewReservations,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2. Redirect to Dashboard
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.border, width: 1.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
+                        icon: const Icon(Icons.dashboard_outlined, size: 20),
+                        label: const Text(
+                          'REDIRECT TO DASHBOARD',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        onPressed: _redirectToDashboard,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Checkmark burst ───────────────────────────────────────────────────────────
+// ── Checkmark burst matching Figma ──────────────────────────────────────────
 
 class _CheckmarkBurst extends StatelessWidget {
   const _CheckmarkBurst();
@@ -118,8 +227,8 @@ class _CheckmarkBurst extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
-      height: 200,
+      width: 180,
+      height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -129,8 +238,8 @@ class _CheckmarkBurst extends StatelessWidget {
           ..._stars(),
           // Glow ring
           Container(
-            width: 130,
-            height: 130,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
@@ -138,8 +247,8 @@ class _CheckmarkBurst extends StatelessWidget {
           ),
           // Green checkmark circle
           Container(
-            width: 84,
-            height: 84,
+            width: 80,
+            height: 80,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Color(0xFF4CAF50),
@@ -154,41 +263,45 @@ class _CheckmarkBurst extends StatelessWidget {
   List<Widget> _dots() {
     const teal = Color(0xFF26C6A6);
     const positions = [
-      Offset(100, 20),
-      Offset(170, 60),
-      Offset(180, 130),
-      Offset(100, 185),
-      Offset(30, 130),
-      Offset(20, 60),
+      Offset(90, 16),
+      Offset(150, 52),
+      Offset(160, 116),
+      Offset(90, 165),
+      Offset(24, 116),
+      Offset(16, 52),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: teal,
-            ),
-          ),
-        )).toList();
+    return positions
+        .map((p) => Positioned(
+              left: p.dx,
+              top: p.dy,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: teal,
+                ),
+              ),
+            ))
+        .toList();
   }
 
   List<Widget> _stars() {
     const orange = Color(0xFFFFA726);
     const positions = [
-      Offset(93, 5),
-      Offset(180, 42),
-      Offset(145, 180),
-      Offset(20, 38),
-      Offset(15, 148),
+      Offset(84, 4),
+      Offset(160, 36),
+      Offset(130, 160),
+      Offset(16, 32),
+      Offset(12, 132),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: const _Star(color: orange, size: 14),
-        )).toList();
+    return positions
+        .map((p) => Positioned(
+              left: p.dx,
+              top: p.dy,
+              child: const _Star(color: orange, size: 13),
+            ))
+        .toList();
   }
 }
 

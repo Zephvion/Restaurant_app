@@ -6,7 +6,7 @@ import '../../state/catering_controller.dart';
 import '../../theme/app_colors.dart';
 
 /// Success overlay displayed after submitting a catering order.
-/// Shows animated green checkmark with confetti and order ID.
+/// Shows animated green checkmark with confetti, order ID, and dual redirection buttons.
 class CateringSuccessScreen extends StatefulWidget {
   const CateringSuccessScreen({super.key});
 
@@ -24,7 +24,9 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
@@ -36,10 +38,17 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
     super.dispose();
   }
 
-  void _close() {
+  void _redirectToDashboard() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.home,
+      (route) => false,
+    );
+  }
+
+  void _viewCateringDashboard() {
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.cateringDashboard,
-      (route) => route.settings.name == AppRoutes.home,
+      (route) => route.settings.name == AppRoutes.home || route.isFirst,
     );
   }
 
@@ -48,67 +57,138 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
     final latestOrder = CateringController.instance.orders.isNotEmpty
         ? CateringController.instance.orders.first
         : null;
-    final orderId = latestOrder?.id ?? 'ID4578';
+    final orderId = latestOrder?.id ?? 'CAT-${DateTime.now().millisecondsSinceEpoch % 10000}';
 
     return Scaffold(
-      backgroundColor: AppColors.background.withValues(alpha: 0.94),
-      body: Stack(
-        children: [
-          // ── Close button ─────────────────────────────────────────────
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textPrimary),
-              onPressed: _close,
-            ),
-          ),
-          // ── Main content ─────────────────────────────────────────────
-          FadeTransition(
-            opacity: _fade,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Thank you for placing\nthe order',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  // ── Animated checkmark ───────────────────────────────
-                  ScaleTransition(
-                    scale: _scale,
-                    child: const _CheckmarkBurst(),
-                  ),
-                  const SizedBox(height: 48),
-                  const Text(
-                    "We'll get in touch with you soon.",
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'ORDER ID : $orderId',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
+      backgroundColor: AppColors.background.withValues(alpha: 0.95),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // ── Top Close button ─────────────────────────────────────────────
+            Positioned(
+              top: 8,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                onPressed: _redirectToDashboard,
               ),
             ),
-          ),
-        ],
+            // ── Main content ─────────────────────────────────────────────────
+            FadeTransition(
+              opacity: _fade,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 2),
+                    const Text(
+                      'Thank you for placing\nthe order',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+
+                    // ── Animated checkmark burst ───────────────────────────────
+                    ScaleTransition(
+                      scale: _scale,
+                      child: const _CheckmarkBurst(),
+                    ),
+                    const SizedBox(height: 32),
+
+                    const Text(
+                      "We'll get in touch with you soon.",
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        'ORDER ID : $orderId',
+                        style: const TextStyle(
+                          color: AppColors.copper,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    const Spacer(flex: 3),
+
+                    // ── Dual Redirection Buttons ───────────────────────────────
+                    // 1. View Catering Bookings
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.copper,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.room_service_rounded, size: 20),
+                        label: const Text(
+                          'VIEW CATERING BOOKINGS',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        onPressed: _viewCateringDashboard,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2. Redirect to Dashboard
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.border, width: 1.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
+                        icon: const Icon(Icons.dashboard_outlined, size: 20),
+                        label: const Text(
+                          'REDIRECT TO DASHBOARD',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        onPressed: _redirectToDashboard,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -122,8 +202,8 @@ class _CheckmarkBurst extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
-      height: 200,
+      width: 180,
+      height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -133,8 +213,8 @@ class _CheckmarkBurst extends StatelessWidget {
           ..._stars(),
           // Glow ring
           Container(
-            width: 130,
-            height: 130,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
@@ -142,8 +222,8 @@ class _CheckmarkBurst extends StatelessWidget {
           ),
           // Green checkmark circle
           Container(
-            width: 84,
-            height: 84,
+            width: 80,
+            height: 80,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Color(0xFF4CAF50),
@@ -158,41 +238,45 @@ class _CheckmarkBurst extends StatelessWidget {
   List<Widget> _dots() {
     const teal = Color(0xFF26C6A6);
     const positions = [
-      Offset(100, 20),
-      Offset(170, 60),
-      Offset(180, 130),
-      Offset(100, 185),
-      Offset(30, 130),
-      Offset(20, 60),
+      Offset(90, 16),
+      Offset(150, 52),
+      Offset(160, 116),
+      Offset(90, 165),
+      Offset(24, 116),
+      Offset(16, 52),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: teal,
-            ),
-          ),
-        )).toList();
+    return positions
+        .map((p) => Positioned(
+              left: p.dx,
+              top: p.dy,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: teal,
+                ),
+              ),
+            ))
+        .toList();
   }
 
   List<Widget> _stars() {
     const orange = Color(0xFFFFA726);
     const positions = [
-      Offset(93, 5),
-      Offset(180, 42),
-      Offset(145, 180),
-      Offset(20, 38),
-      Offset(15, 148),
+      Offset(84, 4),
+      Offset(160, 36),
+      Offset(130, 160),
+      Offset(16, 32),
+      Offset(12, 132),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: const _Star(color: orange, size: 14),
-        )).toList();
+    return positions
+        .map((p) => Positioned(
+              left: p.dx,
+              top: p.dy,
+              child: const _Star(color: orange, size: 13),
+            ))
+        .toList();
   }
 }
 

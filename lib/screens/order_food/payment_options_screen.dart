@@ -49,21 +49,26 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     super.initState();
     _cards = List.of(MockData.cards);
     _upi = List.of(MockData.upi);
+    _selectedId = _cards.isNotEmpty
+        ? _cards.first.id
+        : (_upi.isNotEmpty ? _upi.first.id : MockData.cashOnDelivery.id);
   }
 
   PaymentMethod? get _selected {
-    if (_selectedId == null) return null;
+    if (_selectedId == null) {
+      return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
+    }
     if (_selectedId == _netBankingMethod.id) return _netBankingMethod;
     if (_selectedId == _walletMethod.id) return _walletMethod;
     for (final m in [..._cards, ..._upi, MockData.cashOnDelivery]) {
       if (m.id == _selectedId) return m;
     }
-    return null;
+    return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
   }
 
   void _proceed() {
-    final method = _selected;
-    if (method == null) return;
+    final method = _selected ??
+        (_cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery);
     _cart.selectPayment(method);
 
     PaymentGatewaySheet.show(
