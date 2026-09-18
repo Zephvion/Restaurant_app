@@ -8,7 +8,6 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/nutrition_badge.dart';
-import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 
 /// The Takeaway ordering menu: category tabs, dishes with +/- quantity controls,
@@ -28,27 +27,27 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
   }
 
-  void _onNext() {
+  Future<void> _onNext() async {
     if (_ctrl.isCartEmpty) return;
-    _ctrl.placeOrder();
-    Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
-
-    PaymentGatewaySheet.show(
-      context: context,
-      amount: _ctrl.grandTotal,
-      selectedMethod: MockData.upi.first,
-      onPaymentSuccess: (txnId, mode) {
-        _ctrl.placeOrder();
-        if (mounted) {
-          AppBanner.showSuccess(
-            context,
-            'Takeaway order placed successfully via $mode!',
-            title: 'Order Confirmed',
-          );
-          Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
-        }
-      },
-    );
+    try {
+      await _ctrl.placeOrder();
+      if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Takeaway order placed successfully!',
+          title: 'Order Confirmed',
+        );
+        Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppBanner.showError(
+          context,
+          'Failed to place order: $e',
+          title: 'Order Error',
+        );
+      }
+    }
   }
 
   @override

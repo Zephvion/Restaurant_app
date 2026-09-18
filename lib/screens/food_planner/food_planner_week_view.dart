@@ -78,12 +78,23 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Hello, ${AuthService.instance.currentUser?.displayName.trim().isNotEmpty == true ? AuthService.instance.currentUser!.displayName.trim() : (AuthService.instance.currentUser?.email.contains('@') == true ? AuthService.instance.currentUser!.email.split('@').first : "Valued Guest")}!',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final user = AuthService.instance.currentUser;
+                          final userName = (user != null && user.displayName.trim().isNotEmpty)
+                              ? user.displayName.trim()
+                              : (user != null && user.email.contains('@'))
+                                  ? user.email.split('@').first
+                                  : 'Valued Guest';
+
+                          return Text(
+                            'Hello, $userName!',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 4),
                       const Text(

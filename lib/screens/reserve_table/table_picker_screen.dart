@@ -223,13 +223,20 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       return;
     }
 
-    // Table is available or already held by self -> acquire / refresh lock
-    final result = lockService.acquireLock(table.number);
-    if (result.isSuccess) {
-      _showTableDetailsModal(table);
-    } else {
-      _showLockedConflictModal(table);
-    }
+    // Toggle table selection directly
+    setState(() {
+      if (_selectedTables.contains(table.number)) {
+        _selectedTables.remove(table.number);
+        lockService.releaseLock(table.number);
+      } else {
+        final result = lockService.acquireLock(table.number);
+        if (result.isSuccess) {
+          _selectedTables.add(table.number);
+        } else {
+          _showLockedConflictModal(table);
+        }
+      }
+    });
   }
 
   void _showLockedConflictModal(RestaurantTable table) {
@@ -962,6 +969,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                         isReserved: isReserved,
                         remainingLockText: isHeldByOther ? lock.remainingFormatted : null,
                         onTap: () => _onTableTap(table),
+                        onLongPress: () => _showTableDetailsModal(table),
                       );
                     },
                   ),
@@ -1036,11 +1044,11 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             minimumSize: const Size(double.infinity, 50),
                           ),
-                          onPressed: isEnoughCapacity ? _confirmReservation : null,
+                          onPressed: _confirmReservation,
                           child: Text(
                             isEnoughCapacity
                                 ? 'CONFIRM TABLE RESERVATION'
-                                : 'SELECT MORE SEATS (${totalCap}/${args.seats})',
+                                : 'CONFIRM TABLE #${_selectedTables.join(' & ')} (${totalCap}/${args.seats} SEATS)',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
@@ -1088,6 +1096,7 @@ class _InteractiveTableTile extends StatelessWidget {
     required this.isReserved,
     this.remainingLockText,
     required this.onTap,
+    this.onLongPress,
   });
 
   final RestaurantTable table;
@@ -1097,6 +1106,7 @@ class _InteractiveTableTile extends StatelessWidget {
   final bool isReserved;
   final String? remainingLockText;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -1134,6 +1144,7 @@ class _InteractiveTableTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(

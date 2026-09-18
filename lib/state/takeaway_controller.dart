@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/mock_data.dart';
 import '../models/cart_item.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
@@ -94,10 +95,16 @@ class TakeawayController extends ChangeNotifier {
   // ── Place Order ─────────────────────────────────────────────────────────────
 
   Future<TakeawayOrder> placeOrder({Restaurant? restaurantOverride}) async {
-    final restaurant = restaurantOverride ?? _selectedRestaurant;
-    if (restaurant == null) {
-      throw StateError('Cannot place takeaway order without a selected restaurant');
-    }
+    final restaurant = restaurantOverride ??
+        _selectedRestaurant ??
+        (MockData.restaurants.isNotEmpty
+            ? MockData.restaurants.first
+            : const Restaurant(
+                id: 'rest_main',
+                name: 'Downtown Bistro',
+                address: 'Kannur Road',
+                city: 'Calicut',
+              ));
 
     final order = await TakeawayService.instance.placeTakeawayOrder(
       restaurant: restaurant,

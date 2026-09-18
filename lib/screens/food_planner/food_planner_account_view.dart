@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/food_planner_assets.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 
@@ -51,41 +52,60 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Arti Abraham',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '+91 9874563210',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
-                    ),
-                    SizedBox(width: 6),
-                    Icon(Icons.edit_outlined,
-                        size: 13, color: AppColors.textSecondary),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'artiabraham123@gmail.com',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
-                    ),
-                    SizedBox(width: 6),
-                    Icon(Icons.edit_outlined,
-                        size: 13, color: AppColors.textSecondary),
-                  ],
+                Builder(
+                  builder: (context) {
+                    final user = AuthService.instance.currentUser;
+                    final displayName = (user != null && user.displayName.trim().isNotEmpty)
+                        ? user.displayName.trim()
+                        : 'Arti Abraham';
+                    final phone = (user != null && user.phone.isNotEmpty)
+                        ? user.phone
+                        : '+91 9874563210';
+                    final email = (user != null && user.email.isNotEmpty)
+                        ? user.email
+                        : 'artiabraham123@gmail.com';
+
+                    return Column(
+                      children: [
+                        Text(
+                          displayName,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              phone,
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary, fontSize: 13),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.edit_outlined,
+                                size: 13, color: AppColors.textSecondary),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              email,
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary, fontSize: 13),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.edit_outlined,
+                                size: 13, color: AppColors.textSecondary),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

@@ -474,7 +474,18 @@ class FoodPlannerController extends ChangeNotifier {
     try {
       return MockData.dishes.firstWhere((d) => d.id == id);
     } catch (_) {
-      return null;
+      try {
+        final all = [
+          ...MockData.combinationBreakfast,
+          ...MockData.recommendedBreakfast,
+          ...MockData.chickenDishes,
+          ...MockData.biriyaniDishes,
+          ...MockData.fishDishes,
+        ];
+        return all.firstWhere((d) => d.id == id);
+      } catch (_) {
+        return null;
+      }
     }
   }
 }

@@ -102,6 +102,66 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
                       letterSpacing: 1.2,
                     ),
                   ),
+                  const SizedBox(height: 36),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentRed,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              AppRoutes.takeawayDashboard,
+                              (route) => route.settings.name == AppRoutes.home,
+                            );
+                          },
+                          child: const Text(
+                            'VIEW TAKEAWAY ORDERS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: AppColors.border),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              AppRoutes.home,
+                              (route) => false,
+                            );
+                          },
+                          child: const Text(
+                            'REDIRECT TO DASHBOARD',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

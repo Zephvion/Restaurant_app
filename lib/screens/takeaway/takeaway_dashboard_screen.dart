@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/takeaway_order.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
@@ -112,15 +113,20 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final name = (user?.displayName != null && user!.displayName.isNotEmpty)
+        ? user.displayName.split(' ').first
+        : 'Arti';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 28),
-          const Text(
-            'Hello, Arti!',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          Text(
+            'Hello, $name!',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -149,12 +155,17 @@ class _OrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final name = (user?.displayName != null && user!.displayName.isNotEmpty)
+        ? user.displayName.split(' ').first
+        : 'Arti';
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
       children: [
-        const Text(
-          'Hello, Arti!',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        Text(
+          'Hello, $name!',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -194,32 +205,65 @@ class _TakeawayOrderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Status row with dot ──────────────────────────────────────────
+          // ── Restaurant name & Status row ─────────────────────────────────
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: AppColors.accentRed,
-                  shape: BoxShape.circle,
+              Text(
+                order.restaurant.name,
+                style: const TextStyle(
+                  color: AppColors.copper,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                order.statusLabel,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentRed,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    order.statusLabel,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          if (order.items.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              order.items.map((i) => '${i.quantity}x ${i.dish.name}').join(', '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Total: \$${order.grandTotal.toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
           // ── Progress Stepper ────────────────────────────────────────────
           _ProgressStepper(status: order.status),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           // ── Order ID & Call Action ───────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -245,7 +289,7 @@ class _TakeawayOrderCard extends StatelessWidget {
                 child: const Row(
                   children: [
                     Text(
-                      'Call the restaurant',
+                      'Call restaurant',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,

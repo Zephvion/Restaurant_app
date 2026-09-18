@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../../data/food_planner_assets.dart';
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
 import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
+import '../../services/menu_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/network_image_with_fallback.dart';
 
-/// Meal Menu selection screen for the Food Planner matching Plan food.png and Add to cart.png.
+/// Meal Menu selection screen for the Food Planner matching the Home Page Food Order layout.
+/// Features category tabs, dynamic filtering, horizontal featured rails, category circles,
+/// combo lists, chef recommendations, and interactive quantity steppers.
 class FoodPlannerMenuScreen extends StatefulWidget {
   const FoodPlannerMenuScreen({super.key});
 
@@ -18,16 +21,399 @@ class FoodPlannerMenuScreen extends StatefulWidget {
 
 class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
   String _selectedCategory = 'Frequent order';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<String> _getCategoriesForMeal(MealType mealType) {
     switch (mealType) {
       case MealType.breakfast:
-        return const ['Frequent order', 'Dosa & Idli', 'Appam & Stew', 'Puttu & Poori', 'Beverages'];
+        return const [
+          'Frequent order',
+          'Dosa & Idli',
+          'Appam & Stew',
+          'Puttu & Poori',
+          'Beverages',
+          'Combos',
+        ];
       case MealType.lunch:
-        return const ['Frequent order', 'Kerala Meals', 'Biriyani', 'Fish Curries', 'Chicken Special', 'Veg Rice'];
+        return const [
+          'Frequent order',
+          'Kerala Meals',
+          'Biriyani',
+          'Fish Curries',
+          'Chicken Special',
+          'Veg Rice',
+          'Beverages',
+        ];
       case MealType.dinner:
-        return const ['Frequent order', 'Porotta & Breads', 'Curries & Roast', 'Grilled & Tandoori', 'Light Dinner'];
+        return const [
+          'Frequent order',
+          'Porotta & Breads',
+          'Curries & Roast',
+          'Grilled & Tandoori',
+          'Light Dinner',
+          'Beverages',
+        ];
     }
+  }
+
+  List<Dish> _getDishesForCategory(MealType mealType, String category) {
+    final allDishes = MenuService.instance.dishes.isNotEmpty
+        ? MenuService.instance.dishes
+        : MockData.dishes;
+
+    final catLower = category.toLowerCase();
+
+    // ── 1. Breakfast Categories ──────────────────────────────────────────────
+    if (mealType == MealType.breakfast) {
+      if (catLower == 'frequent order' || catLower == 'all') {
+        return [
+          MockData.plainDosa,
+          MockData.kuzhipaniyaram,
+          ...MockData.combinationBreakfast,
+          ...MockData.recommendedBreakfast,
+        ];
+      }
+      if (catLower.contains('dosa') || catLower.contains('idli')) {
+        return [
+          MockData.plainDosa,
+          const Dish(
+            id: 'masala_dosa',
+            name: 'Ghee Roast Masala Dosa',
+            price: 110,
+            imageUrl: 'https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=600&q=70',
+            kcal: 380,
+            grams: 320,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Breakfast',
+            description: 'Crispy ghee roast filled with tempered spicy potato mash and chutney.',
+          ),
+          MockData.kuzhipaniyaram,
+          const Dish(
+            id: 'idli_sambar_main',
+            name: 'Steamed Idli & Sambar (4 pcs)',
+            price: 90,
+            imageUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
+            kcal: 260,
+            grams: 280,
+            isVeg: true,
+            rating: 4.7,
+            category: 'Breakfast',
+            description: 'Soft, melt-in-the-mouth rice cakes served with piping hot toor dal sambar.',
+          ),
+          ...MockData.recommendedBreakfast,
+        ];
+      }
+      if (catLower.contains('appam') || catLower.contains('stew')) {
+        return [
+          const Dish(
+            id: 'appam_stew_fp',
+            name: 'Appam with Veg Stew (3 pcs)',
+            price: 140,
+            imageUrl: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=600&q=70',
+            kcal: 310,
+            grams: 300,
+            isVeg: true,
+            rating: 4.9,
+            category: 'Breakfast',
+            description: 'Lacy, soft fermented rice pancakes with mild coconut milk vegetable stew.',
+          ),
+          const Dish(
+            id: 'idiyappam_coconut_milk',
+            name: 'Idiyappam & Coconut Milk (4 pcs)',
+            price: 120,
+            imageUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
+            kcal: 280,
+            grams: 260,
+            isVeg: true,
+            rating: 4.6,
+            category: 'Breakfast',
+            description: 'Steamed rice string hoppers paired with sweetened cardamom coconut milk.',
+          ),
+          ...MockData.combinationBreakfast.where((d) => d.name.toLowerCase().contains('appam') || d.name.toLowerCase().contains('idiyappam')),
+        ];
+      }
+      if (catLower.contains('puttu') || catLower.contains('poori')) {
+        return [
+          const Dish(
+            id: 'puttu_kadala_fp',
+            name: 'Kerala Matta Puttu & Kadala Curry',
+            price: 130,
+            imageUrl: 'https://images.unsplash.com/photo-1626500155537-1b3b3d0dd8f8?auto=format&fit=crop&w=600&q=70',
+            kcal: 420,
+            grams: 350,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Breakfast',
+            description: 'Traditional steamed red rice puttu layered with freshly grated coconut.',
+          ),
+          const Dish(
+            id: 'poori_bhaji_fp',
+            name: 'Fluffy Poori Bhaji (3 pcs)',
+            price: 120,
+            imageUrl: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=70',
+            kcal: 460,
+            grams: 320,
+            isVeg: true,
+            rating: 4.7,
+            category: 'Breakfast',
+            description: 'Golden fried pooris served with lightly spiced turmeric potato masala.',
+          ),
+          ...MockData.combinationBreakfast.where((d) => d.name.toLowerCase().contains('puttu') || d.name.toLowerCase().contains('poori')),
+        ];
+      }
+      if (catLower.contains('beverage')) {
+        return [
+          MockData.freshJuiceOrange,
+          const Dish(
+            id: 'filter_coffee',
+            name: 'South Indian Filter Coffee',
+            price: 50,
+            imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=70',
+            kcal: 90,
+            grams: 180,
+            isVeg: true,
+            rating: 4.9,
+            category: 'Beverages',
+            description: 'Freshly brewed aromatic chicory blend with frothy whole milk.',
+          ),
+          const Dish(
+            id: 'malabar_tea',
+            name: 'Malabar Spiced Sulaimani Tea',
+            price: 40,
+            imageUrl: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=70',
+            kcal: 45,
+            grams: 200,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Beverages',
+            description: 'Black tea infused with cardamom, mint, and fresh lemon drops.',
+          ),
+        ];
+      }
+      if (catLower.contains('combo')) {
+        return MockData.combinationBreakfast;
+      }
+    }
+
+    // ── 2. Lunch Categories ──────────────────────────────────────────────────
+    if (mealType == MealType.lunch) {
+      if (catLower == 'frequent order' || catLower == 'all') {
+        return [
+          MockData.meals,
+          ...MockData.biriyaniDishes,
+          ...MockData.chickenDishes,
+          ...MockData.fishDishes,
+        ];
+      }
+      if (catLower.contains('meal')) {
+        return [
+          MockData.meals,
+          const Dish(
+            id: 'grand_sadya_lunch',
+            name: 'Paragon Grand Kerala Sadya',
+            price: 240,
+            imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=70',
+            kcal: 680,
+            grams: 600,
+            isVeg: true,
+            rating: 4.9,
+            category: 'Meals',
+            description: 'Authentic 18-dish feast served with payasam, avial, thoran, and matta rice.',
+          ),
+          const Dish(
+            id: 'executive_veg_thali',
+            name: 'Executive Veg Lunch Thali',
+            price: 180,
+            imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=70',
+            kcal: 540,
+            grams: 480,
+            isVeg: true,
+            rating: 4.7,
+            category: 'Meals',
+            description: 'Compact daily executive meal with chapathi, rice, paneer curry, and salad.',
+          ),
+        ];
+      }
+      if (catLower.contains('biriyani')) {
+        return MockData.biriyaniDishes;
+      }
+      if (catLower.contains('fish')) {
+        return MockData.fishDishes.isNotEmpty
+            ? MockData.fishDishes
+            : [
+                const Dish(
+                  id: 'ayala_curry',
+                  name: 'Malabar Fish Curry (Mackerel)',
+                  price: 220,
+                  imageUrl: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=70',
+                  kcal: 380,
+                  grams: 350,
+                  isVeg: false,
+                  rating: 4.8,
+                  category: 'Fish',
+                  description: 'Spicy, tangy fish curry made with kudampuli and coconut oil.',
+                ),
+              ];
+      }
+      if (catLower.contains('chicken')) {
+        return MockData.chickenDishes;
+      }
+      if (catLower.contains('rice')) {
+        return [
+          const Dish(
+            id: 'ghee_rice_lunch',
+            name: 'Malabar Neychoru (Ghee Rice)',
+            price: 140,
+            imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=70',
+            kcal: 480,
+            grams: 400,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Rice',
+            description: 'Kaima rice tempered with pure desi ghee, fried cashews, and crisp onions.',
+          ),
+          ...MockData.biriyaniDishes.where((d) => d.isVeg),
+        ];
+      }
+      if (catLower.contains('beverage')) {
+        return [
+          MockData.freshJuiceOrange,
+          const Dish(
+            id: 'spiced_buttermilk',
+            name: 'Kerala Sambharam (Spiced Buttermilk)',
+            price: 45,
+            imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=600&q=70',
+            kcal: 60,
+            grams: 250,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Beverages',
+            description: 'Cooling churned curd infused with ginger, curry leaves, and green chillies.',
+          ),
+        ];
+      }
+    }
+
+    // ── 3. Dinner Categories ─────────────────────────────────────────────────
+    if (mealType == MealType.dinner) {
+      if (catLower == 'frequent order' || catLower == 'all') {
+        return [
+          ...MockData.chickenDishes,
+          ...MockData.biriyaniDishes,
+          MockData.plainDosa,
+          MockData.meals,
+        ];
+      }
+      if (catLower.contains('porotta') || catLower.contains('bread')) {
+        return [
+          const Dish(
+            id: 'malabar_porotta_dinner',
+            name: 'Malabar Flaky Porotta (3 pcs)',
+            price: 75,
+            imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=70',
+            kcal: 420,
+            grams: 250,
+            isVeg: true,
+            rating: 4.9,
+            category: 'Breads',
+            description: 'Layered, flaky, melt-in-the-mouth flatbreads crafted to perfection.',
+          ),
+          const Dish(
+            id: 'wheat_chappathi_dinner',
+            name: 'Soft Whole Wheat Chappathi (4 pcs)',
+            price: 60,
+            imageUrl: 'https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=600&q=70',
+            kcal: 280,
+            grams: 200,
+            isVeg: true,
+            rating: 4.7,
+            category: 'Breads',
+            description: 'Nutritious whole wheat rotis roasted on a tawa without oil.',
+          ),
+        ];
+      }
+      if (catLower.contains('curries') || catLower.contains('roast')) {
+        return [
+          ...MockData.chickenDishes,
+          const Dish(
+            id: 'paneer_butter_masala',
+            name: 'Paneer Butter Masala',
+            price: 190,
+            imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=70',
+            kcal: 410,
+            grams: 350,
+            isVeg: true,
+            rating: 4.8,
+            category: 'Curries',
+            description: 'Rich tomato, butter and cashew gravy with fresh cottage cheese cubes.',
+          ),
+        ];
+      }
+      if (catLower.contains('grilled') || catLower.contains('tandoori')) {
+        return [
+          const Dish(
+            id: 'chicken_tikka_dinner',
+            name: 'Tandoori Chicken Tikka Platter',
+            price: 260,
+            imageUrl: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=600&q=70',
+            kcal: 450,
+            grams: 350,
+            isVeg: false,
+            rating: 4.9,
+            category: 'Grill',
+            description: 'Char-grilled boneless chicken chunks marinated in mustard oil & spices.',
+          ),
+        ];
+      }
+      if (catLower.contains('light')) {
+        return [
+          MockData.plainDosa,
+          MockData.kuzhipaniyaram,
+          ...MockData.combinationBreakfast.where((d) => d.name.contains('Idli') || d.name.contains('Appam')),
+        ];
+      }
+      if (catLower.contains('beverage')) {
+        return [
+          MockData.freshJuiceOrange,
+          const Dish(
+            id: 'warm_badam_milk',
+            name: 'Warm Saffron Badam Milk',
+            price: 70,
+            imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=70',
+            kcal: 180,
+            grams: 220,
+            isVeg: true,
+            rating: 4.9,
+            category: 'Beverages',
+            description: 'Warm whole milk infused with crushed almonds, cardamom, and Kashmiri saffron.',
+          ),
+        ];
+      }
+    }
+
+    // Generic fallback if none matched
+    final fallback = allDishes
+        .where((d) =>
+            d.category.toLowerCase().contains(catLower) ||
+            d.name.toLowerCase().contains(catLower))
+        .toList();
+
+    return fallback.isNotEmpty ? fallback : allDishes.take(4).toList();
+  }
+
+  void _openProduct(Dish dish) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.foodPlannerProduct,
+      arguments: dish,
+    );
   }
 
   @override
@@ -44,6 +430,17 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           _selectedCategory = categories.first;
         }
 
+        var activeDishes = _getDishesForCategory(mealType, _selectedCategory);
+
+        if (_searchQuery.trim().isNotEmpty) {
+          final q = _searchQuery.toLowerCase();
+          activeDishes = activeDishes.where((d) {
+            return d.name.toLowerCase().contains(q) ||
+                d.description.toLowerCase().contains(q) ||
+                d.category.toLowerCase().contains(q);
+          }).toList();
+        }
+
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
@@ -57,16 +454,16 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Jan 2 ,2023 - Tuesday',
-                  style: TextStyle(
+                Text(
+                  '${mealType.label.toUpperCase()} MENU',
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
-                  '${mealType.label} ( ${ctrl.currentSlotTime} ) - ${ctrl.currentSlotLocation}',
+                  'Slot: ${ctrl.currentSlotTime} · ${ctrl.currentSlotLocation}',
                   style: const TextStyle(
                     color: AppColors.copper,
                     fontSize: 12,
@@ -77,10 +474,13 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.search,
+                icon: const Icon(Icons.shopping_cart_outlined,
                     color: AppColors.textPrimary, size: 22),
-                onPressed: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.search),
+                onPressed: () {
+                  if (totalItems > 0) {
+                    Navigator.of(context).pushNamed(AppRoutes.foodPlannerCart);
+                  }
+                },
               ),
               const SizedBox(width: 8),
             ],
@@ -91,20 +491,60 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                 padding: const EdgeInsets.only(bottom: 120),
                 children: [
                   const SizedBox(height: 8),
-                  // ── Category Pills ──────────────────────────────────────────
+
+                  // ── Quick Meal Selector Tabs ──────────────────────────────
+                  _mealTypeSegmentedSwitch(ctrl),
+                  const SizedBox(height: 14),
+
+                  // ── Search Bar ────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _searchField(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Category Pills (Horizontal) ───────────────────────────
                   _categoryPills(categories),
                   const SizedBox(height: 20),
 
-                  // ── Frequent Order / Featured Horizontal Rail ───────────────
+                  // ── Featured Dishes Section ───────────────────────────────
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedCategory == 'Frequent order'
+                              ? '${mealType.label} Specials'
+                              : _selectedCategory,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${activeDishes.length} items',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ── Main Food Cards Rail ──────────────────────────────────
+                  _featuredFoodCardsRail(ctrl, activeDishes),
+                  const SizedBox(height: 28),
+
+                  // ── Explore Categories Icons Grid ─────────────────────────
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      mealType == MealType.breakfast
-                          ? 'Frequent Order'
-                          : mealType == MealType.lunch
-                              ? 'Popular Lunch Specials'
-                              : 'Popular Dinner Specials',
-                      style: const TextStyle(
+                      'Explore by Category',
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -112,10 +552,10 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _featuredRail(ctrl, mealType),
+                  _categoryCirclesGrid(mealType, categories),
                   const SizedBox(height: 28),
 
-                  // ── Combination Section ─────────────────────────────────────
+                  // ── Combination / Set Platters Section ────────────────────
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
@@ -142,18 +582,14 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                   _combinationList(ctrl, mealType),
                   const SizedBox(height: 28),
 
-                  // ── Recommended Horizontal Rail ─────────────────────────────
+                  // ── Chef Recommended Specials Rail ────────────────────────
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          mealType == MealType.breakfast
-                              ? 'Recommended for Breakfast'
-                              : mealType == MealType.lunch
-                                  ? 'Chef Recommended Lunch'
-                                  : 'Chef Recommended Dinner',
+                          'Chef Recommended for ${mealType.label}',
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
@@ -170,7 +606,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                 ],
               ),
 
-              // ── Floating Cart Bar when items in basket ───────────────────────
+              // ── Floating Cart Bar when items in basket ─────────────────────
               if (totalItems > 0)
                 Positioned(
                   left: 20,
@@ -184,6 +620,97 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
       },
     );
   }
+
+  // ── Meal Type Segmented Switch ──────────────────────────────────────────────
+
+  Widget _mealTypeSegmentedSwitch(FoodPlannerController ctrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(21),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: MealType.values.map((type) {
+            final isSelected = ctrl.currentSlotMealType == type;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  ctrl.setupSlot(
+                    mealType: type,
+                    timeSlot: type == MealType.breakfast
+                        ? '7:30AM'
+                        : type == MealType.lunch
+                            ? '12:30PM'
+                            : '8:00PM',
+                    location: ctrl.currentSlotLocation,
+                  );
+                  setState(() {
+                    _selectedCategory = _getCategoriesForMeal(type).first;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.copper : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    type.label,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // ── Search Field ────────────────────────────────────────────────────────────
+
+  Widget _searchField() {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        onChanged: (val) => setState(() => _searchQuery = val),
+        decoration: InputDecoration(
+          hintText: 'Search in this menu...',
+          hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppColors.textSecondary, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  // ── Category Pills (Horizontal) ─────────────────────────────────────────────
 
   Widget _categoryPills(List<String> categories) {
     return SizedBox(
@@ -222,126 +749,144 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     );
   }
 
-  Widget _featuredRail(FoodPlannerController ctrl, MealType mealType) {
-    final List<Map<String, dynamic>> featured;
-    switch (mealType) {
-      case MealType.breakfast:
-        featured = [
-          {
-            'dish': MockData.plainDosa,
-            'asset': FoodPlannerAssets.featuredDosa,
-          },
-          {
-            'dish': MockData.kuzhipaniyaram,
-            'asset': FoodPlannerAssets.featuredKuzhi,
-          },
-        ];
-        break;
-      case MealType.lunch:
-        featured = [
-          {
-            'dish': MockData.meals,
-            'asset': FoodPlannerAssets.cardMeals,
-          },
-          {
-            'dish': MockData.plainDosa,
-            'asset': FoodPlannerAssets.featuredDosa,
-          },
-        ];
-        break;
-      case MealType.dinner:
-        featured = [
-          {
-            'dish': MockData.meals,
-            'asset': FoodPlannerAssets.cardChappathi,
-          },
-          {
-            'dish': MockData.kuzhipaniyaram,
-            'asset': FoodPlannerAssets.featuredKuzhi,
-          },
-        ];
-        break;
+  // ── Main Food Cards Rail ────────────────────────────────────────────────────
+
+  Widget _featuredFoodCardsRail(FoodPlannerController ctrl, List<Dish> dishes) {
+    if (dishes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Text(
+              'No items found in this category.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ),
+        ),
+      );
     }
 
     return SizedBox(
-      height: 256,
+      height: 275,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
-        itemCount: featured.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemCount: dishes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
-          final item = featured[index];
-          final dish = item['dish'] as Dish;
-          final asset = item['asset'] as String;
+          final dish = dishes[index];
           final qty = ctrl.getQuantity(dish.id);
 
           return GestureDetector(
-            onTap: () {
-              Navigator.of(context).pushNamed(
-                AppRoutes.foodPlannerProduct,
-                arguments: dish,
-              );
-            },
+            onTap: () => _openProduct(dish),
             child: Container(
-              width: 175,
+              width: 185,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Image
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     child: SizedBox(
-                      height: 100,
+                      height: 110,
                       width: double.infinity,
-                      child: Image.asset(
-                        asset,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.network(
-                          dish.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppColors.surfaceLight,
-                            child: const Icon(Icons.restaurant,
-                                color: AppColors.textSecondary),
-                          ),
-                        ),
+                      child: NetworkImageWithFallback(
+                        url: dish.imageUrl,
+                        fallbackIcon: Icons.restaurant,
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    dish.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+                  // Title & Veg indicator
+                  Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: dish.isVeg
+                              ? const Color(0xFF22C55E)
+                              : AppColors.accentRed,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          dish.name,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '₹ ${dish.price.toInt()}',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
+
+                  // Price & Rating
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '₹ ${dish.price.toInt()}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                          const SizedBox(width: 2),
+                          Text(
+                            dish.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
+
+                  // Macro badges
                   Text(
-                    '🔥 ${dish.kcal} kcal  ⚖️ ${dish.grams} gm',
+                    '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 10,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const Spacer(),
+
+                  // Stepper Add Button
                   _QuantityButton(
                     quantity: qty,
                     onAdd: () => ctrl.addToBasket(dish.id),
@@ -357,95 +902,158 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     );
   }
 
+  // ── Explore Categories Grid ─────────────────────────────────────────────────
+
+  Widget _categoryCirclesGrid(MealType mealType, List<String> categories) {
+    final displayCats = categories.where((c) => c != 'Frequent order').toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.1,
+        ),
+        itemCount: displayCats.length,
+        itemBuilder: (context, i) {
+          final cat = displayCats[i];
+          final isSelected = cat == _selectedCategory;
+          final icon = _getIconForCategory(cat);
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.copper.withValues(alpha: 0.25)
+                    : AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected ? AppColors.copper : AppColors.border,
+                  width: isSelected ? 1.8 : 1.0,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.copper
+                          : AppColors.surfaceLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? Colors.white : AppColors.copper,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      cat,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppColors.copper
+                            : AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _getIconForCategory(String cat) {
+    final lower = cat.toLowerCase();
+    if (lower.contains('dosa') || lower.contains('idli')) return Icons.bakery_dining_rounded;
+    if (lower.contains('appam') || lower.contains('stew')) return Icons.rice_bowl_rounded;
+    if (lower.contains('puttu') || lower.contains('poori')) return Icons.breakfast_dining_rounded;
+    if (lower.contains('meal') || lower.contains('sadya')) return Icons.dinner_dining_rounded;
+    if (lower.contains('biriyani')) return Icons.ramen_dining_rounded;
+    if (lower.contains('fish')) return Icons.set_meal_rounded;
+    if (lower.contains('chicken')) return Icons.kebab_dining_rounded;
+    if (lower.contains('porotta') || lower.contains('bread')) return Icons.flatware_rounded;
+    if (lower.contains('grill') || lower.contains('tandoori')) return Icons.outdoor_grill_rounded;
+    if (lower.contains('beverage')) return Icons.local_drink_rounded;
+    return Icons.restaurant_menu_rounded;
+  }
+
+  // ── Combination List ────────────────────────────────────────────────────────
+
   Widget _combinationList(FoodPlannerController ctrl, MealType mealType) {
     final List<Map<String, dynamic>> combos;
     switch (mealType) {
       case MealType.breakfast:
         combos = [
           {
-            'id': 'appam_stew',
-            'title': 'Appam & Stew - 2 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.thumbAppam,
-            'fallback': FoodPlannerAssets.appamStew,
+            'id': 'appam_stew_c',
+            'title': 'Appam & Vegetable Stew (2 nos)',
+            'price': 160,
+            'imageUrl': 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=600&q=70',
           },
           {
-            'id': 'idiyappam_kadala',
-            'title': 'Idiyappam & Kadala curry - 4 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.thumbIdiyappam,
-            'fallback': FoodPlannerAssets.idiyappam,
+            'id': 'idiyappam_kadala_c',
+            'title': 'Idiyappam & Kadala Curry (4 nos)',
+            'price': 170,
+            'imageUrl': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
           },
           {
-            'id': 'puttu_kadala',
-            'title': 'Puttu & Kadala curry - 2 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.thumbPuttu,
-            'fallback': FoodPlannerAssets.puttuKadala,
-          },
-          {
-            'id': 'poori_masala',
-            'title': 'Poori Masala - 2 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.thumbPoori,
-            'fallback': FoodPlannerAssets.pooriMasala,
-          },
-          {
-            'id': 'idli_sambar',
-            'title': 'Idli & Sambar - 4 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.thumbIdli,
-            'fallback': FoodPlannerAssets.idliSambar,
+            'id': 'puttu_kadala_c',
+            'title': 'Puttu & Spiced Kadala Curry',
+            'price': 150,
+            'imageUrl': 'https://images.unsplash.com/photo-1626500155537-1b3b3d0dd8f8?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
       case MealType.lunch:
         combos = [
           {
-            'id': 'seafood_sadhya',
+            'id': 'seafood_sadhya_c',
             'title': 'Paragon Seafood Sadhya Thali',
             'price': 340,
-            'asset': FoodPlannerAssets.cardMeals,
-            'fallback': FoodPlannerAssets.meals,
+            'imageUrl': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=70',
           },
           {
-            'id': 'thalassery_biryani_combo',
+            'id': 'thalassery_biryani_c',
             'title': 'Thalassery Chicken Biryani Combo',
             'price': 290,
-            'asset': FoodPlannerAssets.cardMeals,
-            'fallback': FoodPlannerAssets.meals,
-          },
-          {
-            'id': 'veg_executive_meal',
-            'title': 'Grand Kerala Veg Feast',
-            'price': 220,
-            'asset': FoodPlannerAssets.cardMeals,
-            'fallback': FoodPlannerAssets.meals,
+            'imageUrl': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
       case MealType.dinner:
         combos = [
           {
-            'id': 'porotta_beef_combo',
-            'title': 'Kerala Porotta (3 nos) & Curry',
-            'price': 260,
-            'asset': FoodPlannerAssets.cardChappathi,
-            'fallback': FoodPlannerAssets.chappathi,
-          },
-          {
-            'id': 'appam_roast_combo',
-            'title': 'Appam (3 nos) & Vegetable Stew',
-            'price': 280,
-            'asset': FoodPlannerAssets.thumbAppam,
-            'fallback': FoodPlannerAssets.appamStew,
-          },
-          {
-            'id': 'wheat_phulka_combo',
-            'title': 'Wheat Phulka (4 nos) & Paneer Gravy',
+            'id': 'porotta_beef_c',
+            'title': 'Malabar Porotta (3 nos) & Curry',
             'price': 240,
-            'asset': FoodPlannerAssets.thumbPoori,
-            'fallback': FoodPlannerAssets.pooriMasala,
+            'imageUrl': 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=70',
+          },
+          {
+            'id': 'appam_roast_c',
+            'title': 'Appam (3 nos) & Egg Roast',
+            'price': 220,
+            'imageUrl': 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
@@ -458,8 +1066,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           final id = item['id'] as String;
           final title = item['title'] as String;
           final price = item['price'] as int;
-          final asset = item['asset'] as String;
-          final fallback = item['fallback'] as String;
+          final imageUrl = item['imageUrl'] as String;
           final qty = ctrl.getQuantity(id);
 
           return Container(
@@ -476,18 +1083,9 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                   child: SizedBox(
                     width: 72,
                     height: 72,
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.network(
-                        fallback,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.surfaceLight,
-                          child: const Icon(Icons.restaurant,
-                              color: AppColors.textSecondary),
-                        ),
-                      ),
+                    child: NetworkImageWithFallback(
+                      url: imageUrl,
+                      fallbackIcon: Icons.restaurant,
                     ),
                   ),
                 ),
@@ -500,29 +1098,32 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                         title,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         '₹ $price',
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.copper,
                           fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
                 ),
-                _QuantityButton(
-                  quantity: qty,
-                  onAdd: () => ctrl.addToBasket(id),
-                  onIncrement: () => ctrl.addToBasket(id),
-                  onDecrement: () => ctrl.removeFromBasket(id),
+                SizedBox(
+                  width: 90,
+                  child: _QuantityButton(
+                    quantity: qty,
+                    onAdd: () => ctrl.addToBasket(id),
+                    onIncrement: () => ctrl.addToBasket(id),
+                    onDecrement: () => ctrl.removeFromBasket(id),
+                  ),
                 ),
               ],
             ),
@@ -532,24 +1133,24 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     );
   }
 
+  // ── Chef Recommended Rail ───────────────────────────────────────────────────
+
   Widget _recommendedRail(FoodPlannerController ctrl, MealType mealType) {
     final List<Map<String, dynamic>> recommended;
     switch (mealType) {
       case MealType.breakfast:
         recommended = [
           {
-            'id': 'plain_dosa_2',
-            'title': 'Plain Dosa - 2 nos',
-            'price': 180,
-            'asset': FoodPlannerAssets.recDosa,
-            'fallback': FoodPlannerAssets.dosa,
+            'id': 'plain_dosa_rec',
+            'title': 'Plain Dosa (2 nos)',
+            'price': 140,
+            'imageUrl': 'https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=600&q=70',
           },
           {
-            'id': 'puttu_kadala_2',
-            'title': 'Puttu and Kadala',
-            'price': 180,
-            'asset': FoodPlannerAssets.recPuttu,
-            'fallback': FoodPlannerAssets.puttuKadala,
+            'id': 'puttu_kadala_rec',
+            'title': 'Puttu & Kadala',
+            'price': 150,
+            'imageUrl': 'https://images.unsplash.com/photo-1626500155537-1b3b3d0dd8f8?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
@@ -559,15 +1160,13 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             'id': 'paragon_biriyani_rec',
             'title': 'Paragon Dum Biryani',
             'price': 260,
-            'asset': FoodPlannerAssets.cardMeals,
-            'fallback': FoodPlannerAssets.meals,
+            'imageUrl': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=70',
           },
           {
             'id': 'kerala_meals_rec',
             'title': 'Special Kerala Meals',
             'price': 220,
-            'asset': FoodPlannerAssets.cardMeals,
-            'fallback': FoodPlannerAssets.meals,
+            'imageUrl': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
@@ -577,22 +1176,20 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             'id': 'malabar_parotta_rec',
             'title': 'Malabar Coin Porotta (5 nos)',
             'price': 160,
-            'asset': FoodPlannerAssets.cardChappathi,
-            'fallback': FoodPlannerAssets.chappathi,
+            'imageUrl': 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=70',
           },
           {
             'id': 'tandoori_chicken_rec',
             'title': 'Grilled Chicken Tikka',
             'price': 290,
-            'asset': FoodPlannerAssets.featuredDosa,
-            'fallback': FoodPlannerAssets.dosa,
+            'imageUrl': 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=600&q=70',
           },
         ];
         break;
     }
 
     return SizedBox(
-      height: 272,
+      height: 250,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
@@ -603,8 +1200,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           final id = item['id'] as String;
           final title = item['title'] as String;
           final price = item['price'] as int;
-          final asset = item['asset'] as String;
-          final fallback = item['fallback'] as String;
+          final imageUrl = item['imageUrl'] as String;
           final qty = ctrl.getQuantity(id);
 
           return Container(
@@ -612,24 +1208,17 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
+                ClipOval(
                   child: SizedBox(
-                    width: 100,
-                    height: 100,
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.network(
-                        fallback,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.restaurant, size: 30),
-                      ),
+                    width: 90,
+                    height: 90,
+                    child: NetworkImageWithFallback(
+                      url: imageUrl,
+                      fallbackIcon: Icons.restaurant,
                     ),
                   ),
                 ),
@@ -639,24 +1228,26 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹ $price',
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.copper,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 2),
-                const Text('🔥 320 kcal  ⚖️ 300 gm',
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                const SizedBox(height: 4),
+                const Text(
+                  '🔥 320 kcal · ⚖️ 300 gm',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                ),
                 const Spacer(),
                 _QuantityButton(
                   quantity: qty,
@@ -672,6 +1263,8 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     );
   }
 
+  // ── Floating Cart Bar ───────────────────────────────────────────────────────
+
   Widget _floatingCartBar(BuildContext context, FoodPlannerController ctrl) {
     return Container(
       height: 56,
@@ -680,8 +1273,8 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
@@ -691,10 +1284,10 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} ADDED',
+            '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} · ₹${ctrl.basketSubtotal.toInt()}',
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
               letterSpacing: 0.8,
             ),
@@ -709,7 +1302,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                   'VIEW CART',
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     fontSize: 13,
                     letterSpacing: 0.8,
                   ),
