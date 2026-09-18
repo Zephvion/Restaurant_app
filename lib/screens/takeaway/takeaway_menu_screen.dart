@@ -169,14 +169,14 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                   children: [
                     _header(),
                     const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _menuSortRow(),
+                    ),
+                    const SizedBox(height: 14),
                     if (_isSearching) ...[
                       _searchBody(),
                     ] else ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _menuSortRow(),
-                      ),
-                      const SizedBox(height: 14),
                       _categoryTabs(),
                       const SizedBox(height: 18),
                       if (_selectedTab == 0) ...[
@@ -1570,11 +1570,14 @@ class _TakeawayBasketBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added to basket',
+              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added',
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

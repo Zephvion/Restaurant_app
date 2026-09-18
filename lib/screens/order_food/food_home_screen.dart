@@ -133,14 +133,14 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 
   List<Dish> _applyFiltersAndSort(List<Dish> source) {
-    var list = List<Dish>.from(source);
+    List<Dish> list;
 
-    // Filter by Category Tab
-    if (_activeCategoryFilter != 'All' &&
-        _activeCategoryFilter.toLowerCase() != 'frequent order' &&
-        _activeCategoryFilter.isNotEmpty) {
+    // Filter by Category Tab: Frequent order tab displays frequentOrders
+    if (_selectedTab == 0 || _activeCategoryFilter.toLowerCase() == 'frequent order') {
+      list = List<Dish>.from(MockData.frequentOrders);
+    } else if (_activeCategoryFilter != 'All' && _activeCategoryFilter.isNotEmpty) {
       final filter = _activeCategoryFilter.toLowerCase();
-      list = list.where((d) {
+      list = source.where((d) {
         if (filter == 'veg') return d.isVeg;
         final cat = d.category.toLowerCase();
         if (filter == 'breakfast') return cat.contains('breakfast') || cat.contains('dosa') || cat.contains('idli');
@@ -151,7 +151,13 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
         return cat.contains(filter) || d.name.toLowerCase().contains(filter);
       }).toList();
       if (list.isEmpty) list = List<Dish>.from(source);
+    } else {
+      list = List<Dish>.from(source);
     }
+
+    // Deduplicate by lowercase name to ensure zero duplicate cards
+    final seen = <String>{};
+    list = list.where((d) => seen.add(d.name.toLowerCase().trim())).toList();
 
     // Sort
     switch (_activeSort) {
@@ -235,14 +241,10 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_cart.isNotEmpty)
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: BasketBar(
-                    itemCount: _cart.totalQuantity,
-                    label: 'GO TO CART',
-                    onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
-                  ),
+                BasketBar(
+                  itemCount: _cart.totalQuantity,
+                  label: 'GO TO CART',
+                  onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
                 ),
               const ParagonBottomNav(current: ParagonTab.home),
             ],

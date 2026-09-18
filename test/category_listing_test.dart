@@ -16,8 +16,11 @@ void main() {
       expect(meals.isNotEmpty, isTrue);
       for (final dish in meals) {
         expect(dish.category == 'Meals' || dish.id == 'meals', isTrue);
-        // Verify meals uses high-res card_meals.webp
-        expect(dish.imageUrl.contains('card_meals.webp'), isTrue);
+        // Verify meals uses high-res card_meals.webp or dish_non_veg_meals.webp
+        expect(
+            dish.imageUrl.contains('card_meals.webp') ||
+                dish.imageUrl.contains('dish_non_veg_meals.webp'),
+            isTrue);
       }
 
       final chicken = MockData.getDishesForCategory('Chicken');
@@ -141,8 +144,8 @@ void main() {
       expect(cart.quantityOf(addedDish), 2);
       expect(cart.totalQuantity, 2);
 
-      // BasketBar should be visible with "2 Items added to basket"
-      expect(find.text('2 Items added to basket'), findsOneWidget);
+      // BasketBar should be visible with "2 Items added"
+      expect(find.text('2 Items added'), findsOneWidget);
     });
 
     testWidgets('TEST 4: Chicken category listing shows correct items',

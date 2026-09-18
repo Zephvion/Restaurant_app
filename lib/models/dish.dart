@@ -118,4 +118,42 @@ class Dish {
       protein: (map['protein'] as num?)?.toInt() ?? 8,
     );
   }
+
+  Dish copyWith({
+    String? id,
+    String? name,
+    String? subtitle,
+    double? price,
+    double? oldPrice,
+    String? imageUrl,
+    int? kcal,
+    int? grams,
+    bool? isVeg,
+    double? rating,
+    String? category,
+    String? description,
+    List<String>? ingredients,
+    int? carbs,
+    int? fat,
+    int? protein,
+  }) {
+    return Dish(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      subtitle: subtitle ?? this.subtitle,
+      price: price ?? this.price,
+      oldPrice: oldPrice ?? this.oldPrice,
+      imageUrl: imageUrl ?? this.imageUrl,
+      kcal: kcal ?? this.kcal,
+      grams: grams ?? this.grams,
+      isVeg: isVeg ?? this.isVeg,
+      rating: rating ?? this.rating,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      ingredients: ingredients ?? this.ingredients,
+      carbs: carbs ?? this.carbs,
+      fat: fat ?? this.fat,
+      protein: protein ?? this.protein,
+    );
+  }
 }

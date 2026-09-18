@@ -128,13 +128,17 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
       bottomNavigationBar: AnimatedBuilder(
         animation: _cart,
         builder: (context, _) {
-          if (_cart.isEmpty) {
-            return const ParagonBottomNav(current: ParagonTab.home);
-          }
-          return BasketBar(
-            itemCount: _cart.totalQuantity,
-            label: 'GO TO CART',
-            onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_cart.isNotEmpty)
+                BasketBar(
+                  itemCount: _cart.totalQuantity,
+                  label: 'GO TO CART',
+                  onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+                ),
+              const ParagonBottomNav(current: ParagonTab.home),
+            ],
           );
         },
       ),
