@@ -71,8 +71,7 @@ class MockData {
     ServiceItem(
       id: 'order_food',
       title: 'ORDER FOOD',
-      imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=70',
+      imageUrl: 'assets/images/order/extracted/dish_chicken_biryani.webp',
       route: AppRoutes.orderFood,
     ),
     ServiceItem(
@@ -93,7 +92,7 @@ class MockData {
       id: 'food_planner',
       title: 'FOOD PLANNER',
       imageUrl:
-          'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=600&q=70',
+          'assets/images/foodplanner/extracted/card_meals.webp',
       badgeCount: 1,
       route: AppRoutes.foodPlannerIntro,
     ),
@@ -110,7 +109,7 @@ class MockData {
 
   /// Full-bleed image on the "ORDER FOOD" intro screen.
   static const String orderFoodHero =
-      'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1000&q=75';
+      'assets/images/order/extracted/dish_chicken_biryani.webp';
 
   static const List<PromoBanner> promos = [
     PromoBanner(
@@ -259,8 +258,7 @@ class MockData {
     id: 'orange_juice',
     name: 'Fresh Juice - Orange',
     price: 110,
-    imageUrl:
-        'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
+    imageUrl: 'assets/images/order/extracted/dish_orange_juice.webp',
     kcal: 110,
     grams: 250,
     isVeg: true,
@@ -382,7 +380,7 @@ class MockData {
       id: 'chicken_biriyani',
       name: 'Chicken Biriyani',
       price: 220,
-      imageUrl: 'assets/images/order/extracted/cat_chicken.webp',
+      imageUrl: 'assets/images/order/extracted/dish_chicken_biryani.webp',
       kcal: 580,
       grams: 450,
       isVeg: false,
@@ -398,7 +396,7 @@ class MockData {
       id: 'chicken_curry',
       name: 'Chicken Curry',
       price: 180,
-      imageUrl: 'assets/images/order/extracted/cat_chicken.webp',
+      imageUrl: 'assets/images/order/extracted/dish_chicken_curry.webp',
       kcal: 420,
       grams: 350,
       isVeg: false,
@@ -417,7 +415,7 @@ class MockData {
       id: 'veg_biriyani',
       name: 'Veg Biriyani',
       price: 160,
-      imageUrl: 'assets/images/order/extracted/cat_biryani_1.webp',
+      imageUrl: 'assets/images/order/extracted/dish_veg_biryani.webp',
       kcal: 450,
       grams: 400,
       isVeg: true,
@@ -433,7 +431,7 @@ class MockData {
       id: 'mutton_biriyani',
       name: 'Mutton Biriyani',
       price: 280,
-      imageUrl: 'assets/images/order/extracted/cat_biryani_2.webp',
+      imageUrl: 'assets/images/order/extracted/dish_mutton_biryani.webp',
       kcal: 650,
       grams: 500,
       isVeg: false,
@@ -452,7 +450,7 @@ class MockData {
       id: 'fish_curry',
       name: 'Fish Curry',
       price: 200,
-      imageUrl: 'assets/images/order/extracted/cat_fish.webp',
+      imageUrl: 'assets/images/order/extracted/dish_fish_curry.webp',
       kcal: 380,
       grams: 350,
       isVeg: false,
@@ -468,7 +466,7 @@ class MockData {
       id: 'fish_fry',
       name: 'Fish Fry',
       price: 220,
-      imageUrl: 'assets/images/order/extracted/cat_fish.webp',
+      imageUrl: 'assets/images/order/extracted/dish_fish_fry.webp',
       kcal: 350,
       grams: 250,
       isVeg: false,
@@ -504,7 +502,7 @@ class MockData {
       id: 'avial',
       name: 'Avial',
       price: 120,
-      imageUrl: 'assets/images/order/extracted/cat_veg_rice.webp',
+      imageUrl: 'assets/images/order/extracted/dish_avial.webp',
       kcal: 280,
       grams: 300,
       isVeg: true,
@@ -520,7 +518,7 @@ class MockData {
       id: 'sambar_rice',
       name: 'Sambar Rice',
       price: 100,
-      imageUrl: 'assets/images/order/extracted/cat_veg_rice.webp',
+      imageUrl: 'assets/images/order/extracted/dish_sambar_rice.webp',
       kcal: 380,
       grams: 400,
       isVeg: true,
@@ -539,7 +537,7 @@ class MockData {
       id: 'egg_curry',
       name: 'Egg Curry',
       price: 120,
-      imageUrl: 'assets/images/order/extracted/cat_meals_2.webp',
+      imageUrl: 'assets/images/order/extracted/dish_egg_curry.webp',
       kcal: 320,
       grams: 300,
       isVeg: false,
@@ -555,7 +553,7 @@ class MockData {
       id: 'egg_roast',
       name: 'Egg Roast',
       price: 140,
-      imageUrl: 'assets/images/order/extracted/cat_meals_2.webp',
+      imageUrl: 'assets/images/order/extracted/dish_egg_roast.webp',
       kcal: 340,
       grams: 280,
       isVeg: false,
@@ -596,7 +594,7 @@ class MockData {
       id: 'non_veg_meals',
       name: 'Non-Veg Meals',
       price: 180,
-      imageUrl: 'assets/images/foodplanner/extracted/card_meals.webp',
+      imageUrl: 'assets/images/order/extracted/dish_non_veg_meals.webp',
       kcal: 750,
       grams: 600,
       isVeg: false,
@@ -615,7 +613,7 @@ class MockData {
       id: 'lemon_rice',
       name: 'Lemon Rice',
       price: 90,
-      imageUrl: 'assets/images/order/extracted/cat_veg_rice.webp',
+      imageUrl: 'assets/images/order/extracted/dish_lemon_rice.webp',
       kcal: 320,
       grams: 350,
       isVeg: true,
@@ -631,7 +629,7 @@ class MockData {
       id: 'ghee_rice',
       name: 'Ghee Rice',
       price: 110,
-      imageUrl: 'assets/images/order/extracted/cat_veg_rice.webp',
+      imageUrl: 'assets/images/order/extracted/dish_ghee_rice.webp',
       kcal: 400,
       grams: 380,
       isVeg: true,
@@ -645,11 +643,10 @@ class MockData {
     ),
   ];
 
-  /// All dishes combined for easy lookup.
+  /// All dishes combined for easy lookup (deduplicated: recommendedBreakfast cards use plain_dosa and puttu_kadala).
   static const List<Dish> dishes = [
     ...frequentOrders,
     ...combinationBreakfast,
-    ...recommendedBreakfast,
     ...chickenDishes,
     ...biriyaniDishes,
     ...fishDishes,
@@ -659,43 +656,60 @@ class MockData {
     ...vegRiceDishes,
   ];
 
+  /// Helper to lookup a dish by ID across all dish collections.
+  static Dish? findDishById(String id) {
+    for (final d in dishes) {
+      if (d.id == id) return d;
+    }
+    for (final d in recommendedBreakfast) {
+      if (d.id == id) return d;
+    }
+    return null;
+  }
+
   /// Helper to get all dishes belonging to a category without duplicating data.
   static List<Dish> getDishesForCategory(String category) {
     final cat = category.toLowerCase().trim();
-    if (cat.isEmpty || cat == 'all' || cat == 'frequent order') {
-      return dishes;
+    List<Dish> result;
+    if (cat.isEmpty || cat == 'all') {
+      result = dishes;
+    } else if (cat == 'frequent order') {
+      result = frequentOrders;
+    } else {
+      result = dishes.where((dish) {
+        final dishCat = dish.category.toLowerCase().trim();
+        if (dishCat == cat) return true;
+        if (cat == 'veg' && dish.isVeg) return true;
+        if (cat == 'breakfast' &&
+            (dishCat == 'breakfast' ||
+                dish.id == 'plain_dosa' ||
+                dish.id == 'kuzhipaniyaram')) {
+          return true;
+        }
+        if (cat == 'meals' && (dishCat == 'meals' || dish.id == 'meals')) {
+          return true;
+        }
+        if (cat == 'biriyani' && dish.name.toLowerCase().contains('biriyani')) {
+          return true;
+        }
+        if (cat == 'chicken' && dish.name.toLowerCase().contains('chicken')) {
+          return true;
+        }
+        if (cat == 'fish' && dish.name.toLowerCase().contains('fish')) {
+          return true;
+        }
+        if (cat == 'egg' && dish.name.toLowerCase().contains('egg')) {
+          return true;
+        }
+        if (cat == 'veg rice' &&
+            (dishCat == 'veg rice' || dish.name.toLowerCase().contains('rice'))) {
+          return true;
+        }
+        return false;
+      }).toList();
     }
-    return dishes.where((dish) {
-      final dishCat = dish.category.toLowerCase().trim();
-      if (dishCat == cat) return true;
-      if (cat == 'veg' && dish.isVeg) return true;
-      if (cat == 'breakfast' &&
-          (dishCat == 'breakfast' ||
-              dish.id == 'plain_dosa' ||
-              dish.id == 'kuzhipaniyaram')) {
-        return true;
-      }
-      if (cat == 'meals' && (dishCat == 'meals' || dish.id == 'meals')) {
-        return true;
-      }
-      if (cat == 'biriyani' && dish.name.toLowerCase().contains('biriyani')) {
-        return true;
-      }
-      if (cat == 'chicken' && dish.name.toLowerCase().contains('chicken')) {
-        return true;
-      }
-      if (cat == 'fish' && dish.name.toLowerCase().contains('fish')) {
-        return true;
-      }
-      if (cat == 'egg' && dish.name.toLowerCase().contains('egg')) {
-        return true;
-      }
-      if (cat == 'veg rice' &&
-          (dishCat == 'veg rice' || dish.name.toLowerCase().contains('rice'))) {
-        return true;
-      }
-      return false;
-    }).toList();
+    final seen = <String>{};
+    return result.where((d) => seen.add(d.name.toLowerCase().trim())).toList();
   }
 
   // ---- Addresses ---------------------------------------------------------

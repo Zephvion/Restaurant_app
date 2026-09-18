@@ -693,11 +693,14 @@ class _TakeawayBasketBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added to basket',
+              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added',
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

@@ -207,17 +207,22 @@ class _TakeawayOrderCard extends StatelessWidget {
         children: [
           // ── Restaurant name & Status row ─────────────────────────────────
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                order.restaurant.name,
-                style: const TextStyle(
-                  color: AppColors.copper,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  order.restaurant.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: 8,
@@ -232,7 +237,7 @@ class _TakeawayOrderCard extends StatelessWidget {
                     order.statusLabel,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -268,15 +273,19 @@ class _TakeawayOrderCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'ORDER ID : ${order.id}',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+              Flexible(
+                child: Text(
+                  'ORDER ID : ${order.id}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(

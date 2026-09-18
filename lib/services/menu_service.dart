@@ -31,8 +31,44 @@ class MenuService {
         // Fetch Dishes
         final dishesSnapshot = await firestore.collection('dishes').get();
         if (dishesSnapshot.docs.isNotEmpty) {
-          _cachedDishes = dishesSnapshot.docs
+          final fetched = dishesSnapshot.docs
               .map((doc) => Dish.fromMap(doc.data(), id: doc.id))
+              .toList();
+
+          // Sync with MockData to ensure authentic local WebP assets are always respected
+          final List<Dish> synced = [];
+          final batch = firestore.batch();
+          bool hasFirestoreUpdates = false;
+
+          for (final dish in fetched) {
+            final mock = MockData.findDishById(dish.id);
+            if (mock != null && mock.imageUrl.isNotEmpty) {
+              final updated = dish.copyWith(imageUrl: mock.imageUrl);
+              synced.add(updated);
+              if (dish.imageUrl != mock.imageUrl) {
+                batch.update(firestore.collection('dishes').doc(dish.id), {
+                  'imageUrl': mock.imageUrl,
+                });
+                hasFirestoreUpdates = true;
+              }
+            } else {
+              synced.add(dish);
+            }
+          }
+
+          if (hasFirestoreUpdates) {
+            try {
+              await batch.commit();
+              debugPrint('✅ Updated Firestore dish images to authentic WebP assets');
+            } catch (e) {
+              debugPrint('Firestore batch image update note: $e');
+            }
+          }
+
+          // Deduplicate by name
+          final seenNames = <String>{};
+          _cachedDishes = synced
+              .where((d) => seenNames.add(d.name.toLowerCase().trim()))
               .toList();
         } else {
           _cachedDishes = List.from(MockData.dishes);
@@ -62,7 +98,11 @@ class MenuService {
     _cachedPromos = List.from(MockData.promoBanners);
   }
 
-  List<Dish> get dishes => _cachedDishes.isNotEmpty ? _cachedDishes : MockData.dishes;
+  List<Dish> get dishes {
+    final list = _cachedDishes.isNotEmpty ? _cachedDishes : MockData.dishes;
+    final seen = <String>{};
+    return list.where((d) => seen.add(d.name.toLowerCase().trim())).toList();
+  }
 
   List<MenuCategory> get categories =>
       _cachedCategories.isNotEmpty ? _cachedCategories : MockData.categories;
@@ -74,8 +114,7 @@ class MenuService {
       _cachedPromos.isNotEmpty ? _cachedPromos : MockData.promoBanners;
 
   List<Dish> getDishesByCategory(String categoryName) {
-    if (categoryName.toLowerCase() == 'all') return dishes;
-    return dishes.where((d) => d.category.toLowerCase() == categoryName.toLowerCase()).toList();
+    return MockData.getDishesForCategory(categoryName);
   }
 
   List<Dish> searchDishes(String query) {
@@ -92,7 +131,7 @@ class MenuService {
     try {
       return dishes.firstWhere((d) => d.id == id);
     } catch (_) {
-      return null;
+      return MockData.findDishById(id);
     }
   }
 }

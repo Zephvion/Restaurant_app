@@ -55,49 +55,45 @@ class ParagonBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Container(
-          height: 66,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.backgroundElevated,
-            borderRadius: BorderRadius.circular(40),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                active: current == ParagonTab.home,
-                onTap: () => _go(context, ParagonTab.home),
-              ),
-              _NavItem(
-                icon: Icons.location_on_outlined,
-                active: current == ParagonTab.location,
-                onTap: () => _go(context, ParagonTab.location),
-              ),
-              _CartNavItem(
-                active: current == ParagonTab.cart,
-                onTap: () => _go(context, ParagonTab.cart),
-              ),
-              _NavItem(
-                icon: Icons.settings_outlined,
-                label: current == ParagonTab.account ? 'Account' : null,
-                active: current == ParagonTab.account,
-                onTap: () => _go(context, ParagonTab.account),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundElevated,
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 1),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.home_rounded,
+                  active: current == ParagonTab.home,
+                  onTap: () => _go(context, ParagonTab.home),
+                ),
+                _NavItem(
+                  icon: Icons.location_on_outlined,
+                  active: current == ParagonTab.location,
+                  onTap: () => _go(context, ParagonTab.location),
+                ),
+                _CartNavItem(
+                  active: current == ParagonTab.cart,
+                  onTap: () => _go(context, ParagonTab.cart),
+                ),
+                _NavItem(
+                  icon: Icons.settings_outlined,
+                  label: current == ParagonTab.account ? 'Account' : null,
+                  active: current == ParagonTab.account,
+                  onTap: () => _go(context, ParagonTab.account),
+                ),
+              ],
+            ),
           ),
         ),
       ),
