@@ -774,64 +774,69 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // ── Multi-User Race Simulator Banner ────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.people_outline, color: AppColors.copper, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'User: ${lockService.activeUserName}',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                // ── Active Reservation Banner (if user already booked) ──────
+                AnimatedBuilder(
+                  animation: ReservationController.instance,
+                  builder: (context, _) {
+                    final existing = ReservationController.instance.reservations;
+                    if (existing.isEmpty) return const SizedBox.shrink();
+                    final latest = existing.first;
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.5)),
                         ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () {
-                            if (lockService.activeUserId == 'usr_alex') {
-                              lockService.switchSimulatedUser(
-                                userId: 'usr_sarah',
-                                userName: 'Sarah (Person 2)',
-                              );
-                            } else {
-                              lockService.switchSimulatedUser(
-                                userId: 'usr_alex',
-                                userName: 'Alex (Person 1)',
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.copper.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Switch User ⇄',
-                              style: TextStyle(
-                                color: AppColors.copper,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Active Booking: Table #${latest.tableNumber}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${latest.formattedDate} · ${latest.timeSlot} · ${latest.seats} Guests',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF22C55E),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'RESERVED',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
 
                 // ── Active Hold Countdown Banner (if table selected) ───────
                 if (isHoldingAny && primaryHoldLock != null) ...[

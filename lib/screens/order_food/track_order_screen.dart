@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/mock_data.dart';
+import '../../models/address.dart';
 import '../../models/order_model.dart';
 import '../../services/order_service.dart';
 import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/address_picker_sheet.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/customer_support_sheet.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
@@ -419,6 +422,25 @@ class _TrackingSheet extends StatelessWidget {
                     value: order?.deliveryAddress.label.isNotEmpty == true
                         ? '${order!.deliveryAddress.label} · ${order!.deliveryAddress.details}'
                         : 'Palazhi, Calicut',
+                    actionLabel: 'Change ✏️',
+                    onTap: () {
+                      AddressPickerSheet.show(
+                        context: context,
+                        onAddressSelected: (Address newAddr) async {
+                          await OrderService.instance.updateDeliveryAddress(
+                            order?.id ?? orderId,
+                            newAddr,
+                          );
+                          if (context.mounted) {
+                            AppBanner.showSuccess(
+                              context,
+                              'Delivery address updated to ${newAddr.label} (${newAddr.details})!',
+                              title: 'Address Updated',
+                            );
+                          }
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(height: 18),
 
@@ -772,15 +794,19 @@ class _InfoLine extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.actionLabel,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String? actionLabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,9 +832,36 @@ class _InfoLine extends StatelessWidget {
               ),
             ),
           ),
+          if (actionLabel != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.copper.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                actionLabel!,
+                style: const TextStyle(
+                  color: AppColors.copper,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: content,
+      );
+    }
+    return content;
   }
 }
 

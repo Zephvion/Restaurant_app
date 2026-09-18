@@ -21,6 +21,9 @@ class Restaurant {
   final String openTime;
   final String closeTime;
 
+  String get branch => address.isNotEmpty ? address : city;
+  String? get imageUrl => logoUrl;
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,

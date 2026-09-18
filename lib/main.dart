@@ -32,6 +32,8 @@ import 'screens/catering/catering_dashboard_screen.dart';
 import 'screens/catering/catering_intro_screen.dart';
 import 'screens/catering/catering_notice_screen.dart';
 import 'screens/catering/catering_notify_screen.dart';
+import 'screens/catering/catering_package_screen.dart';
+import 'screens/catering/catering_select_restaurant_screen.dart';
 import 'screens/catering/catering_success_screen.dart';
 import 'screens/reserve_table/table_picker_screen.dart';
 import 'screens/food_planner/food_planner_calculator_screen.dart';
@@ -173,7 +175,10 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.catering: (_) => const CateringIntroScreen(),
         AppRoutes.cateringDashboard: (_) => const CateringDashboardScreen(),
         AppRoutes.cateringNotice: (_) => const CateringNoticeScreen(),
+        AppRoutes.cateringSelectRestaurant: (_) =>
+            const CateringSelectRestaurantScreen(),
         AppRoutes.cateringBooking: (_) => const CateringBookingScreen(),
+        AppRoutes.cateringPackage: (_) => const CateringPackageScreen(),
         AppRoutes.cateringNotify: (_) => const CateringNotifyScreen(),
         AppRoutes.cateringSuccess: (_) => const CateringSuccessScreen(),
 

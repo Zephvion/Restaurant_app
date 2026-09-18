@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/catering_order.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../state/catering_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
@@ -107,15 +108,20 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final userName = (user != null && user.displayName != null && user.displayName!.isNotEmpty)
+        ? user.displayName!
+        : 'Valued Guest';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 28),
-          const Text(
-            'Hello, Arti!',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          Text(
+            'Hello, $userName!',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -144,12 +150,17 @@ class _OrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final userName = (user != null && user.displayName != null && user.displayName!.isNotEmpty)
+        ? user.displayName!
+        : 'Valued Guest';
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
       children: [
-        const Text(
-          'Hello, Arti!',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        Text(
+          'Hello, $userName!',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         const SizedBox(height: 6),
         const Text(

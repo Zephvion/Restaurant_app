@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../data/mock_data.dart';
 import '../models/address.dart';
@@ -206,6 +205,29 @@ class OrderService {
     Timer(const Duration(seconds: 45), () {
       _updateStatusLocal(orderId, OrderStatus.delivered, 0);
     });
+  }
+
+  /// Updates delivery address for an active order in real-time
+  Future<void> updateDeliveryAddress(String orderId, Address newAddress) async {
+    final current = _localOrders[orderId];
+    if (current != null) {
+      final updated = current.copyWith(
+        deliveryAddress: newAddress,
+      );
+      _localOrders[orderId] = updated;
+      _orderStreams[orderId]?.add(updated);
+
+      if (FirebaseInitializer.isFirebaseReady) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .doc(orderId)
+              .update({'deliveryAddress': newAddress.toMap()});
+        } catch (e) {
+          debugPrint('Error updating delivery address in Firestore: $e');
+        }
+      }
+    }
   }
 
   void _updateStatusLocal(String orderId, OrderStatus status, int eta) {

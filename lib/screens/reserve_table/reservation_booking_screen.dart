@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/restaurant.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
@@ -134,9 +135,13 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Hello, Arti!',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13)),
+                    Text(
+                      'Hello, ${AuthService.instance.currentUser?.displayName.trim().isNotEmpty == true ? AuthService.instance.currentUser!.displayName.trim() : "Guest"}!',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Reserve a table\nat ${restaurant.name.split(' ').first}',
@@ -214,33 +219,30 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
               ),
             ],
           ),
-          // ── NEXT button ────────────────────────────────────────────────
-          if (_canProceed)
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: 24,
-              child: GestureDetector(
-                onTap: _proceed,
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'NEXT',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+          // ── Persistent Proceed Button ────────────────────────────────────
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 24,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _canProceed ? AppColors.accentRed : AppColors.surface,
+                foregroundColor: _canProceed ? Colors.white : AppColors.textSecondary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                elevation: _canProceed ? 4 : 0,
+              ),
+              onPressed: _canProceed ? _proceed : null,
+              child: Text(
+                _canProceed ? 'PROCEED TO TABLE SELECTION' : 'SELECT DATE, TIME & GUESTS',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 1.1,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );

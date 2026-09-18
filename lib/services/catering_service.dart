@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/catering_order.dart';
+import '../models/restaurant.dart';
 import 'auth_service.dart';
 import 'firebase_initializer.dart';
 
@@ -16,15 +17,33 @@ class CateringService {
   Future<CateringOrder> placeCateringOrder({
     required DateTime date,
     required String guestRange,
+    Restaurant? restaurant,
+    String timeSlot = 'Lunch (12:00 PM – 3:30 PM)',
+    String eventType = 'Corporate Buffet',
+    String menuPackage = 'Royal Malabar Feast',
+    double pricePerPlate = 450.0,
+    String venueAddress = 'Palazhi, Calicut',
+    String specialInstructions = '',
+    String contactPhone = '+91 9874563210',
   }) async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
-    final randId = 'ID${1000 + DateTime.now().millisecondsSinceEpoch % 9000}';
+    final randId = 'CAT-${1000 + DateTime.now().millisecondsSinceEpoch % 9000}';
 
     final order = CateringOrder(
       id: randId,
       userId: uid,
+      restaurantId: restaurant?.id ?? 'rest_calicut',
+      restaurantName: restaurant?.name ?? 'Paragon Restaurant - Calicut',
+      branchLocation: restaurant?.address ?? 'Mavoor Road, Calicut',
       date: date,
+      timeSlot: timeSlot,
       guestRange: guestRange,
+      eventType: eventType,
+      menuPackage: menuPackage,
+      pricePerPlate: pricePerPlate,
+      venueAddress: venueAddress,
+      specialInstructions: specialInstructions,
+      contactPhone: contactPhone,
       status: CateringStatus.notifiedParagon,
       createdAt: DateTime.now(),
     );
@@ -82,4 +101,3 @@ class CateringService {
     }
   }
 }
-

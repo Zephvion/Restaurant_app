@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/catering_order.dart';
+import '../models/restaurant.dart';
 import '../services/auth_service.dart';
 import '../services/catering_service.dart';
 
@@ -28,10 +29,26 @@ class CateringController extends ChangeNotifier {
   Future<CateringOrder> placeOrder({
     required DateTime date,
     required String guestRange,
+    Restaurant? restaurant,
+    String timeSlot = 'Lunch (12:00 PM – 3:30 PM)',
+    String eventType = 'Corporate Buffet',
+    String menuPackage = 'Royal Malabar Feast',
+    double pricePerPlate = 450.0,
+    String venueAddress = 'Palazhi, Calicut',
+    String specialInstructions = '',
+    String contactPhone = '+91 9874563210',
   }) async {
     final order = await CateringService.instance.placeCateringOrder(
       date: date,
       guestRange: guestRange,
+      restaurant: restaurant,
+      timeSlot: timeSlot,
+      eventType: eventType,
+      menuPackage: menuPackage,
+      pricePerPlate: pricePerPlate,
+      venueAddress: venueAddress,
+      specialInstructions: specialInstructions,
+      contactPhone: contactPhone,
     );
 
     _orders.insert(0, order);

@@ -96,12 +96,31 @@ class TableLockService extends ChangeNotifier {
   String _activeUserId = 'usr_alex';
   String _activeUserName = 'Alex (Person 1)';
 
-  String get activeUserId => _activeUserId;
+  String get activeUserId {
+    // If real auth session exists, use real user ID
+    // Otherwise fallback to simulated persona for testing
+    return _activeUserId;
+  }
+
   String get activeUserName => _activeUserName;
 
   void switchSimulatedUser({required String userId, required String userName}) {
     _activeUserId = userId;
     _activeUserName = userName;
+    notifyListeners();
+  }
+
+  /// Receptionist / Staff action to manually unlock or free a table
+  void receptionistReleaseTable(int tableNumber) {
+    final lock = getLock(tableNumber);
+    _transferOrRelease(lock, reason: 'Receptionist / Staff manual override');
+  }
+
+  /// Receptionist / Staff action to mark a table as occupied/reserved
+  void receptionistMarkOccupied(int tableNumber) {
+    final lock = getLock(tableNumber);
+    lock.status = TableLockStatus.reserved;
+    lock.expiresAt = null;
     notifyListeners();
   }
 

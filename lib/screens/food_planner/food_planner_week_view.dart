@@ -556,6 +556,28 @@ class _EmptyMealPlaceholders extends StatelessWidget {
   const _EmptyMealPlaceholders({required this.onAdd});
   final ValueChanged<MealType> onAdd;
 
+  IconData _getMealIcon(MealType type) {
+    switch (type) {
+      case MealType.breakfast:
+        return Icons.wb_sunny_outlined;
+      case MealType.lunch:
+        return Icons.restaurant_menu;
+      case MealType.dinner:
+        return Icons.nights_stay_outlined;
+    }
+  }
+
+  String _getMealAsset(MealType type) {
+    switch (type) {
+      case MealType.breakfast:
+        return FoodPlannerAssets.cardDosa;
+      case MealType.lunch:
+        return FoodPlannerAssets.cardMeals;
+      case MealType.dinner:
+        return FoodPlannerAssets.cardChappathi;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const types = [MealType.breakfast, MealType.lunch, MealType.dinner];
@@ -567,64 +589,98 @@ class _EmptyMealPlaceholders extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final type = types[index];
-          return SizedBox(
-            width: 160,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Empty placeholder card matching Edit.png
-                Container(
-                  width: 160,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Stack(
-                    children: [
-                      const Center(
-                        child: Icon(Icons.fastfood_outlined,
-                            size: 38, color: AppColors.surfaceLight),
-                      ),
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: GestureDetector(
-                          onTap: () => onAdd(type),
+          final assetPath = _getMealAsset(type);
+
+          return InkWell(
+            onTap: () => onAdd(type),
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              width: 160,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Interactive placeholder card matching Edit.png
+                  Container(
+                    width: 160,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        // Meal preview image with subtle opacity
+                        Opacity(
+                          opacity: 0.25,
+                          child: Image.asset(
+                            assetPath,
+                            width: 160,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getMealIcon(type),
+                                size: 34,
+                                color: AppColors.copper,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap to Plan\n${type.label}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
                           child: Container(
                             width: 32,
                             height: 32,
                             decoration: const BoxDecoration(
-                              color: AppColors.surfaceLight,
+                              color: AppColors.accentRed,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.add,
                                 color: Colors.white, size: 18),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  type.label,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 10),
+                  Text(
+                    type.label,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Item',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Item',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

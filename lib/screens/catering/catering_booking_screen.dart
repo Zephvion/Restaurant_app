@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
+import '../../models/restaurant.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
-/// Arguments passed from Booking Screen to the Notify Screen.
+/// Arguments passed from Booking Screen to the Package Screen.
 class CateringBookingArgs {
   const CateringBookingArgs({
+    this.restaurant,
     required this.date,
+    required this.timeSlot,
     required this.guestRange,
+    required this.eventType,
   });
 
+  final Restaurant? restaurant;
   final DateTime date;
+  final String timeSlot;
   final String guestRange;
+  final String eventType;
 }
 
-/// Screen allowing the user to select the catering event date and expected number of guests.
+/// Step 2 of Catering: Event date, time slot, expected guests, and event type.
 class CateringBookingScreen extends StatefulWidget {
   const CateringBookingScreen({super.key});
 
@@ -27,25 +34,48 @@ class CateringBookingScreen extends StatefulWidget {
 class _CateringBookingScreenState extends State<CateringBookingScreen> {
   late DateTime _weekStart;
   int? _selectedDayOffset; // 0..6
+  String _selectedTimeSlot = 'Lunch (12:00 PM – 3:30 PM)';
   String? _selectedGuestRange;
+  String _selectedEventType = 'Corporate Buffet';
+
+  final List<String> _timeSlots = [
+    'Lunch (12:00 PM – 3:30 PM)',
+    'High Tea (4:00 PM – 6:30 PM)',
+    'Dinner (7:00 PM – 11:00 PM)',
+  ];
 
   final List<String> _guestRanges = [
-    'Less than 50',
-    'Less than 100',
-    'Less than 250',
-    '250+',
+    '25 - 50 Guests',
+    '50 - 100 Guests',
+    '100 - 250 Guests',
+    '250 - 500 Guests',
+    '500+ Guests',
+  ];
+
+  final List<String> _eventTypes = [
+    'Corporate Buffet',
+    'Wedding Reception',
+    'Birthday Feast',
+    'Housewarming',
+    'Social Gathering',
   ];
 
   @override
   void initState() {
     super.initState();
-    // Default to at least 2 days in advance (starts at today + 2 days)
+    // Default to at least 2 days in advance
     final now = DateTime.now().add(const Duration(days: 2));
     _weekStart = now.subtract(Duration(days: now.weekday % 7));
   }
 
   bool get _canProceed =>
       _selectedDayOffset != null && _selectedGuestRange != null;
+
+  Restaurant? get _restaurant {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Restaurant) return args;
+    return MockData.restaurants.first;
+  }
 
   void _nextWeek() => setState(() {
         _weekStart = _weekStart.add(const Duration(days: 7));
@@ -56,10 +86,13 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
     if (!_canProceed) return;
     final selectedDate = _weekStart.add(Duration(days: _selectedDayOffset!));
     Navigator.of(context).pushNamed(
-      AppRoutes.cateringNotify,
+      AppRoutes.cateringPackage,
       arguments: CateringBookingArgs(
+        restaurant: _restaurant,
         date: selectedDate,
+        timeSlot: _selectedTimeSlot,
         guestRange: _selectedGuestRange!,
+        eventType: _selectedEventType,
       ),
     );
   }
@@ -75,6 +108,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final restaurant = _restaurant ?? MockData.restaurants.first;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -82,7 +117,7 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
           ListView(
             padding: const EdgeInsets.only(bottom: 100),
             children: [
-              // ── Hero image ─────────────────────────────────────────────
+              // ── Hero Image ─────────────────────────────────────────────
               SizedBox(
                 height: 200,
                 child: Stack(
@@ -101,7 +136,14 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                             IconButton(
                               icon: const Icon(Icons.arrow_back_ios_new,
                                   color: Colors.white, size: 20),
-                              onPressed: () => Navigator.of(context).pop(),
+                              onPressed: () {
+                                if (Navigator.of(context).canPop()) {
+                                  Navigator.of(context).pop();
+                                } else {
+                                  Navigator.of(context).pushReplacementNamed(
+                                      AppRoutes.cateringSelectRestaurant);
+                                }
+                              },
                             ),
                             const Spacer(),
                             IconButton(
@@ -118,33 +160,43 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                   ],
                 ),
               ),
+
               // ── Content ────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Hello, Arti!',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13)),
-                    const SizedBox(height: 6),
                     const Text(
-                      'Place catering\norders with us.',
+                      'Step 2 of 4: Schedule & Scale',
                       style: TextStyle(
+                        color: AppColors.copper,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Catering by ${restaurant.name}',
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    // ── Date selector row ─────────────────────────────────
+                    const SizedBox(height: 24),
+
+                    // ── Date Row ─────────────────────────────────────────
                     Row(
                       children: [
                         const Text(
-                          'Select the date for reservation',
+                          'Select Event Date',
                           style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 13),
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700),
                         ),
                         const Spacer(),
                         GestureDetector(
@@ -154,79 +206,214 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                               Text(
                                 _weekLabel(),
                                 style: const TextStyle(
-                                  color: AppColors.textSecondary,
+                                  color: AppColors.copper,
                                   fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(width: 4),
                               const Icon(Icons.arrow_forward_ios,
-                                  size: 12,
-                                  color: AppColors.textSecondary),
+                                  size: 12, color: AppColors.copper),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _DateStrip(
                       weekStart: _weekStart,
                       selectedOffset: _selectedDayOffset,
-                      onSelect: (i) =>
-                          setState(() => _selectedDayOffset = i),
+                      onSelect: (i) => setState(() => _selectedDayOffset = i),
                     ),
-                    const SizedBox(height: 32),
-                    // ── Expected number of people ─────────────────────────
+                    const SizedBox(height: 24),
+
+                    // ── Time Slot ────────────────────────────────────────
                     const Text(
-                      'Expected number of people',
+                      'Service Time Slot',
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 14),
-                    _GuestRangeRow(
-                      ranges: _guestRanges,
-                      selected: _selectedGuestRange,
-                      onSelect: (r) =>
-                          setState(() => _selectedGuestRange = r),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _timeSlots.map((slot) {
+                        final isSelected = slot == _selectedTimeSlot;
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedTimeSlot = slot),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accentRed
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.accentRed
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              slot,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Event Type ───────────────────────────────────────
+                    const Text(
+                      'Event Type',
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _eventTypes.map((type) {
+                          final isSelected = type == _selectedEventType;
+                          return GestureDetector(
+                            onTap: () =>
+                                setState(() => _selectedEventType = type),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(right: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.accentRed
+                                    : AppColors.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.accentRed
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: Text(
+                                type,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Guest Count Range ────────────────────────────────
+                    const Text(
+                      'Expected Guest Count',
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _guestRanges.map((range) {
+                        final isSelected = range == _selectedGuestRange;
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedGuestRange = range),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accentRed
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.accentRed
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Text(
+                              range,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          // ── NEXT button ────────────────────────────────────────────────
-          if (_canProceed)
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: 24,
-              child: GestureDetector(
-                onTap: _proceed,
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'NEXT',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+
+          // ── Persistent Proceed Button ────────────────────────────────────
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _canProceed
+                    ? AppColors.accentRed
+                    : AppColors.surface,
+                foregroundColor: _canProceed
+                    ? Colors.white
+                    : AppColors.textSecondary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+                elevation: _canProceed ? 4 : 0,
+              ),
+              onPressed: _canProceed ? _proceed : null,
+              child: Text(
+                _canProceed
+                    ? 'CHOOSE CATERING MENU PACKAGE'
+                    : 'SELECT DATE & GUEST COUNT',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 1.1,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Date strip ────────────────────────────────────────────────────────────────
+// ── Date Strip Component ─────────────────────────────────────────────────────
 
 class _DateStrip extends StatelessWidget {
   const _DateStrip({
@@ -239,99 +426,55 @@ class _DateStrip extends StatelessWidget {
   final int? selectedOffset;
   final ValueChanged<int> onSelect;
 
+  static const _days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
   @override
   Widget build(BuildContext context) {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(7, (i) {
-          final date = weekStart.add(Duration(days: i));
-          final selected = selectedOffset == i;
-          return GestureDetector(
+    return Row(
+      children: List.generate(7, (i) {
+        final date = weekStart.add(Duration(days: i));
+        final isSelected = i == selectedOffset;
+
+        return Expanded(
+          child: GestureDetector(
             onTap: () => onSelect(i),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 10),
-              width: 52,
-              height: 64,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: selected ? AppColors.accentRed : AppColors.surface,
+                color: isSelected ? AppColors.accentRed : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? AppColors.accentRed : AppColors.border,
+                ),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text(
+                    _days[date.weekday % 7],
+                    style: TextStyle(
+                      color: isSelected ? Colors.white70 : AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     '${date.day}',
                     style: TextStyle(
-                      color: selected
-                          ? Colors.white
-                          : AppColors.textPrimary,
-                      fontSize: 20,
+                      color: isSelected ? Colors.white : AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                   ),
-                  if (selected)
-                    Text(
-                      days[date.weekday % 7],
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
                 ],
               ),
             ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-// ── Guest Range Row ───────────────────────────────────────────────────────────
-
-class _GuestRangeRow extends StatelessWidget {
-  const _GuestRangeRow({
-    required this.ranges,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<String> ranges;
-  final String? selected;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: ranges.map((range) {
-          final isSelected = range == selected;
-          return GestureDetector(
-            onTap: () => onSelect(range),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.accentRed : AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                range,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }),
     );
   }
 }

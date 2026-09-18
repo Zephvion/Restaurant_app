@@ -58,7 +58,8 @@ class CateringNoticeScreen extends StatelessWidget {
                     // ── Continue Button ─────────────────────────────────
                     GestureDetector(
                       onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.cateringBooking);
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.cateringSelectRestaurant);
                       },
                       child: Container(
                         width: 220,

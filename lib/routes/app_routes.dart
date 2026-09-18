@@ -49,7 +49,9 @@ class AppRoutes {
   static const String catering = '/catering';
   static const String cateringDashboard = '/catering-dashboard';
   static const String cateringNotice = '/catering-notice';
+  static const String cateringSelectRestaurant = '/catering-select-restaurant';
   static const String cateringBooking = '/catering-booking';
+  static const String cateringPackage = '/catering-package';
   static const String cateringNotify = '/catering-notify';
   static const String cateringSuccess = '/catering-success';
 
