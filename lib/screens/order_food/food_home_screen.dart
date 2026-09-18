@@ -20,13 +20,6 @@ import '../../widgets/menu_list_tile.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
-enum DishSortOption {
-  popularity,
-  priceLowHigh,
-  priceHighLow,
-  rating,
-}
-
 /// The main "Order Food" menu: interactive delivery header, search, promo carousel,
 /// category tabs with dynamic filtering, sort options, clickable categories and dish rails.
 class FoodHomeScreen extends StatefulWidget {
@@ -172,7 +165,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
         list.sort((a, b) => b.rating.compareTo(a.rating));
         break;
       case DishSortOption.popularity:
-      default:
         list.sort((a, b) => b.rating.compareTo(a.rating));
         break;
     }

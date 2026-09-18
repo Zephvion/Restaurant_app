@@ -28,6 +28,8 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   int _selectedTab = 0;
   final TakeawayController _ctrl = TakeawayController.instance;
 
+  DishSortOption _activeSort = DishSortOption.popularity;
+
   bool _isSearching = false;
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
@@ -42,6 +44,25 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
 
   void _openProduct(Dish dish) {
     Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
+  }
+
+  List<Dish> _applySort(List<Dish> source) {
+    var list = List<Dish>.from(source);
+    switch (_activeSort) {
+      case DishSortOption.priceLowHigh:
+        list.sort((a, b) => a.price.compareTo(b.price));
+        break;
+      case DishSortOption.priceHighLow:
+        list.sort((a, b) => b.price.compareTo(a.price));
+        break;
+      case DishSortOption.rating:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+      case DishSortOption.popularity:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+    }
+    return list;
   }
 
   Future<void> _onNext() async {
@@ -76,9 +97,9 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
         : MockData.dishes;
     final cat = category.toLowerCase().trim();
     if (cat == 'frequent order') {
-      return MockData.frequentOrders;
+      return _applySort(MockData.frequentOrders);
     }
-    return allDishes.where((dish) {
+    final matches = allDishes.where((dish) {
       final dishCat = dish.category.toLowerCase().trim();
       if (dishCat == cat) return true;
       if (cat == 'veg' && dish.isVeg) return true;
@@ -111,6 +132,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
       }
       return false;
     }).toList();
+    return _applySort(matches);
   }
 
   List<Dish> _getSearchResults() {
@@ -119,13 +141,14 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     final allDishes = MenuService.instance.dishes.isNotEmpty
         ? MenuService.instance.dishes
         : MockData.dishes;
-    return allDishes.where((d) {
+    final matches = allDishes.where((d) {
       return d.name.toLowerCase().contains(q) ||
           (d.subtitle != null && d.subtitle!.toLowerCase().contains(q)) ||
           d.category.toLowerCase().contains(q) ||
           d.description.toLowerCase().contains(q) ||
           d.ingredients.any((ing) => ing.toLowerCase().contains(q));
     }).toList();
+    return _applySort(matches);
   }
 
   @override
@@ -487,6 +510,73 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 
+  void _openSortModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Sort Dishes By',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close,
+                        color: AppColors.textSecondary, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _sortTile(ctx, 'Popularity (Default)', DishSortOption.popularity),
+              _sortTile(ctx, 'Price: Low to High', DishSortOption.priceLowHigh),
+              _sortTile(ctx, 'Price: High to Low', DishSortOption.priceHighLow),
+              _sortTile(ctx, 'Customer Rating (4.5+)', DishSortOption.rating),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sortTile(BuildContext ctx, String label, DishSortOption option) {
+    final selected = _activeSort == option;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppColors.copper : AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      trailing: selected
+          ? const Icon(Icons.check_circle_rounded,
+              color: AppColors.copper, size: 20)
+          : const Icon(Icons.circle_outlined, color: AppColors.hint, size: 20),
+      onTap: () {
+        setState(() => _activeSort = option);
+        Navigator.of(ctx).pop();
+      },
+    );
+  }
+
   // ── Menu & Sort Row ─────────────────────────────────────────────────────────
 
   Widget _menuSortRow() {
@@ -500,20 +590,27 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                 fontWeight: FontWeight.w700,
               ),
         ),
-        const Row(
-          children: [
-            Text(
-              'SORT BY',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                letterSpacing: 1,
-                fontWeight: FontWeight.w600,
-              ),
+        InkWell(
+          onTap: _openSortModal,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                Text(
+                  _activeSort == DishSortOption.popularity ? 'SORT BY' : 'SORTED',
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontSize: 12,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.swap_vert, color: AppColors.copper, size: 18),
+              ],
             ),
-            SizedBox(width: 6),
-            Icon(Icons.swap_vert, color: AppColors.textSecondary, size: 18),
-          ],
+          ),
         ),
       ],
     );
@@ -620,15 +717,16 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   // ── Featured Rail ───────────────────────────────────────────────────────────
 
   Widget _featuredRail() {
+    final dishes = _applySort(MockData.frequentOrders);
     return SizedBox(
       height: 264,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: MockData.frequentOrders.length,
+        itemCount: dishes.length,
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, i) {
-          final dish = MockData.frequentOrders[i];
+          final dish = dishes[i];
           final qty = _ctrl.quantityOf(dish);
           return _TakeawayDishCard(
             dish: dish,
@@ -646,10 +744,11 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   // ── Combination List ────────────────────────────────────────────────────────
 
   Widget _combinationList() {
+    final dishes = _applySort(MockData.combinationBreakfast);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        children: MockData.combinationBreakfast.map((dish) {
+        children: dishes.map((dish) {
           final qty = _ctrl.quantityOf(dish);
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -670,15 +769,16 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   // ── Recommended Rail ────────────────────────────────────────────────────────
 
   Widget _recommendedRail() {
+    final dishes = _applySort(MockData.recommendedBreakfast);
     return SizedBox(
       height: 290,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: MockData.recommendedBreakfast.length,
+        itemCount: dishes.length,
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, i) {
-          final dish = MockData.recommendedBreakfast[i];
+          final dish = dishes[i];
           final qty = _ctrl.quantityOf(dish);
           return _TakeawayRecommendedCard(
             dish: dish,
