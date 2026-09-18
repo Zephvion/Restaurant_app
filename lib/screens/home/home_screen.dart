@@ -8,6 +8,7 @@ import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/basket_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/top_mode_selector.dart';
 
 // ─── Tab model ───────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ const _tabs = [
   _ServiceTab(
     id: 'order_food',
     label: 'Order Food',
-    icon: Icons.restaurant_menu_rounded,
+    icon: Icons.lunch_dining_rounded,
     route: AppRoutes.foodHome,
   ),
   _ServiceTab(
@@ -44,16 +45,16 @@ const _tabs = [
     route: AppRoutes.reserveDashboard,
   ),
   _ServiceTab(
-    id: 'food_planner',
-    label: 'Food Planner',
-    icon: Icons.calendar_month_rounded,
-    route: AppRoutes.foodPlanner,
-  ),
-  _ServiceTab(
     id: 'catering',
     label: 'Catering',
     icon: Icons.room_service_rounded,
     route: AppRoutes.cateringDashboard,
+  ),
+  _ServiceTab(
+    id: 'food_planner',
+    label: 'Food Planner',
+    icon: Icons.calendar_month_rounded,
+    route: AppRoutes.foodPlanner,
   ),
 ];
 
@@ -210,10 +211,12 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            // ── Swiggy-style tab bar ────────────────────────────────────────
-            _TopTabBar(controller: _tabController, tabs: _tabs),
-            // ── Animated indicator underline ────────────────────────────────
-            _TabIndicator(controller: _tabController),
+            // ── Swiggy-style organic flared top mode selector ───────────────
+            TopModeSelector(
+              controller: _tabController,
+              backgroundColor: AppColors.background,
+              canvasColor: AppColors.background,
+            ),
             // ── Tab body ────────────────────────────────────────────────────
             Expanded(
               child: TabBarView(
@@ -235,133 +238,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// ─── Top tab bar (icon + label chips) ────────────────────────────────────────
-
-class _TopTabBar extends StatefulWidget {
-  const _TopTabBar({required this.controller, required this.tabs});
-  final TabController controller;
-  final List<_ServiceTab> tabs;
-
-  @override
-  State<_TopTabBar> createState() => _TopTabBarState();
-}
-
-class _TopTabBarState extends State<_TopTabBar> {
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onTabChange);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTabChange);
-    super.dispose();
-  }
-
-  void _onTabChange() => setState(() {});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.background,
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(_tabs.length, (i) {
-            final isSelected = widget.controller.index == i;
-            return _TabChip(
-              tab: _tabs[i],
-              selected: isSelected,
-              onTap: () => widget.controller.animateTo(i),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Individual tab chip ──────────────────────────────────────────────────────
-
-class _TabChip extends StatelessWidget {
-  const _TabChip({
-    required this.tab,
-    required this.selected,
-    required this.onTap,
-  });
-  final _ServiceTab tab;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.maroon.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(
-            color: selected ? AppColors.maroon : Colors.transparent,
-            width: 1.4,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              tab.icon,
-              size: 18,
-              color: selected ? AppColors.maroon : AppColors.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              tab.label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight:
-                    selected ? FontWeight.w700 : FontWeight.w500,
-                color:
-                    selected ? AppColors.maroon : AppColors.textSecondary,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Sliding underline indicator ──────────────────────────────────────────────
-
-class _TabIndicator extends StatelessWidget {
-  const _TabIndicator({required this.controller});
-  final TabController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 2,
-      child: TabBar(
-        controller: controller,
-        tabs: _tabs.map((_) => const Tab(text: '')).toList(),
-        indicatorColor: AppColors.maroon,
-        indicatorWeight: 2.5,
-        labelPadding: EdgeInsets.zero,
-        dividerColor: Colors.transparent,
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
-      ),
-    );
-  }
-}
 
 // ─── Per-service full-page panel ──────────────────────────────────────────────
 

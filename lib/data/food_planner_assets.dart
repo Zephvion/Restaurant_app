@@ -59,23 +59,14 @@ class FoodPlannerAssets {
   static const String driverJohn = 'assets/images/foodplanner/extracted/driver_john.webp';
   static const String dateHeader = 'assets/images/foodplanner/extracted/date_header.webp';
 
-  // Fallback URLs
-  static const String dosa =
-      'https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=800&q=70';
-  static const String meals =
-      'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=70';
-  static const String chappathi =
-      'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=70';
-  static const String kuzhipaniyaram =
-      'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=70';
-  static const String appamStew =
-      'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=800&q=70';
-  static const String idiyappam =
-      'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=70';
-  static const String puttuKadala =
-      'https://images.unsplash.com/photo-1626500155537-1b3b3d0dd8f8?auto=format&fit=crop&w=800&q=70';
-  static const String pooriMasala =
-      'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=70';
-  static const String idliSambar =
-      'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=70';
+  // Fallback / standard dish assets
+  static const String dosa = 'assets/images/order/extracted/featured_dosa.webp';
+  static const String meals = 'assets/images/foodplanner/extracted/card_meals.webp';
+  static const String chappathi = 'assets/images/foodplanner/extracted/card_chappathi.webp';
+  static const String kuzhipaniyaram = 'assets/images/order/extracted/featured_kuzhi.webp';
+  static const String appamStew = 'assets/images/order/extracted/thumb_appam.webp';
+  static const String idiyappam = 'assets/images/order/extracted/thumb_idiyappam.webp';
+  static const String puttuKadala = 'assets/images/order/extracted/rec_puttu.webp';
+  static const String pooriMasala = 'assets/images/order/extracted/thumb_poori.webp';
+  static const String idliSambar = 'assets/images/order/extracted/thumb_idli.webp';
 }
