@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../data/food_planner_assets.dart';
+import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
@@ -45,7 +46,8 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
     return AnimatedBuilder(
       animation: FoodPlannerController.instance,
       builder: (context, _) {
-        final stats = FoodPlannerController.instance.calorieStats;
+        final ctrl = FoodPlannerController.instance;
+        final stats = ctrl.calorieStats;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -169,42 +171,44 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                       ),
                       if (_isDrawerOpen)
                         Expanded(
-                          child: ListView(
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                            children: const [
-                              _MealCalorieTile(
-                                period: 'BREAKFAST',
-                                name: 'Dosa',
-                                calories: 320,
-                                weight: 300,
-                                imageUrl: FoodPlannerAssets.dosa,
-                                protein: 50,
-                                carbs: 50,
-                                fat: 50,
-                              ),
-                              SizedBox(height: 16),
-                              _MealCalorieTile(
-                                period: 'NOON',
-                                name: 'Meals',
-                                calories: 320,
-                                weight: 300,
-                                imageUrl: FoodPlannerAssets.meals,
-                                protein: 50,
-                                carbs: 50,
-                                fat: 50,
-                              ),
-                              SizedBox(height: 16),
-                              _MealCalorieTile(
-                                period: 'DINNER',
-                                name: 'Chappathi Curry',
-                                calories: 320,
-                                weight: 300,
-                                imageUrl: FoodPlannerAssets.chappathi,
-                                protein: 50,
-                                carbs: 50,
-                                fat: 50,
-                              ),
-                            ],
+                          child: Builder(
+                            builder: (context) {
+                              final dayMeals = ctrl.getMealsForSelectedDay();
+                              if (dayMeals.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 24),
+                                  child: Center(
+                                    child: Text(
+                                      'No meals planned for this day yet.\nGo to "My week" to schedule your meals.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 13),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(
+                                    20, 4, 20, 20),
+                                itemCount: dayMeals.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 14),
+                                itemBuilder: (context, i) {
+                                  final meal = dayMeals[i];
+                                  return _MealCalorieTile(
+                                    period: meal.mealType.label,
+                                    name: meal.dishName,
+                                    calories: meal.calories,
+                                    weight: meal.weightGm,
+                                    imageUrl: meal.imageUrl,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                  );
+                                },
+                              );
+                            },
                           ),
                         ),
                     ],

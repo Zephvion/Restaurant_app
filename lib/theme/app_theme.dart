@@ -39,6 +39,21 @@ class AppTheme {
         systemOverlayStyle: null,
       ),
       iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF26242B),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.copper, width: 1.2),
+        ),
+        elevation: 8,
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      ),
     );
   }
 

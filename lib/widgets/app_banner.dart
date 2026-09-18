@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 /// Type of in-app banner/toast notification.
 enum BannerType { success, error, info }
 
-/// High-visibility floating top banner / notification toast.
+/// High-visibility floating banner and toast notification system.
 class AppBanner {
   static void show(
     BuildContext context, {
@@ -14,65 +14,159 @@ class AppBanner {
     String? title,
     Duration duration = const Duration(seconds: 3),
   }) {
-    final overlay = Overlay.maybeOf(context);
-    if (overlay == null) {
-      // Fallback to SnackBar if overlay not readily accessible
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+    AppToast.show(
+      context,
+      message: message,
+      title: title,
+      type: type,
+      duration: duration,
+    );
+  }
+
+  static void showSuccess(
+    BuildContext context,
+    String message, {
+    String? title,
+  }) {
+    AppToast.showSuccess(context, message, title: title);
+  }
+
+  static void showError(
+    BuildContext context,
+    String message, {
+    String? title,
+  }) {
+    AppToast.showError(context, message, title: title);
+  }
+
+  static void showInfo(
+    BuildContext context,
+    String message, {
+    String? title,
+  }) {
+    AppToast.showInfo(context, message, title: title);
+  }
+}
+
+/// Unified, high-contrast Toast helper for displaying visible notifications.
+class AppToast {
+  static void show(
+    BuildContext context, {
+    required String message,
+    String? title,
+    BannerType type = BannerType.info,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    final Color borderColor;
+    final Color bgColor;
+    final Color iconColor;
+    final IconData iconData;
+
+    switch (type) {
+      case BannerType.success:
+        borderColor = const Color(0xFF4ADE80);
+        bgColor = const Color(0xFF132F20);
+        iconColor = const Color(0xFF4ADE80);
+        iconData = Icons.check_circle_rounded;
+        break;
+      case BannerType.error:
+        borderColor = const Color(0xFFFF5252);
+        bgColor = const Color(0xFF381414);
+        iconColor = const Color(0xFFFF6B6B);
+        iconData = Icons.error_outline_rounded;
+        break;
+      case BannerType.info:
+        borderColor = AppColors.copper;
+        bgColor = const Color(0xFF2C2219);
+        iconColor = AppColors.copper;
+        iconData = Icons.info_outline_rounded;
+        break;
+    }
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          backgroundColor: type == BannerType.success
-              ? const Color(0xFF1E3A2B)
-              : type == BannerType.error
-                  ? const Color(0xFF4A1818)
-                  : AppColors.backgroundElevated,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: type == BannerType.success
-                  ? const Color(0xFF3FA34D)
-                  : type == BannerType.error
-                      ? AppColors.accentRed
-                      : AppColors.copper,
-              width: 1.2,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 85),
+          padding: EdgeInsets.zero,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          duration: duration,
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor, width: 1.8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: borderColor.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          ),
-          content: Row(
-            children: [
-              Icon(
-                type == BannerType.success
-                    ? Icons.check_circle_rounded
-                    : type == BannerType.error
-                        ? Icons.error_outline_rounded
-                        : Icons.info_outline_rounded,
-                color: type == BannerType.success
-                    ? const Color(0xFF4ADE80)
-                    : type == BannerType.error
-                        ? const Color(0xFFFF6B6B)
-                        : AppColors.copper,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(iconData, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (title != null && title.isNotEmpty) ...[
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: iconColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          duration: duration,
         ),
       );
       return;
     }
 
-    late OverlayEntry entry;
+    // Overlay fallback if ScaffoldMessenger not accessible
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
 
+    late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) => _TopBannerWidget(
         title: title,
@@ -85,7 +179,6 @@ class AppBanner {
     );
 
     overlay.insert(entry);
-
     Future.delayed(duration, () {
       if (entry.mounted) {
         entry.remove();
@@ -196,20 +289,20 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
 
     switch (widget.type) {
       case BannerType.success:
-        borderColor = const Color(0xFF3FA34D);
-        bgColor = const Color(0xFF14291D);
+        borderColor = const Color(0xFF4ADE80);
+        bgColor = const Color(0xFF132F20);
         iconColor = const Color(0xFF4ADE80);
         iconData = Icons.check_circle_rounded;
         break;
       case BannerType.error:
-        borderColor = AppColors.accentRed;
-        bgColor = const Color(0xFF2E1212);
+        borderColor = const Color(0xFFFF5252);
+        bgColor = const Color(0xFF381414);
         iconColor = const Color(0xFFFF6B6B);
         iconData = Icons.error_outline_rounded;
         break;
       case BannerType.info:
         borderColor = AppColors.copper;
-        bgColor = AppColors.backgroundElevated;
+        bgColor = const Color(0xFF2C2219);
         iconColor = AppColors.copper;
         iconData = Icons.info_outline_rounded;
         break;
@@ -229,16 +322,21 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
               onTap: _dismiss,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: bgColor.withOpacity(0.96),
+                  color: bgColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor, width: 1.2),
+                  border: Border.all(color: borderColor, width: 1.8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.45),
+                      color: Colors.black.withValues(alpha: 0.5),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: borderColor.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
@@ -248,12 +346,12 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.16),
+                        color: iconColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(iconData, color: iconColor, size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,9 +372,9 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
                           Text(
                             widget.message,
                             style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -287,8 +385,8 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
                       onTap: _dismiss,
                       child: const Icon(
                         Icons.close,
-                        color: AppColors.textSecondary,
-                        size: 18,
+                        color: Colors.white70,
+                        size: 20,
                       ),
                     ),
                   ],
@@ -301,4 +399,3 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
     );
   }
 }
-

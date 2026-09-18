@@ -1,12 +1,18 @@
 import 'package:flutter/foundation.dart';
 
-/// An entry on the Notifications screen — either an order status update or a
-/// promotional message.
+/// An entry on the Notifications screen — food planner reminders,
+/// calorie budget updates, nutrition tips, or promotional messages.
 @immutable
 class AppNotification {
   const AppNotification({
     this.id = '',
     required this.title,
+    this.message,
+    this.category = 'MEAL REMINDER',
+    this.iconName = 'meal',
+    this.actionLabel,
+    this.actionRoute,
+    this.actionMealType,
     this.orderId,
     this.imageUrl,
     this.isPlaced = false,
@@ -18,28 +24,88 @@ class AppNotification {
 
   final String id;
 
-  /// "Arriving Soon", "Order Placed"…
+  /// Main headline: "Log Today's Lunch! 🍛", "Daily Calorie Budget Update 🎯"
   final String title;
 
-  /// Order reference (shown as "Order ID  PO78965412").
+  /// Body / explanation: "Keep your calorie tracking consistent. Tap to log your afternoon meal."
+  final String? message;
+
+  /// Category tag: 'MEAL REMINDER', 'CALORIE GOAL', 'MEAL PLANNING', 'HEALTH TIP', 'WEEKLY SUMMARY'
+  final String category;
+
+  /// Identifier for icon: 'meal', 'fire', 'calendar', 'water', 'analytics', 'gift'
+  final String iconName;
+
+  /// Action button label: 'Log Lunch', 'View Stats', 'Plan Dinner'
+  final String? actionLabel;
+
+  /// Target route: e.g. AppRoutes.foodPlannerMenu, AppRoutes.foodPlannerCalculator
+  final String? actionRoute;
+
+  /// Target meal slot (breakfast, lunch, dinner, snacks) if applicable
+  final String? actionMealType;
+
+  /// Legacy order reference (if any)
   final String? orderId;
 
-  /// Thumbnail for order notifications.
+  /// Thumbnail image (optional)
   final String? imageUrl;
 
-  /// Shows the green tick beside the title.
+  /// Legacy order placed flag
   final bool isPlaced;
 
-  /// Renders the promo style (gift icon + offer text) instead of an order row.
+  /// Promotional offer flag
   final bool isPromo;
   final String? promoText;
 
   final DateTime? timestamp;
   final bool read;
 
+  AppNotification copyWith({
+    String? id,
+    String? title,
+    String? message,
+    String? category,
+    String? iconName,
+    String? actionLabel,
+    String? actionRoute,
+    String? actionMealType,
+    String? orderId,
+    String? imageUrl,
+    bool? isPlaced,
+    bool? isPromo,
+    String? promoText,
+    DateTime? timestamp,
+    bool? read,
+  }) {
+    return AppNotification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      category: category ?? this.category,
+      iconName: iconName ?? this.iconName,
+      actionLabel: actionLabel ?? this.actionLabel,
+      actionRoute: actionRoute ?? this.actionRoute,
+      actionMealType: actionMealType ?? this.actionMealType,
+      orderId: orderId ?? this.orderId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isPlaced: isPlaced ?? this.isPlaced,
+      isPromo: isPromo ?? this.isPromo,
+      promoText: promoText ?? this.promoText,
+      timestamp: timestamp ?? this.timestamp,
+      read: read ?? this.read,
+    );
+  }
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'title': title,
+        'message': message,
+        'category': category,
+        'iconName': iconName,
+        'actionLabel': actionLabel,
+        'actionRoute': actionRoute,
+        'actionMealType': actionMealType,
         'orderId': orderId,
         'imageUrl': imageUrl,
         'isPlaced': isPlaced,
@@ -53,6 +119,12 @@ class AppNotification {
     return AppNotification(
       id: id ?? (map['id'] as String? ?? ''),
       title: map['title'] as String? ?? '',
+      message: map['message'] as String?,
+      category: map['category'] as String? ?? 'MEAL REMINDER',
+      iconName: map['iconName'] as String? ?? 'meal',
+      actionLabel: map['actionLabel'] as String?,
+      actionRoute: map['actionRoute'] as String?,
+      actionMealType: map['actionMealType'] as String?,
       orderId: map['orderId'] as String?,
       imageUrl: map['imageUrl'] as String?,
       isPlaced: map['isPlaced'] as bool? ?? false,

@@ -4,6 +4,7 @@ import '../routes/app_routes.dart';
 import '../state/cart_controller.dart';
 import '../theme/app_colors.dart';
 import 'address_picker_sheet.dart';
+import 'app_banner.dart';
 
 /// Which tab is currently active in the floating bottom navigation bar.
 enum ParagonTab { home, location, cart, account }
@@ -28,15 +29,7 @@ class ParagonBottomNav extends StatelessWidget {
         );
         break;
       case ParagonTab.location:
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppColors.surfaceLight,
-              content: Text('Choose a delivery location'),
-            ),
-          );
+        AppToast.showInfo(context, 'Choose a delivery location');
         AddressPickerSheet.show(
           context: context,
           onAddressSelected: (addr) {

@@ -37,12 +37,8 @@ import 'screens/catering/catering_select_restaurant_screen.dart';
 import 'screens/catering/catering_success_screen.dart';
 import 'screens/reserve_table/table_picker_screen.dart';
 import 'screens/food_planner/food_planner_calculator_screen.dart';
-import 'screens/food_planner/food_planner_cart_screen.dart';
 import 'screens/food_planner/food_planner_intro_screen.dart';
-import 'screens/food_planner/food_planner_manage_payments_screen.dart';
 import 'screens/food_planner/food_planner_menu_screen.dart';
-import 'screens/food_planner/food_planner_order_history_screen.dart';
-import 'screens/food_planner/food_planner_payment_screen.dart';
 import 'screens/food_planner/food_planner_product_screen.dart';
 import 'screens/food_planner/food_planner_shell_screen.dart';
 import 'screens/food_planner/food_planner_slot_screen.dart';
@@ -188,14 +184,8 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.foodPlannerSlot: (_) => const FoodPlannerSlotScreen(),
         AppRoutes.foodPlannerMenu: (_) => const FoodPlannerMenuScreen(),
         AppRoutes.foodPlannerProduct: (_) => const FoodPlannerProductScreen(),
-        AppRoutes.foodPlannerCart: (_) => const FoodPlannerCartScreen(),
-        AppRoutes.foodPlannerPayment: (_) => const FoodPlannerPaymentScreen(),
         AppRoutes.foodPlannerCalculator: (_) =>
             const FoodPlannerCalculatorScreen(),
-        AppRoutes.foodPlannerOrderHistory: (_) =>
-            const FoodPlannerOrderHistoryScreen(),
-        AppRoutes.foodPlannerManagePayments: (_) =>
-            const FoodPlannerManagePaymentsScreen(),
       },
     );
   }

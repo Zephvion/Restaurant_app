@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../routes/app_routes.dart';
 import '../services/google_auth_service.dart';
 import '../theme/app_colors.dart';
+import 'app_banner.dart';
 import 'google_sign_in_button.dart';
 
 /// Shows an authentic Google Account Chooser bottom sheet modal.
@@ -47,29 +48,10 @@ class _GoogleAccountPickerModalState extends State<_GoogleAccountPickerModal> {
     Navigator.of(context).pop(); // Close bottom sheet
 
     // Show confirmation toast
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Color(0xFF34A853), size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Signed in as ${account.email}',
-                style: const TextStyle(fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF1E1E24),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFF2E2E36)),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    AppToast.showSuccess(
+      context,
+      'Signed in as ${account.email}',
+      title: 'Google Sign-In',
     );
 
     if (widget.onSuccess != null) {

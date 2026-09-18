@@ -766,26 +766,60 @@ class MockData {
     cashOnDelivery,
   ];
 
-  // ---- Notifications -----------------------------------------------------
+  // ---- Notifications (Food Planner Reminders & Updates) -------------------
 
   static const List<AppNotification> notifications = [
     AppNotification(
-      title: 'Arriving Soon',
-      orderId: orderId,
-      imageUrl:
-          'https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=200&q=70',
+      id: 'notif_lunch_reminder',
+      title: 'Time to log your Lunch! 🍛',
+      message:
+          'Keep your calorie tracking consistent. Tap to select healthy dishes for today’s lunch slot.',
+      category: 'MEAL REMINDER',
+      iconName: 'meal',
+      actionLabel: 'Log Lunch',
+      actionRoute: AppRoutes.foodPlannerMenu,
+      actionMealType: 'lunch',
     ),
     AppNotification(
-      title: 'Order Placed',
-      orderId: orderId,
-      isPlaced: true,
-      imageUrl:
-          'https://images.unsplash.com/photo-1630383249896-424e482df921?auto=format&fit=crop&w=200&q=70',
+      id: 'notif_calorie_budget',
+      title: 'Daily Calorie Budget Update 🎯',
+      message:
+          'You have planned 1,420 / 2,100 kcal for today. 680 kcal remaining for dinner & healthy snacks.',
+      category: 'CALORIE GOAL',
+      iconName: 'fire',
+      actionLabel: 'View Macro Stats',
+      actionRoute: AppRoutes.foodPlannerCalculator,
     ),
     AppNotification(
-      title: 'Offer',
-      isPromo: true,
-      promoText: 'Get 30% off on orders above  500',
+      id: 'notif_plan_tomorrow',
+      title: 'Plan Ahead for Tomorrow 📅',
+      message:
+          'Tomorrow’s dinner slot is still empty. Schedule early to ensure balanced macro distribution.',
+      category: 'MEAL PLANNING',
+      iconName: 'calendar',
+      actionLabel: 'Plan Tomorrow',
+      actionRoute: AppRoutes.foodPlannerSlot,
+      actionMealType: 'dinner',
+    ),
+    AppNotification(
+      id: 'notif_hydration',
+      title: 'Hydration & Nutrition Tip 💧',
+      message:
+          'Aim for 2.5L of water today! Drink a glass before your evening meal and add fresh fiber-rich greens.',
+      category: 'HEALTH TIP',
+      iconName: 'water',
+      actionLabel: 'BMR & Target Guide',
+      actionRoute: AppRoutes.foodPlannerCalculator,
+    ),
+    AppNotification(
+      id: 'notif_weekly_split',
+      title: 'Weekly Macro Split on Track ✨',
+      message:
+          'Your protein intake is averaging 115g/day this week. Excellent progress towards muscle maintenance!',
+      category: 'WEEKLY SUMMARY',
+      iconName: 'analytics',
+      actionLabel: 'Review Nutrition',
+      actionRoute: AppRoutes.foodPlannerCalculator,
     ),
   ];
   // ---- Reserve Table -------------------------------------------------------

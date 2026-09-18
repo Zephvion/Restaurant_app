@@ -61,9 +61,5 @@ class AppRoutes {
   static const String foodPlannerSlot = '/food-planner/slot';
   static const String foodPlannerMenu = '/food-planner/menu';
   static const String foodPlannerProduct = '/food-planner/product';
-  static const String foodPlannerCart = '/food-planner/cart';
-  static const String foodPlannerPayment = '/food-planner/payment';
   static const String foodPlannerCalculator = '/food-planner/calculator';
-  static const String foodPlannerOrderHistory = '/food-planner/order-history';
-  static const String foodPlannerManagePayments = '/food-planner/manage-payments';
 }

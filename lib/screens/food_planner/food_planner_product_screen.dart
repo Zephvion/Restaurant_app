@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../data/food_planner_assets.dart';
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
+import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 
 /// Product detail screen matching Product screen.png and Product add to cart.png.
 class FoodPlannerProductScreen extends StatefulWidget {
@@ -224,23 +226,31 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
                           Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                Navigator.of(context)
-                                    .pushNamed(AppRoutes.foodPlannerCart);
+                                ctrl.confirmPlannedMeal(dish: dish);
+                                AppToast.showSuccess(
+                                  context,
+                                  'Added ${dish.name} to your ${ctrl.currentSlotMealType.displayName} plan! (+${dish.kcal > 0 ? dish.kcal : 320} kcal)',
+                                  title: 'Added to Plan',
+                                );
+                                Navigator.of(context).popUntil((route) =>
+                                    route.settings.name ==
+                                        AppRoutes.foodPlanner ||
+                                    route.isFirst);
                               },
                               child: Container(
                                 height: 56,
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceLight,
+                                  color: AppColors.accentRed,
                                   borderRadius: BorderRadius.circular(28),
                                 ),
                                 alignment: Alignment.center,
-                                child: const Text(
-                                  'NEXT',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                child: Text(
+                                  'CONFIRM TO ${ctrl.currentSlotMealType.label}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    letterSpacing: 1.5,
+                                    fontSize: 13,
+                                    letterSpacing: 1.2,
                                   ),
                                 ),
                               ),
@@ -295,12 +305,6 @@ class _ImageHeader extends StatelessWidget {
                     icon: const Icon(Icons.search, color: Colors.white),
                     onPressed: () =>
                         Navigator.of(context).pushNamed(AppRoutes.search),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined,
-                        color: Colors.white),
-                    onPressed: () => Navigator.of(context)
-                        .pushNamed(AppRoutes.foodPlannerCart),
                   ),
                 ],
               ),

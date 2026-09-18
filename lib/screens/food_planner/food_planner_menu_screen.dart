@@ -7,6 +7,7 @@ import '../../routes/app_routes.dart';
 import '../../services/menu_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
 /// Meal Menu selection screen for the Food Planner matching the Home Page Food Order layout.
@@ -59,6 +60,14 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           'Grilled & Tandoori',
           'Light Dinner',
           'Beverages',
+        ];
+      case MealType.snacks:
+        return const [
+          'Frequent order',
+          'Beverages',
+          'Snacks & Bites',
+          'Desserts',
+          'Healthy Bowls',
         ];
     }
   }
@@ -399,6 +408,35 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
       }
     }
 
+    // ── 4. Snacks & Drinks Categories ────────────────────────────────────────
+    if (mealType == MealType.snacks) {
+      if (catLower == 'frequent order' || catLower == 'all') {
+        return [
+          MockData.freshJuiceOrange,
+          MockData.kuzhipaniyaram,
+          ...allDishes.where((d) => d.category.toLowerCase().contains('beverage')),
+        ];
+      }
+      if (catLower.contains('beverage')) {
+        return [
+          MockData.freshJuiceOrange,
+          ...allDishes.where((d) => d.category.toLowerCase().contains('beverage')),
+        ];
+      }
+      if (catLower.contains('snack') || catLower.contains('bite')) {
+        return [
+          MockData.kuzhipaniyaram,
+          ...MockData.vegDishes.take(4),
+        ];
+      }
+      if (catLower.contains('dessert') || catLower.contains('bowl')) {
+        return [
+          MockData.freshJuiceOrange,
+          ...allDishes.where((d) => d.category.toLowerCase().contains('dessert') || d.category.toLowerCase().contains('sweet')),
+        ];
+      }
+    }
+
     // Generic fallback if none matched
     final fallback = allDishes
         .where((d) =>
@@ -473,16 +511,34 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined,
-                    color: AppColors.textPrimary, size: 22),
-                onPressed: () {
-                  if (totalItems > 0) {
-                    Navigator.of(context).pushNamed(AppRoutes.foodPlannerCart);
-                  }
-                },
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department,
+                          color: AppColors.accentRed, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${ctrl.getPlannedCaloriesForDay()} kcal',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
             ],
           ),
           body: Stack(
@@ -1057,6 +1113,22 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           },
         ];
         break;
+      case MealType.snacks:
+        combos = [
+          {
+            'id': 'snack_combo_1',
+            'title': 'Kuzhi Paniyaram & Sulaimani Chai',
+            'price': 90,
+            'imageUrl': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
+          },
+          {
+            'id': 'snack_combo_2',
+            'title': 'Cold Pressed Juice & Fruit Salad',
+            'price': 130,
+            'imageUrl': 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
+          },
+        ];
+        break;
     }
 
     return Padding(
@@ -1186,6 +1258,22 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           },
         ];
         break;
+      case MealType.snacks:
+        recommended = [
+          {
+            'id': 'orange_juice_rec',
+            'title': 'Cold Pressed Orange Juice',
+            'price': 80,
+            'imageUrl': 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
+          },
+          {
+            'id': 'kuzhi_paniyaram_rec',
+            'title': 'Crispy Kuzhi Paniyaram (6 pcs)',
+            'price': 95,
+            'imageUrl': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
+          },
+        ];
+        break;
     }
 
     return SizedBox(
@@ -1266,10 +1354,20 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
   // ── Floating Cart Bar ───────────────────────────────────────────────────────
 
   Widget _floatingCartBar(BuildContext context, FoodPlannerController ctrl) {
+    int totalKcal = 0;
+    ctrl.basket.forEach((dishId, qty) {
+      final dish = ctrl.findDish(dishId);
+      if (dish != null) {
+        totalKcal += (dish.kcal > 0 ? dish.kcal : 320) * qty;
+      }
+    });
+
+    final mealLabel = ctrl.currentSlotMealType.label;
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: AppColors.copper,
+        color: AppColors.accentRed,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
@@ -1283,32 +1381,48 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} · ₹${ctrl.basketSubtotal.toInt()}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-              letterSpacing: 0.8,
-            ),
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department,
+                  color: Colors.white, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} · $totalKcal kcal',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
           ),
           GestureDetector(
             onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.foodPlannerCart);
+              ctrl.confirmBasketToPlan();
+              AppToast.showSuccess(
+                context,
+                '$mealLabel plan saved! Added $totalKcal kcal to your schedule.',
+                title: 'Plan Updated',
+              );
+              Navigator.of(context).popUntil((route) =>
+                  route.settings.name == AppRoutes.foodPlanner ||
+                  route.isFirst);
             },
-            child: const Row(
+            child: Row(
               children: [
                 Text(
-                  'VIEW CART',
-                  style: TextStyle(
+                  'CONFIRM $mealLabel',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                     letterSpacing: 0.8,
                   ),
                 ),
-                SizedBox(width: 6),
-                Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+                const SizedBox(width: 6),
+                const Icon(Icons.check_circle_outline,
+                    color: Colors.white, size: 18),
               ],
             ),
           ),

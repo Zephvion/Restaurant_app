@@ -3,6 +3,7 @@ enum MealType {
   breakfast,
   lunch,
   dinner,
+  snacks,
 }
 
 extension MealTypeExt on MealType {
@@ -14,6 +15,21 @@ extension MealTypeExt on MealType {
         return 'LUNCH';
       case MealType.dinner:
         return 'DINNER';
+      case MealType.snacks:
+        return 'SNACKS';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case MealType.breakfast:
+        return 'Breakfast';
+      case MealType.lunch:
+        return 'Lunch';
+      case MealType.dinner:
+        return 'Dinner';
+      case MealType.snacks:
+        return 'Snacks & Drinks';
     }
   }
 
@@ -23,6 +39,9 @@ extension MealTypeExt on MealType {
         return MealType.lunch;
       case 'dinner':
         return MealType.dinner;
+      case 'snacks':
+      case 'snack':
+        return MealType.snacks;
       case 'breakfast':
       default:
         return MealType.breakfast;
@@ -40,12 +59,14 @@ class PlannedMeal {
     required this.location,
     required this.dishName,
     required this.imageUrl,
+    this.dishId = '',
+    this.servings = 1,
     this.calories = 320,
     this.weightGm = 300,
     this.price = 80.0,
-    this.protein = 50,
-    this.carbs = 50,
-    this.fat = 50,
+    this.protein = 20,
+    this.carbs = 40,
+    this.fat = 10,
   });
 
   final String id;
@@ -55,12 +76,50 @@ class PlannedMeal {
   final String location; // 'HOME' or 'OFFICE'
   final String dishName;
   final String imageUrl;
+  final String dishId;
+  final int servings;
   final int calories;
   final int weightGm;
   final double price;
   final int protein;
   final int carbs;
   final int fat;
+
+  PlannedMeal copyWith({
+    String? id,
+    int? dayOffset,
+    MealType? mealType,
+    String? timeSlot,
+    String? location,
+    String? dishName,
+    String? imageUrl,
+    String? dishId,
+    int? servings,
+    int? calories,
+    int? weightGm,
+    double? price,
+    int? protein,
+    int? carbs,
+    int? fat,
+  }) {
+    return PlannedMeal(
+      id: id ?? this.id,
+      dayOffset: dayOffset ?? this.dayOffset,
+      mealType: mealType ?? this.mealType,
+      timeSlot: timeSlot ?? this.timeSlot,
+      location: location ?? this.location,
+      dishName: dishName ?? this.dishName,
+      imageUrl: imageUrl ?? this.imageUrl,
+      dishId: dishId ?? this.dishId,
+      servings: servings ?? this.servings,
+      calories: calories ?? this.calories,
+      weightGm: weightGm ?? this.weightGm,
+      price: price ?? this.price,
+      protein: protein ?? this.protein,
+      carbs: carbs ?? this.carbs,
+      fat: fat ?? this.fat,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -70,6 +129,8 @@ class PlannedMeal {
         'location': location,
         'dishName': dishName,
         'imageUrl': imageUrl,
+        'dishId': dishId,
+        'servings': servings,
         'calories': calories,
         'weightGm': weightGm,
         'price': price,
@@ -87,12 +148,14 @@ class PlannedMeal {
       location: map['location'] as String? ?? 'HOME',
       dishName: map['dishName'] as String? ?? '',
       imageUrl: map['imageUrl'] as String? ?? '',
+      dishId: map['dishId'] as String? ?? '',
+      servings: (map['servings'] as num?)?.toInt() ?? 1,
       calories: (map['calories'] as num?)?.toInt() ?? 320,
       weightGm: (map['weightGm'] as num?)?.toInt() ?? 300,
       price: (map['price'] as num?)?.toDouble() ?? 80.0,
-      protein: (map['protein'] as num?)?.toInt() ?? 50,
-      carbs: (map['carbs'] as num?)?.toInt() ?? 50,
-      fat: (map['fat'] as num?)?.toInt() ?? 50,
+      protein: (map['protein'] as num?)?.toInt() ?? 20,
+      carbs: (map['carbs'] as num?)?.toInt() ?? 40,
+      fat: (map['fat'] as num?)?.toInt() ?? 10,
     );
   }
 }

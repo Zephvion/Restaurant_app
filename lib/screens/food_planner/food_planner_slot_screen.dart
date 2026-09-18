@@ -40,6 +40,14 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
     '9:00PM',
   ];
 
+  final List<String> _snacksSlots = [
+    '10:30AM',
+    '11:00AM',
+    '4:00PM',
+    '4:30PM',
+    '5:00PM',
+  ];
+
   final List<String> _locations = ['HOME', 'OFFICE'];
 
   @override
@@ -58,6 +66,8 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
         return _lunchSlots;
       case MealType.dinner:
         return _dinnerSlots;
+      case MealType.snacks:
+        return _snacksSlots;
     }
   }
 
@@ -111,9 +121,9 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
                     ),
                   ),
                   const SizedBox(height: 48),
-                  // ── Select Delivery Time ───────────────────────────────
+                  // ── Select Meal Time ──────────────────────────────────
                   const Text(
-                    'Select the delivery time',
+                    'Select preferred meal time',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 13,
@@ -152,9 +162,9 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
                     ),
                   ),
                   const SizedBox(height: 36),
-                  // ── Select Delivery Location ───────────────────────────
+                  // ── Select Meal Location ───────────────────────────────
                   const Text(
-                    'Select the delivery location',
+                    'Select meal setting / location',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 13,

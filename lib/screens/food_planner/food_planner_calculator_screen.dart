@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 
 /// Interactive Calorie Calculator screen matching Calculator.png through Calculator 8.png.
 class FoodPlannerCalculatorScreen extends StatefulWidget {
@@ -14,12 +15,12 @@ class FoodPlannerCalculatorScreen extends StatefulWidget {
 
 class _FoodPlannerCalculatorScreenState
     extends State<FoodPlannerCalculatorScreen> {
-  String _sex = 'Female';
-  int _age = 22;
-  int _heightFt = 6;
-  int _heightIn = 0;
-  int _weightKg = 30;
-  String _activity = 'Less active';
+  String _sex = 'Male';
+  int _age = 26;
+  int _heightFt = 5;
+  int _heightIn = 9; // ~175 cm
+  int _weightKg = 68;
+  String _activity = 'Moderate active';
   String _goal = 'Maintain Weight';
 
   final List<String> _activities = [
@@ -34,36 +35,69 @@ class _FoodPlannerCalculatorScreenState
     'Gain weight',
   ];
 
-  int _calculateTarget() {
-    // Mifflin-St Jeor estimate
-    int bmr = (10 * _weightKg) + (6 * ((_heightFt * 12 + _heightIn) * 2.54).toInt()) - (5 * _age);
+  Map<String, num> _calculateMetrics() {
+    final heightCm = (_heightFt * 12 + _heightIn) * 2.54;
+    // Exact Mifflin-St Jeor equation:
+    double bmr = (10.0 * _weightKg) + (6.25 * heightCm) - (5.0 * _age);
     if (_sex == 'Male') {
-      bmr += 5;
+      bmr += 5.0;
     } else {
-      bmr -= 161;
+      bmr -= 161.0;
     }
 
-    double mult = 1.2;
-    if (_activity == 'Moderate active') mult = 1.4;
-    if (_activity == 'Very active') mult = 1.6;
+    double pal = 1.2; // Sedentary
+    if (_activity == 'Moderate active') pal = 1.55;
+    if (_activity == 'Very active') pal = 1.725;
 
-    double target = bmr * mult;
-    if (_goal == 'Lose weight') target -= 300;
-    if (_goal == 'Gain weight') target += 300;
+    double tdee = bmr * pal;
+    double target = tdee;
+    if (_goal == 'Lose weight') target -= 500; // safe 0.5kg/week fat loss deficit
+    if (_goal == 'Gain weight') target += 400; // clean surplus
 
-    return target.clamp(1200, 3500).toInt();
+    final targetKcal = target.clamp(1200, 4500).round();
+    final proteinG = ((targetKcal * 0.30) / 4).round();
+    final carbsG = ((targetKcal * 0.45) / 4).round();
+    final fatG = ((targetKcal * 0.25) / 9).round();
+
+    return {
+      'bmr': bmr.round(),
+      'tdee': tdee.round(),
+      'targetKcal': targetKcal,
+      'proteinG': proteinG,
+      'carbsG': carbsG,
+      'fatG': fatG,
+    };
   }
 
   void _showResult() {
-    final target = _calculateTarget();
+    final metrics = _calculateMetrics();
+    final target = metrics['targetKcal']!.toInt();
+    final bmr = metrics['bmr']!.toInt();
+    final tdee = metrics['tdee']!.toInt();
+    final protein = metrics['proteinG']!.toInt();
+    final carbs = metrics['carbsG']!.toInt();
+    final fat = metrics['fatG']!.toInt();
+    final planned = FoodPlannerController.instance.getPlannedCaloriesForDay();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _CalorieResultDialog(
         targetKcal: target,
+        bmrKcal: bmr,
+        tdeeKcal: tdee,
+        proteinG: protein,
+        carbsG: carbs,
+        fatG: fat,
+        plannedKcal: planned,
         onSet: () {
           FoodPlannerController.instance.setCalorieTarget(target);
           Navigator.of(ctx).pop(); // pop dialog
+          AppToast.showSuccess(
+            context,
+            'Daily target set to $target kcal with real macro targets!',
+            title: 'Goal Saved',
+          );
           Navigator.of(context).pop(); // pop calculator screen
         },
         onClose: () => Navigator.of(ctx).pop(),
@@ -384,114 +418,235 @@ class _FoodPlannerCalculatorScreenState
 class _CalorieResultDialog extends StatelessWidget {
   const _CalorieResultDialog({
     required this.targetKcal,
+    required this.bmrKcal,
+    required this.tdeeKcal,
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+    required this.plannedKcal,
     required this.onSet,
     required this.onClose,
   });
 
   final int targetKcal;
+  final int bmrKcal;
+  final int tdeeKcal;
+  final int proteinG;
+  final int carbsG;
+  final int fatG;
+  final int plannedKcal;
   final VoidCallback onSet;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
+    final diff = targetKcal - plannedKcal;
+
     return Dialog(
-      backgroundColor: AppColors.background.withValues(alpha: 0.95),
-      insetPadding: EdgeInsets.zero,
-      child: Stack(
-        children: [
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: onClose,
-            ),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+      backgroundColor: const Color(0xFF1E1B24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.copper, width: 1.2),
+      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Your calorie intake',
+                    'Daily Nutrition Target',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 26,
+                      fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  // Green circular gauge
-                  Container(
-                    width: 170,
-                    height: 170,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF4CAF50),
-                        width: 18,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$targetKcal',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const Text(
-                          'kcal',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-                  const Text(
-                    'This is your required intake of\ncalories per day',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  GestureDetector(
-                    onTap: onSet,
-                    child: Container(
-                      width: double.infinity,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(27),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'SET',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                    onPressed: onClose,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 24),
+              // Green circular gauge
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF4ADE80),
+                    width: 14,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4ADE80).withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$targetKcal',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Text(
+                      'TARGET KCAL',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Scientific breakdown chip
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  'Base BMR: $bmrKcal kcal  •  Maintenance (TDEE): $tdeeKcal kcal',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Target Macros Breakdown
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Recommended Macronutrient Split',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _macroPill('Protein (30%)', '${proteinG}g', const Color(0xFF4EA8DE)),
+                  const SizedBox(width: 8),
+                  _macroPill('Carbs (45%)', '${carbsG}g', const Color(0xFFF77F00)),
+                  const SizedBox(width: 8),
+                  _macroPill('Fat (25%)', '${fatG}g', const Color(0xFFE63946)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Current planned comparison
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF26232D),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.copper.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.copper, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        diff >= 0
+                            ? 'Currently planned today: $plannedKcal kcal ($diff kcal remaining to reach target).'
+                            : 'Currently planned today: $plannedKcal kcal (${-diff} kcal over target budget).',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: onSet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentRed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'SET AS DAILY GOAL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _macroPill(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

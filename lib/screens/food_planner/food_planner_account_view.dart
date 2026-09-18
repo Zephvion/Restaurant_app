@@ -15,7 +15,6 @@ class FoodPlannerAccountView extends StatefulWidget {
 }
 
 class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
-  bool _addressExpanded = true;
   bool _plannerExpanded = true;
 
   @override
@@ -111,37 +110,24 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
             ),
           ),
           const SizedBox(height: 32),
-          // ── 1. Address Drawer ─────────────────────────────────────────
-          _buildAddressSection(),
+          // ── 1. Daily Nutrition & Goals ────────────────────────────────
+          _buildNutritionGoalsSection(),
           const SizedBox(height: 14),
-          // ── 2. Food Planner Drawer ────────────────────────────────────
+          // ── 2. Food Planner Overview Drawer ───────────────────────────
           _buildFoodPlannerSection(),
           const SizedBox(height: 14),
           // ── 3. Calorie Counter Tile ───────────────────────────────────
           _simpleTile(
+            icon: Icons.local_fire_department,
+            title: 'Daily calorie & macro tracker',
+            onTap: () => FoodPlannerController.instance.setActiveTab(1),
+          ),
+          const SizedBox(height: 14),
+          // ── 4. Calculator Tile ────────────────────────────────────────
+          _simpleTile(
             icon: Icons.calculate_outlined,
-            title: 'Calorie counter',
+            title: 'BMR & Calorie target calculator',
             onTap: () => FoodPlannerController.instance.setActiveTab(2),
-          ),
-          const SizedBox(height: 14),
-          // ── 4. Payments Tile ──────────────────────────────────────────
-          _simpleTile(
-            icon: Icons.payment,
-            title: 'Payments',
-            onTap: () {
-              Navigator.of(context)
-                  .pushNamed(AppRoutes.foodPlannerManagePayments);
-            },
-          ),
-          const SizedBox(height: 14),
-          // ── 5. Order History Tile ─────────────────────────────────────
-          _simpleTile(
-            icon: Icons.restaurant_outlined,
-            title: 'Order history',
-            onTap: () {
-              Navigator.of(context)
-                  .pushNamed(AppRoutes.foodPlannerOrderHistory);
-            },
           ),
           const SizedBox(height: 32),
           // ── 6. Logout ─────────────────────────────────────────────────
@@ -195,7 +181,9 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
     );
   }
 
-  Widget _buildAddressSection() {
+  Widget _buildNutritionGoalsSection() {
+    final ctrl = FoodPlannerController.instance;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -207,11 +195,10 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
         children: [
           Row(
             children: [
-              const Icon(Icons.home_outlined,
-                  color: AppColors.textSecondary, size: 20),
+              const Icon(Icons.tune, color: AppColors.textSecondary, size: 20),
               const SizedBox(width: 10),
               const Text(
-                'Address',
+                'Nutrition & Calorie Goals',
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 15,
@@ -220,32 +207,53 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () =>
-                    setState(() => _addressExpanded = !_addressExpanded),
-                child: const Icon(Icons.edit_outlined,
-                    size: 16, color: AppColors.textSecondary),
+                onTap: () => ctrl.setActiveTab(2),
+                child: const Row(
+                  children: [
+                    Text(
+                      'Recalculate',
+                      style: TextStyle(
+                        color: AppColors.copper,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios,
+                        color: AppColors.copper, size: 10),
+                  ],
+                ),
               ),
             ],
           ),
-          if (_addressExpanded) ...[
-            const SizedBox(height: 18),
-            _addressRow(
-              type: 'Home',
-              address: 'Flat no 9B, Landmark World, Palazhi, Calicut, 673014',
-            ),
-            const SizedBox(height: 14),
-            _addressRow(
-              type: 'Office',
-              address:
-                  'Cybaze technologies, UL Cyberpark, Palazhi, Calicut, 6730',
-            ),
-          ],
+          const SizedBox(height: 16),
+          _goalRow(
+            label: 'Daily Target',
+            value: '${ctrl.targetKcal} kcal / day',
+            subtitle: 'Calculated baseline intake',
+          ),
+          const SizedBox(height: 12),
+          _goalRow(
+            label: 'Diet Preference',
+            value: 'Balanced Indian Diet',
+            subtitle: 'Vegetarian & Kerala Delicacies',
+          ),
+          const SizedBox(height: 12),
+          _goalRow(
+            label: 'Hydration Target',
+            value: '2.5 Litres / day',
+            subtitle: 'Optimal metabolic rate',
+          ),
         ],
       ),
     );
   }
 
-  Widget _addressRow({required String type, required String address}) {
+  Widget _goalRow({
+    required String label,
+    required String value,
+    required String subtitle,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,26 +263,40 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
           color: AppColors.accentRed,
         ),
         const SizedBox(width: 12),
-        SizedBox(
-          width: 50,
-          child: Text(
-            type,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            address,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              height: 1.3,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.hint,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
       ],

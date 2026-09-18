@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../theme/app_colors.dart';
+import 'app_banner.dart';
 
 /// Customer support, restaurant assistance, and delivery partner contact modal.
 class CustomerSupportSheet extends StatelessWidget {
@@ -36,20 +37,7 @@ class CustomerSupportSheet extends StatelessWidget {
 
   void _showActionToast(BuildContext context, String message) {
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.phone_in_talk, color: Color(0xFF34A853), size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: const Color(0xFF1E1E24),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    AppToast.showSuccess(context, message, title: 'Support');
   }
 
   @override

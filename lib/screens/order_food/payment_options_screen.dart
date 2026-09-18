@@ -467,11 +467,9 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
                       _selectedId = newCard.id;
                     });
                     Navigator.of(sheetCtx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Card ending in $last4 added & selected'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppToast.showSuccess(
+                      context,
+                      'Card ending in $last4 added & selected',
                     );
                   },
                   child: const Text(
@@ -559,11 +557,9 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
                       _selectedId = newUpi.id;
                     });
                     Navigator.of(sheetCtx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('UPI ID "$upiId" added & selected'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppToast.showSuccess(
+                      context,
+                      'UPI ID "$upiId" added & selected',
                     );
                   },
                   child: const Text(

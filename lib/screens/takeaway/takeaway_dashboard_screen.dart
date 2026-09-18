@@ -6,6 +6,7 @@ import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
@@ -279,11 +280,9 @@ class _TakeawayOrderCard extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Calling ${order.restaurant.name}...'),
-                      duration: const Duration(seconds: 2),
-                    ),
+                  AppToast.showInfo(
+                    context,
+                    'Calling ${order.restaurant.name}...',
                   );
                 },
                 child: const Row(

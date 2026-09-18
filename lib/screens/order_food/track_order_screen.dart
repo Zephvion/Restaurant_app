@@ -203,12 +203,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                         foregroundColor: AppColors.copper,
                         elevation: 4,
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Centered on delivery vehicle'),
-                              duration: Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
+                          AppToast.showInfo(
+                            context,
+                            'Centered on delivery vehicle',
                           );
                         },
                         child: const Icon(Icons.my_location, size: 20),
