@@ -117,9 +117,10 @@ class _CateringNotifyScreenState extends State<CateringNotifyScreen> {
       }
 
       setState(() => _isSubmitting = true);
+      final nav = Navigator.of(context);
 
       try {
-        final order = await CateringController.instance.placeOrder(
+        await CateringController.instance.placeOrder(
           date: args.date,
           guestRange: args.guestRange,
           restaurant: args.restaurant,
@@ -127,6 +128,7 @@ class _CateringNotifyScreenState extends State<CateringNotifyScreen> {
           eventType: args.eventType,
           menuPackage: args.menuPackage,
           pricePerPlate: args.pricePerPlate,
+          totalAmount: totalEstimate,
           venueAddress:
               '${_venueNameCtrl.text.trim()}, ${_venueAddressCtrl.text.trim()}',
           specialInstructions: _instructionsCtrl.text.trim(),
@@ -136,14 +138,14 @@ class _CateringNotifyScreenState extends State<CateringNotifyScreen> {
         if (mounted) {
           AppBanner.showSuccess(
             context,
-            'Catering request submitted for ${args.guestRange} on $formattedDate!',
-            title: 'Request Submitted',
-          );
-          Navigator.of(context).pushReplacementNamed(
-            AppRoutes.cateringSuccess,
-            arguments: order,
+            'Catering request registered for ${args.guestRange}!',
+            title: 'Catering Order Placed',
           );
         }
+        nav.pushNamedAndRemoveUntil(
+          AppRoutes.cateringDashboard,
+          (route) => route.isFirst || route.settings.name == AppRoutes.home,
+        );
       } catch (e) {
         if (mounted) {
           setState(() => _isSubmitting = false);
@@ -152,6 +154,10 @@ class _CateringNotifyScreenState extends State<CateringNotifyScreen> {
             'Failed to submit catering request: $e',
             title: 'Error',
           );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
         }
       }
     }

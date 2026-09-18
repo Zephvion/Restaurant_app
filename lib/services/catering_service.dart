@@ -10,7 +10,30 @@ class CateringService {
   CateringService._();
   static final CateringService instance = CateringService._();
 
-  final List<CateringOrder> _localOrders = [];
+  final List<CateringOrder> _localOrders = [
+    CateringOrder(
+      id: 'CAT-4578',
+      userId: 'usr_demo',
+      restaurantId: 'rest_calicut',
+      restaurantName: 'Paragon Restaurant - Calicut',
+      branchLocation: 'Mavoor Road, Kozhikode',
+      pickupLocation: 'Paragon Central Catering Hub, Mavoor Road, Kozhikode',
+      ownerName: 'Chef Rajesh Kumar (Catering Operations Head)',
+      ownerPhone: '+91 98470 12345',
+      date: DateTime.now().add(const Duration(days: 4)),
+      timeSlot: 'Lunch (12:00 PM – 3:30 PM)',
+      guestRange: '100 - 250 Guests',
+      eventType: 'Corporate Buffet Gala',
+      menuPackage: 'Royal Malabar Feast',
+      pricePerPlate: 550.0,
+      totalAmount: 82500.0,
+      venueAddress: 'Grand Palace Convention Centre, Mavoor Road, Kozhikode',
+      specialInstructions: 'Live appam counter requested; Jain options for 10 guests.',
+      contactPhone: '+91 98765 43210',
+      status: CateringStatus.notifiedParagon,
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+    ),
+  ];
 
   List<CateringOrder> get orders => List.unmodifiable(_localOrders);
 
@@ -22,9 +45,13 @@ class CateringService {
     String eventType = 'Corporate Buffet',
     String menuPackage = 'Royal Malabar Feast',
     double pricePerPlate = 450.0,
+    double totalAmount = 0.0,
     String venueAddress = 'Palazhi, Calicut',
     String specialInstructions = '',
     String contactPhone = '+91 9874563210',
+    String ownerName = 'Chef Rajesh Kumar (Catering Operations Head)',
+    String ownerPhone = '+91 98470 12345',
+    String pickupLocation = 'Paragon Central Catering Hub, Mavoor Road, Kozhikode',
   }) async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
     final randId = 'CAT-${1000 + DateTime.now().millisecondsSinceEpoch % 9000}';
@@ -35,12 +62,16 @@ class CateringService {
       restaurantId: restaurant?.id ?? 'rest_calicut',
       restaurantName: restaurant?.name ?? 'Paragon Restaurant - Calicut',
       branchLocation: restaurant?.address ?? 'Mavoor Road, Calicut',
+      pickupLocation: pickupLocation,
+      ownerName: ownerName,
+      ownerPhone: ownerPhone,
       date: date,
       timeSlot: timeSlot,
       guestRange: guestRange,
       eventType: eventType,
       menuPackage: menuPackage,
       pricePerPlate: pricePerPlate,
+      totalAmount: totalAmount,
       venueAddress: venueAddress,
       specialInstructions: specialInstructions,
       contactPhone: contactPhone,
@@ -51,17 +82,64 @@ class CateringService {
     _localOrders.insert(0, order);
 
     if (FirebaseInitializer.isFirebaseReady) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('catering_requests')
-            .doc(randId)
-            .set(order.toMap());
-      } catch (e) {
-        debugPrint('Error placing catering request in Firestore: $e');
-      }
+      // Non-blocking background sync with timeout so it never blocks UI navigation
+      FirebaseFirestore.instance
+          .collection('catering_requests')
+          .doc(randId)
+          .set(order.toMap())
+          .timeout(const Duration(seconds: 2))
+          .catchError((e) {
+        debugPrint('Firestore catering sync offline note: $e');
+      });
     }
 
     return order;
+  }
+
+  Future<void> confirmPayment(
+    String id, {
+    required String txnId,
+    required String paymentMode,
+  }) async {
+    final idx = _localOrders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      _localOrders[idx].isPaid = true;
+      _localOrders[idx].paymentTxnId = txnId;
+      _localOrders[idx].paymentMode = paymentMode;
+      _localOrders[idx].status = CateringStatus.bookingConfirmed;
+    }
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      FirebaseFirestore.instance
+          .collection('catering_requests')
+          .doc(id)
+          .update({
+        'isPaid': true,
+        'paymentTxnId': txnId,
+        'paymentMode': paymentMode,
+        'status': CateringStatus.bookingConfirmed.name,
+      }).timeout(const Duration(seconds: 2)).catchError((e) {
+        debugPrint('Error updating payment in Firestore: $e');
+      });
+    }
+  }
+
+  Future<void> updateOrderStatus(String id, CateringStatus status) async {
+    final idx = _localOrders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      _localOrders[idx].status = status;
+    }
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      FirebaseFirestore.instance
+          .collection('catering_requests')
+          .doc(id)
+          .update({'status': status.name})
+          .timeout(const Duration(seconds: 2))
+          .catchError((e) {
+        debugPrint('Error updating status in Firestore: $e');
+      });
+    }
   }
 
   Future<List<CateringOrder>> getUserCateringOrders(String userId) async {
@@ -70,7 +148,8 @@ class CateringService {
         final query = await FirebaseFirestore.instance
             .collection('catering_requests')
             .where('userId', isEqualTo: userId)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 2));
         if (query.docs.isNotEmpty) {
           final items = query.docs
               .map((doc) => CateringOrder.fromMap(doc.data(), id: doc.id))
@@ -90,14 +169,14 @@ class CateringService {
   Future<void> cancelOrder(String id) async {
     _localOrders.removeWhere((o) => o.id == id);
     if (FirebaseInitializer.isFirebaseReady) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('catering_requests')
-            .doc(id)
-            .delete();
-      } catch (e) {
+      FirebaseFirestore.instance
+          .collection('catering_requests')
+          .doc(id)
+          .delete()
+          .timeout(const Duration(seconds: 2))
+          .catchError((e) {
         debugPrint('Error deleting catering request from Firestore: $e');
-      }
+      });
     }
   }
 }

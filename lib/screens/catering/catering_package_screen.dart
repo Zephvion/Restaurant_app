@@ -124,8 +124,16 @@ class _CateringPackageScreenState extends State<CateringPackageScreen> {
   bool _needLiveCounters = true;
   bool _needServiceStaff = true;
 
-  CateringBookingArgs get _args =>
-      ModalRoute.of(context)!.settings.arguments as CateringBookingArgs;
+  CateringBookingArgs get _args {
+    final raw = ModalRoute.of(context)?.settings.arguments;
+    if (raw is CateringBookingArgs) return raw;
+    return CateringBookingArgs(
+      date: DateTime.now().add(const Duration(days: 3)),
+      timeSlot: 'Lunch (12:00 PM – 3:30 PM)',
+      guestRange: '100 – 200 Guests',
+      eventType: 'Corporate Buffet',
+    );
+  }
 
   void _proceed() {
     final selectedPkg =
