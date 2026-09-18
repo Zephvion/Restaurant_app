@@ -25,7 +25,7 @@ class FoodPlannerService {
             .doc(meal.id);
         batch.set(doc, meal.toMap());
       }
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds: 2));
     } catch (e) {
       debugPrint('Error saving meal plans to Firestore: $e');
     }
@@ -41,7 +41,8 @@ class FoodPlannerService {
           .doc(uid)
           .collection('preferences')
           .doc('calorie_stats')
-          .set(stats.toMap());
+          .set(stats.toMap())
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
       debugPrint('Error saving calorie stats to Firestore: $e');
     }
@@ -56,7 +57,8 @@ class FoodPlannerService {
           .collection('users')
           .doc(uid)
           .collection('meal_plans')
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 2));
 
       if (snapshot.docs.isNotEmpty) {
         return snapshot.docs

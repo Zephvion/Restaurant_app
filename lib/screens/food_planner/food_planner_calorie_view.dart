@@ -16,30 +16,7 @@ class FoodPlannerCalorieView extends StatefulWidget {
 }
 
 class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
-  String _selectedDateTab = 'Today';
   bool _isDrawerOpen = true;
-
-  late final List<String> _dateTabs;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    final minus2 = now.subtract(const Duration(days: 2));
-    final plus2 = now.add(const Duration(days: 2));
-
-    _dateTabs = [
-      '${months[minus2.month - 1]} ${minus2.day}',
-      'Yesterday',
-      'Today',
-      'Tomorrow',
-      '${months[plus2.month - 1]} ${plus2.day}',
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +64,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 200),
                 children: [
                   // ── Date Tabs ─────────────────────────────────────────
-                  _dateTabsRow(),
+                  _dateTabsRow(ctrl),
                   const SizedBox(height: 36),
                   // ── Circular Calorie Gauge ────────────────────────────
                   _CalorieRing(
@@ -222,14 +199,28 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
     );
   }
 
-  Widget _dateTabsRow() {
+  Widget _dateTabsRow(FoodPlannerController ctrl) {
+    final now = DateTime.now();
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: _dateTabs.map((tab) {
-          final isSelected = tab == _selectedDateTab;
+        children: List.generate(7, (i) {
+          final isSelected = ctrl.selectedDayOffset == i;
+          final date = now.add(Duration(days: i));
+          final label = i == 0
+              ? 'Today'
+              : i == 1
+                  ? 'Tomorrow'
+                  : '${dayNames[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+
           return GestureDetector(
-            onTap: () => setState(() => _selectedDateTab = tab),
+            onTap: () => ctrl.selectDay(i),
             child: Container(
               margin: const EdgeInsets.only(right: 18),
               padding: const EdgeInsets.only(bottom: 6),
@@ -242,7 +233,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                 ),
               ),
               child: Text(
-                tab,
+                label,
                 style: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textSecondary,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -251,7 +242,7 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ),
     );
   }

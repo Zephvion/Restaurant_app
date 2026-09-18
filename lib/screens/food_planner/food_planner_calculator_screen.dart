@@ -15,13 +15,13 @@ class FoodPlannerCalculatorScreen extends StatefulWidget {
 
 class _FoodPlannerCalculatorScreenState
     extends State<FoodPlannerCalculatorScreen> {
-  String _sex = 'Male';
-  int _age = 26;
-  int _heightFt = 5;
-  int _heightIn = 9; // ~175 cm
-  int _weightKg = 68;
-  String _activity = 'Moderate active';
-  String _goal = 'Maintain Weight';
+  String? _sex;
+  int? _age;
+  int? _heightFt;
+  int? _heightIn = 0;
+  int? _weightKg;
+  String? _activity;
+  String? _goal;
 
   final List<String> _activities = [
     'Less active',
@@ -35,10 +35,34 @@ class _FoodPlannerCalculatorScreenState
     'Gain weight',
   ];
 
+  bool get _isComplete =>
+      _sex != null &&
+      _age != null &&
+      _age! > 0 &&
+      _heightFt != null &&
+      _heightFt! > 0 &&
+      _weightKg != null &&
+      _weightKg! > 0 &&
+      _activity != null &&
+      _goal != null;
+
+  List<String> _getMissingFields() {
+    final missing = <String>[];
+    if (_sex == null) missing.add('Sex');
+    if (_age == null || _age! <= 0) missing.add('Age');
+    if (_heightFt == null || _heightFt! <= 0) missing.add('Height');
+    if (_weightKg == null || _weightKg! <= 0) missing.add('Weight');
+    if (_activity == null) missing.add('Activity Level');
+    if (_goal == null) missing.add('Goal');
+    return missing;
+  }
+
   Map<String, num> _calculateMetrics() {
-    final heightCm = (_heightFt * 12 + _heightIn) * 2.54;
+    if (!_isComplete) return {};
+    final heightIn = _heightIn ?? 0;
+    final heightCm = (_heightFt! * 12 + heightIn) * 2.54;
     // Exact Mifflin-St Jeor equation:
-    double bmr = (10.0 * _weightKg) + (6.25 * heightCm) - (5.0 * _age);
+    double bmr = (10.0 * _weightKg!) + (6.25 * heightCm) - (5.0 * _age!);
     if (_sex == 'Male') {
       bmr += 5.0;
     } else {
@@ -70,6 +94,16 @@ class _FoodPlannerCalculatorScreenState
   }
 
   void _showResult() {
+    if (!_isComplete) {
+      final missing = _getMissingFields().join(', ');
+      AppBanner.showWarning(
+        context,
+        'Please enter all details ($missing) before calculating BMR.',
+        title: 'Details Required',
+      );
+      return;
+    }
+
     final metrics = _calculateMetrics();
     final target = metrics['targetKcal']!.toInt();
     final bmr = metrics['bmr']!.toInt();
@@ -212,17 +246,17 @@ class _FoodPlannerCalculatorScreenState
               Row(
                 children: [
                   _heightBox(
-                    value: '$_heightFt',
+                    value: _heightFt != null ? '$_heightFt' : '-',
                     unit: 'ft',
-                    onTap: () => setState(
-                        () => _heightFt = _heightFt >= 7 ? 4 : _heightFt + 1),
+                    onTap: () => setState(() =>
+                        _heightFt = _heightFt == null ? 5 : (_heightFt! >= 7 ? 4 : _heightFt! + 1)),
                   ),
                   const SizedBox(width: 20),
                   _heightBox(
-                    value: '$_heightIn',
+                    value: _heightIn != null ? '$_heightIn' : '-',
                     unit: 'in',
-                    onTap: () => setState(
-                        () => _heightIn = _heightIn >= 11 ? 0 : _heightIn + 1),
+                    onTap: () => setState(() =>
+                        _heightIn = _heightIn == null ? 0 : (_heightIn! >= 11 ? 0 : _heightIn! + 1)),
                   ),
                 ],
               ),
@@ -234,7 +268,7 @@ class _FoodPlannerCalculatorScreenState
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: List.generate(40, (i) {
-                    final wVal = 25 + i * 2;
+                    final wVal = 35 + i * 2;
                     final isSelected = _weightKg == wVal;
                     return GestureDetector(
                       onTap: () => setState(() => _weightKg = wVal),
@@ -342,17 +376,28 @@ class _FoodPlannerCalculatorScreenState
               child: Container(
                 height: 56,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: _isComplete ? AppColors.accentRed : AppColors.surface,
                   borderRadius: BorderRadius.circular(28),
+                  boxShadow: _isComplete
+                      ? [
+                          BoxShadow(
+                            color: AppColors.accentRed.withValues(alpha: 0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          )
+                        ]
+                      : null,
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'CALCULATE CALORIE',
+                child: Text(
+                  _isComplete
+                      ? 'CALCULATE CALORIE'
+                      : 'ENTER ALL DETAILS TO CALCULATE',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: _isComplete ? Colors.white : AppColors.textSecondary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    letterSpacing: 1.5,
+                    fontSize: 14,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),

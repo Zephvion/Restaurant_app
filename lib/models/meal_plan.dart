@@ -59,6 +59,7 @@ class PlannedMeal {
     required this.location,
     required this.dishName,
     required this.imageUrl,
+    this.date,
     this.dishId = '',
     this.servings = 1,
     this.calories = 320,
@@ -70,7 +71,8 @@ class PlannedMeal {
   });
 
   final String id;
-  final int dayOffset; // 0..6 (e.g. 0 for Tuesday Jan 2)
+  final int dayOffset; // 0..6 (0 for today)
+  final String? date; // 'yyyy-MM-dd'
   final MealType mealType;
   final String timeSlot; // e.g. '7:30AM'
   final String location; // 'HOME' or 'OFFICE'
@@ -88,6 +90,7 @@ class PlannedMeal {
   PlannedMeal copyWith({
     String? id,
     int? dayOffset,
+    String? date,
     MealType? mealType,
     String? timeSlot,
     String? location,
@@ -105,6 +108,7 @@ class PlannedMeal {
     return PlannedMeal(
       id: id ?? this.id,
       dayOffset: dayOffset ?? this.dayOffset,
+      date: date ?? this.date,
       mealType: mealType ?? this.mealType,
       timeSlot: timeSlot ?? this.timeSlot,
       location: location ?? this.location,
@@ -124,6 +128,7 @@ class PlannedMeal {
   Map<String, dynamic> toMap() => {
         'id': id,
         'dayOffset': dayOffset,
+        if (date != null) 'date': date,
         'mealType': mealType.name,
         'timeSlot': timeSlot,
         'location': location,
@@ -143,6 +148,7 @@ class PlannedMeal {
     return PlannedMeal(
       id: id ?? (map['id'] as String? ?? ''),
       dayOffset: (map['dayOffset'] as num?)?.toInt() ?? 0,
+      date: map['date'] as String?,
       mealType: MealTypeExt.fromString(map['mealType'] as String?),
       timeSlot: map['timeSlot'] as String? ?? '7:30AM',
       location: map['location'] as String? ?? 'HOME',

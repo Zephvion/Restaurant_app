@@ -390,6 +390,13 @@ class FoodPlannerController extends ChangeNotifier {
     }
   }
 
+  static String dateStringForOffset(int offset) {
+    final date = DateTime.now().add(Duration(days: offset));
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String get selectedDateString => dateStringForOffset(_selectedDayOffset);
+
   void selectDay(int offset) {
     if (_selectedDayOffset != offset) {
       _selectedDayOffset = offset;
@@ -397,10 +404,18 @@ class FoodPlannerController extends ChangeNotifier {
     }
   }
 
-  List<PlannedMeal> getMealsForSelectedDay() {
+  List<PlannedMeal> getMealsForDay([int? dayOffset]) {
+    final offset = dayOffset ?? _selectedDayOffset;
+    final dateStr = dateStringForOffset(offset);
     return _plannedMeals
-        .where((m) => m.dayOffset == _selectedDayOffset)
+        .where((m) =>
+            (m.date != null && m.date == dateStr) ||
+            (m.date == null && m.dayOffset == offset))
         .toList();
+  }
+
+  List<PlannedMeal> getMealsForSelectedDay() {
+    return getMealsForDay(_selectedDayOffset);
   }
 
   void setupSlot({
@@ -439,15 +454,13 @@ class FoodPlannerController extends ChangeNotifier {
   }
 
   int getPlannedCaloriesForDay([int? dayOffset]) {
-    final offset = dayOffset ?? _selectedDayOffset;
-    final dayMeals = _plannedMeals.where((m) => m.dayOffset == offset);
+    final dayMeals = getMealsForDay(dayOffset);
     return dayMeals.fold<int>(0, (sum, m) => sum + m.calories);
   }
 
   CalorieStats getCalorieStatsForDay([int? dayOffset]) {
     final offset = dayOffset ?? _selectedDayOffset;
-    final dayMeals =
-        _plannedMeals.where((m) => m.dayOffset == offset).toList();
+    final dayMeals = getMealsForDay(offset);
     final plannedKcal = dayMeals.fold<int>(0, (sum, m) => sum + m.calories);
     final remaining = math.max(0, _targetKcal - plannedKcal);
 
@@ -515,15 +528,21 @@ class FoodPlannerController extends ChangeNotifier {
   }
 
   void clearSlot(int dayOffset, MealType mealType) {
-    _plannedMeals.removeWhere(
-        (m) => m.dayOffset == dayOffset && m.mealType == mealType);
+    final dateStr = dateStringForOffset(dayOffset);
+    _plannedMeals.removeWhere((m) =>
+        ((m.date != null && m.date == dateStr) || m.dayOffset == dayOffset) &&
+        m.mealType == mealType);
     FoodPlannerService.instance.savePlannedMeals(_plannedMeals);
     notifyListeners();
   }
 
   List<PlannedMeal> getMealsForSlot(int dayOffset, MealType type) {
+    final dateStr = dateStringForOffset(dayOffset);
     return _plannedMeals
-        .where((m) => m.dayOffset == dayOffset && m.mealType == type)
+        .where((m) =>
+            ((m.date != null && m.date == dateStr) ||
+                (m.date == null && m.dayOffset == dayOffset)) &&
+            m.mealType == type)
         .toList();
   }
 
@@ -556,6 +575,7 @@ class FoodPlannerController extends ChangeNotifier {
     int quantity = 1,
   }) {
     final offset = dayOffset ?? _selectedDayOffset;
+    final dateStr = dateStringForOffset(offset);
     final type = mealType ?? _currentSlotMealType;
     final time = timeSlot ?? _currentSlotTime;
     final loc = location ?? _currentSlotLocation;
@@ -569,7 +589,7 @@ class FoodPlannerController extends ChangeNotifier {
     // Check if this dish is already in this slot
     final existingIndex = _plannedMeals.indexWhere(
       (m) =>
-          m.dayOffset == offset &&
+          ((m.date != null && m.date == dateStr) || m.dayOffset == offset) &&
           m.mealType == type &&
           (m.dishId == dish.id || m.dishName == dish.name),
     );
@@ -579,6 +599,7 @@ class FoodPlannerController extends ChangeNotifier {
       final newServings = existing.servings + quantity;
       _plannedMeals[existingIndex] = existing.copyWith(
         servings: newServings,
+        date: dateStr,
         calories: baseKcal * newServings,
         weightGm: baseGrams * newServings,
         price: dish.price * newServings,
@@ -592,6 +613,7 @@ class FoodPlannerController extends ChangeNotifier {
       final newMeal = PlannedMeal(
         id: 'pm_${DateTime.now().microsecondsSinceEpoch}_${dish.id}',
         dayOffset: offset,
+        date: dateStr,
         mealType: type,
         timeSlot: time,
         location: loc,

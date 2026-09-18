@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/service_item.dart';
 import '../../routes/app_routes.dart';
+import '../../services/notification_service.dart';
+import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/basket_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
 // ─── Tab model ───────────────────────────────────────────────────────────────
@@ -87,10 +90,126 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: ListenableBuilder(
+        listenable: CartController.instance,
+        builder: (context, _) {
+          final cart = CartController.instance;
+          if (cart.isEmpty) return const SizedBox.shrink();
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: BasketBar(
+                itemCount: cart.totalQuantity,
+                label: 'VIEW CART',
+                onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+              ),
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
+            // ── Top App Header with Brand & Cart ────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 14, 4),
+              child: Row(
+                children: [
+                  const Text(
+                    'PARAGON',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Notifications bell
+                  ListenableBuilder(
+                    listenable: NotificationService.instance,
+                    builder: (context, _) {
+                      final unread = NotificationService.instance.unreadCount;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColors.textPrimary,
+                              size: 24,
+                            ),
+                            onPressed: () => Navigator.of(context)
+                                .pushNamed(AppRoutes.notifications),
+                          ),
+                          if (unread > 0)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.accentRed,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  // Cart button
+                  ListenableBuilder(
+                    listenable: CartController.instance,
+                    builder: (context, _) {
+                      final count = CartController.instance.totalQuantity;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.shopping_cart_outlined,
+                              color: AppColors.textPrimary,
+                              size: 24,
+                            ),
+                            onPressed: () =>
+                                Navigator.of(context).pushNamed(AppRoutes.cart),
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 18,
+                                  minHeight: 18,
+                                ),
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.accentRed,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
             // ── Swiggy-style tab bar ────────────────────────────────────────
             _TopTabBar(controller: _tabController, tabs: _tabs),
             // ── Animated indicator underline ────────────────────────────────

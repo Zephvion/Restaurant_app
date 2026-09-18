@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 /// Type of in-app banner/toast notification.
-enum BannerType { success, error, info }
+enum BannerType { success, error, info, warning }
 
 /// High-visibility floating banner and toast notification system.
 class AppBanner {
@@ -37,6 +37,14 @@ class AppBanner {
     String? title,
   }) {
     AppToast.showError(context, message, title: title);
+  }
+
+  static void showWarning(
+    BuildContext context,
+    String message, {
+    String? title,
+  }) {
+    AppToast.showWarning(context, message, title: title);
   }
 
   static void showInfo(
@@ -74,6 +82,12 @@ class AppToast {
         bgColor = const Color(0xFF381414);
         iconColor = const Color(0xFFFF6B6B);
         iconData = Icons.error_outline_rounded;
+        break;
+      case BannerType.warning:
+        borderColor = const Color(0xFFFBBF24);
+        bgColor = const Color(0xFF322710);
+        iconColor = const Color(0xFFFBBF24);
+        iconData = Icons.warning_amber_rounded;
         break;
       case BannerType.info:
         borderColor = AppColors.copper;
@@ -212,6 +226,19 @@ class AppToast {
     );
   }
 
+  static void showWarning(
+    BuildContext context,
+    String message, {
+    String? title,
+  }) {
+    show(
+      context,
+      message: message,
+      title: title ?? 'Warning',
+      type: BannerType.warning,
+    );
+  }
+
   static void showInfo(
     BuildContext context,
     String message, {
@@ -299,6 +326,12 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
         bgColor = const Color(0xFF381414);
         iconColor = const Color(0xFFFF6B6B);
         iconData = Icons.error_outline_rounded;
+        break;
+      case BannerType.warning:
+        borderColor = const Color(0xFFFBBF24);
+        bgColor = const Color(0xFF322710);
+        iconColor = const Color(0xFFFBBF24);
+        iconData = Icons.warning_amber_rounded;
         break;
       case BannerType.info:
         borderColor = AppColors.copper;

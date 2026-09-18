@@ -37,7 +37,8 @@ class TakeawayService {
         await FirebaseFirestore.instance
             .collection('takeaways')
             .doc(orderId)
-            .set(order.toMap());
+            .set(order.toMap())
+            .timeout(const Duration(seconds: 2));
       } catch (e) {
         debugPrint('Error placing takeaway in Firestore: $e');
       }
@@ -52,7 +53,8 @@ class TakeawayService {
         final query = await FirebaseFirestore.instance
             .collection('takeaways')
             .where('userId', isEqualTo: userId)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 2));
         if (query.docs.isNotEmpty) {
           final items = query.docs
               .map((doc) => TakeawayOrder.fromMap(doc.data(), id: doc.id))

@@ -209,24 +209,26 @@ class _OrdersList extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hello, $userName!',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 13),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Your Catering Bookings',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, $userName!',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Your Catering Bookings',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.add_circle, color: AppColors.copper, size: 32),

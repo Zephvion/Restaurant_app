@@ -65,26 +65,6 @@ class CartScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Cart'),
-        actions: [
-          AnimatedBuilder(
-            animation: cart,
-            builder: (context, _) {
-              if (cart.isEmpty) return const SizedBox.shrink();
-              return TextButton.icon(
-                onPressed: () => _confirmClearCart(context),
-                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.accentRed),
-                label: const Text(
-                  'Clear Cart',
-                  style: TextStyle(
-                    color: AppColors.accentRed,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: AnimatedBuilder(
         animation: cart,

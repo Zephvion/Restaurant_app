@@ -908,34 +908,38 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.local_fire_department,
-                      color: AppColors.accentRed, size: 24),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$plannedKcal / $targetKcal kcal',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 17,
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_fire_department,
+                        color: AppColors.accentRed, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$plannedKcal / $targetKcal kcal',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 17,
+                            ),
+                          ),
+                          Text(
+                            remainingKcal > 0
+                                ? '$remainingKcal kcal budget remaining'
+                                : 'Daily caloric goal achieved!',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        remainingKcal > 0
-                            ? '$remainingKcal kcal budget remaining'
-                            : 'Daily caloric goal achieved!',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
               GestureDetector(
                 onTap: onViewDetails,
