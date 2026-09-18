@@ -28,9 +28,15 @@ class FirestoreSeeder {
 
         // Seed categories
         for (final cat in MockData.categories) {
-          final catId = cat.id.isNotEmpty ? cat.id : cat.name.toLowerCase().replaceAll(' ', '_');
-          final doc = firestore.collection('categories').doc(catId);
-          batch.set(doc, cat.toMap());
+          final id = cat.id.isNotEmpty ? cat.id : cat.name.toLowerCase().replaceAll(' ', '_');
+          final doc = firestore.collection('categories').doc(id);
+          batch.set(doc, {
+            'id': id,
+            'name': cat.name,
+            'imageUrl': cat.imageUrl,
+            'iconAsset': cat.iconAsset,
+            'sortOrder': MockData.categories.indexOf(cat),
+          });
         }
 
         // Seed restaurants
@@ -40,8 +46,8 @@ class FirestoreSeeder {
         }
 
         // Seed promos
-        for (int i = 0; i < MockData.promos.length; i++) {
-          final promo = MockData.promos[i];
+        for (int i = 0; i < MockData.promoBanners.length; i++) {
+          final promo = MockData.promoBanners[i];
           final doc = firestore.collection('promos').doc('promo_$i');
           batch.set(doc, promo.toMap());
         }
@@ -54,3 +60,4 @@ class FirestoreSeeder {
     }
   }
 }
+

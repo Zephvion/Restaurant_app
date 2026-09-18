@@ -18,15 +18,22 @@ class PromoBanner {
 
   final String imageUrl;
 
+  String get title => headline;
+  String get subtitle => 'Use code $code';
+  String get buttonText => 'ORDER NOW';
+
   Map<String, dynamic> toMap() => {
         'headline': headline,
         'code': code,
         'imageUrl': imageUrl,
+        'title': headline,
+        'subtitle': 'Use code $code',
+        'buttonText': 'ORDER NOW',
       };
 
   factory PromoBanner.fromMap(Map<String, dynamic> map) {
     return PromoBanner(
-      headline: map['headline'] as String? ?? '',
+      headline: map['headline'] as String? ?? map['title'] as String? ?? '',
       code: map['code'] as String? ?? '',
       imageUrl: map['imageUrl'] as String? ?? '',
     );

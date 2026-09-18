@@ -14,17 +14,21 @@ class MenuCategory {
   final String name;
   final String imageUrl;
 
+  /// Compatibility getter for iconAsset
+  String get iconAsset => imageUrl;
+
   Map<String, dynamic> toMap() => {
         'id': id.isNotEmpty ? id : name.toLowerCase().replaceAll(' ', '_'),
         'name': name,
         'imageUrl': imageUrl,
+        'iconAsset': imageUrl,
       };
 
   factory MenuCategory.fromMap(Map<String, dynamic> map, {String? id}) {
     return MenuCategory(
       id: id ?? (map['id'] as String? ?? ''),
       name: map['name'] as String? ?? '',
-      imageUrl: map['imageUrl'] as String? ?? '',
+      imageUrl: map['imageUrl'] as String? ?? map['iconAsset'] as String? ?? '',
     );
   }
 }

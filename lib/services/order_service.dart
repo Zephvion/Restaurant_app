@@ -18,7 +18,6 @@ class OrderService {
 
   final Map<String, OrderModel> _localOrders = {};
   final Map<String, StreamController<OrderModel>> _orderStreams = {};
-  final _uuid = const Uuid();
 
   Future<void> init() async {
     // Populate an initial default mock order for tracking demo

@@ -130,6 +130,8 @@ class MockData {
     ),
   ];
 
+  static const List<PromoBanner> promoBanners = promos;
+
   // ---- Menu category tabs & circles -------------------------------------
 
   /// The scrollable tab row under "MENU".

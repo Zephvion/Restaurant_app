@@ -49,7 +49,7 @@ class MenuService {
         }
 
         _cachedCategories = List.from(MockData.categories);
-        _cachedPromos = List.from(MockData.promos);
+        _cachedPromos = List.from(MockData.promoBanners);
         return;
       } catch (e) {
         debugPrint('Error fetching menu from Firestore: $e');
@@ -59,7 +59,7 @@ class MenuService {
     _cachedDishes = List.from(MockData.dishes);
     _cachedCategories = List.from(MockData.categories);
     _cachedRestaurants = List.from(MockData.restaurants);
-    _cachedPromos = List.from(MockData.promos);
+    _cachedPromos = List.from(MockData.promoBanners);
   }
 
   List<Dish> get dishes => _cachedDishes.isNotEmpty ? _cachedDishes : MockData.dishes;
@@ -71,7 +71,7 @@ class MenuService {
       _cachedRestaurants.isNotEmpty ? _cachedRestaurants : MockData.restaurants;
 
   List<PromoBanner> get promoBanners =>
-      _cachedPromos.isNotEmpty ? _cachedPromos : MockData.promos;
+      _cachedPromos.isNotEmpty ? _cachedPromos : MockData.promoBanners;
 
   List<Dish> getDishesByCategory(String categoryName) {
     if (categoryName.toLowerCase() == 'all') return dishes;
@@ -96,3 +96,4 @@ class MenuService {
     }
   }
 }
+

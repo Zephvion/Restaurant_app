@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../../models/restaurant.dart';
 import '../../routes/app_routes.dart';
 import '../../services/table_lock_service.dart';
 import '../../state/reservation_controller.dart';
