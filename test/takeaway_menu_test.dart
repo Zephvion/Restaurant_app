@@ -73,6 +73,30 @@ void main() {
     expect(find.text('Takeaway Basket & Orders'), findsOneWidget);
     expect(find.textContaining('ITEMS IN BASKET'), findsOneWidget);
     expect(find.text('Plain Dosa'), findsWidgets);
+
+    // Close the cart modal
+    final closeButton = find.byIcon(Icons.close);
+    await tester.tap(closeButton.last);
+    await tester.pumpAndSettle();
+
+    // 5. Test SORT BY / ORDER BY Button
+    final sortByButton = find.text('SORT BY');
+    expect(sortByButton, findsOneWidget);
+    await tester.tap(sortByButton);
+    await tester.pumpAndSettle();
+
+    // Verify Sort modal opens
+    expect(find.text('Sort Dishes By'), findsOneWidget);
+    expect(find.text('Price: Low to High'), findsOneWidget);
+    expect(find.text('Price: High to Low'), findsOneWidget);
+    expect(find.text('Customer Rating (4.5+)'), findsOneWidget);
+
+    // Select 'Price: Low to High'
+    await tester.tap(find.text('Price: Low to High'));
+    await tester.pumpAndSettle();
+
+    // Verify button updates to 'SORTED'
+    expect(find.text('SORTED'), findsOneWidget);
   });
 }
 

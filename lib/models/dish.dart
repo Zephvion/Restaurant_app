@@ -1,5 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+/// Available sorting options for dish menus.
+enum DishSortOption {
+  popularity,
+  priceLowHigh,
+  priceHighLow,
+  rating,
+}
+
 /// A single menu item (dish) shown across the Order Food flow.
 ///
 /// Frontend-only build: every field is populated from in-app mock data
