@@ -310,25 +310,15 @@ class _TrackingSheet extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 10, bottom: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.hint.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Icon(
-                  expanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-              ],
+            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            alignment: Alignment.center,
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.hint.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
         ),
