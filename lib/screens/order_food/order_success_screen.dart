@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
 import '../../services/session_manager.dart';
+import '../../state/app_mode_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 
@@ -90,6 +91,15 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     final orderId = _orderId ??
         (ModalRoute.of(context)?.settings.arguments as String?) ??
         SessionManager.instance.activeOrderId;
+
+    if (AppModeController.instance.isTakeAway) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.takeawayDashboard,
+        (route) => route.settings.name == AppRoutes.home || route.isFirst,
+      );
+      return;
+    }
+
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.trackOrder,
       (route) => route.settings.name == AppRoutes.home || route.isFirst,
@@ -218,7 +228,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        'Redirecting to delivery tracking in ${_secondsRemaining}s...',
+                        AppModeController.instance.isTakeAway
+                            ? 'Redirecting to takeaway dashboard in ${_secondsRemaining}s...'
+                            : 'Redirecting to delivery tracking in ${_secondsRemaining}s...',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -234,7 +246,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               const Spacer(flex: 3),
 
               // ── Dual Redirection Buttons ─────────────────────────────────
-              // 1. Track Order Button
+              // 1. Track Order / View Takeaway Orders Button
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -247,9 +259,16 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     ),
                     elevation: 0,
                   ),
-                  icon: const Icon(Icons.location_on_rounded, size: 20),
+                  icon: Icon(
+                    AppModeController.instance.isTakeAway
+                        ? Icons.storefront_rounded
+                        : Icons.location_on_rounded,
+                    size: 20,
+                  ),
                   label: Text(
-                    'TRACK ORDER (${_secondsRemaining}s)',
+                    AppModeController.instance.isTakeAway
+                        ? 'VIEW TAKEAWAY ORDERS (${_secondsRemaining}s)'
+                        : 'TRACK ORDER (${_secondsRemaining}s)',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -19,6 +20,8 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
   late final Animation<double> _fade;
+  Timer? _redirectTimer;
+  int _secondsRemaining = 3;
 
   @override
   void initState() {
@@ -28,15 +31,34 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
+
+    _startAutoRedirect();
+  }
+
+  void _startAutoRedirect() {
+    _redirectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 1) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+        _close();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _redirectTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
 
   void _close() {
+    _redirectTimer?.cancel();
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.takeawayDashboard,
       (route) => route.settings.name == AppRoutes.home,
@@ -102,7 +124,37 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.timer_outlined,
+                            color: AppColors.copper, size: 16),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Redirecting to Takeaway Dashboard in ${_secondsRemaining}s...',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Column(
@@ -116,12 +168,7 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
                             ),
                             minimumSize: const Size(double.infinity, 48),
                           ),
-                          onPressed: () {
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                              AppRoutes.takeawayDashboard,
-                              (route) => route.settings.name == AppRoutes.home,
-                            );
-                          },
+                          onPressed: _close,
                           child: const Text(
                             'VIEW TAKEAWAY ORDERS',
                             style: TextStyle(
@@ -144,6 +191,7 @@ class _TakeawaySuccessScreenState extends State<TakeawaySuccessScreen>
                             minimumSize: const Size(double.infinity, 48),
                           ),
                           onPressed: () {
+                            _redirectTimer?.cancel();
                             Navigator.of(context).pushNamedAndRemoveUntil(
                               AppRoutes.home,
                               (route) => false,

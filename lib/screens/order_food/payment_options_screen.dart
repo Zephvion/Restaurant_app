@@ -4,6 +4,7 @@ import '../../data/mock_data.dart';
 import '../../models/payment_method.dart';
 import '../../routes/app_routes.dart';
 import '../../services/session_manager.dart';
+import '../../state/app_mode_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
@@ -82,7 +83,6 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     // If user dismissed the sheet without paying, result is null
     if (result == null || !mounted) return;
 
-    final txnId = result['txnId'] ?? '';
     final mode = result['mode'] ?? method.title;
 
     try {
@@ -93,11 +93,18 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
           context,
           'Payment successful via $mode! Order #${order.id} placed.',
         );
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.orderSuccess,
-          (r) => r.settings.name == AppRoutes.home || r.isFirst,
-          arguments: order.id,
-        );
+        if (AppModeController.instance.isTakeAway) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.takeawaySuccess,
+            (r) => r.settings.name == AppRoutes.home || r.isFirst,
+          );
+        } else {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.orderSuccess,
+            (r) => r.settings.name == AppRoutes.home || r.isFirst,
+            arguments: order.id,
+          );
+        }
       }
     } catch (e) {
       debugPrint('Checkout error: $e');
