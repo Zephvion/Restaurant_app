@@ -882,6 +882,8 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
         ],
       ),
     );
+  }
+
   Widget _buildUpiIntentView() {
     final upiUrl = RazorpayGatewayService.getUpiUri(
       amount: widget.amount,
