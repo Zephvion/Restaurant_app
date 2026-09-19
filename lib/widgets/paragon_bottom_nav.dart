@@ -70,11 +70,6 @@ class ParagonBottomNav extends StatelessWidget {
                   active: current == ParagonTab.home,
                   onTap: () => _go(context, ParagonTab.home),
                 ),
-                _NavItem(
-                  icon: Icons.location_on_outlined,
-                  active: current == ParagonTab.location,
-                  onTap: () => _go(context, ParagonTab.location),
-                ),
                 _CartNavItem(
                   active: current == ParagonTab.cart,
                   onTap: () => _go(context, ParagonTab.cart),
