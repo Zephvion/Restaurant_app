@@ -475,12 +475,16 @@ class _RestaurantTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  'Open till ${restaurant.closeTime}',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11.5,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Open till ${restaurant.closeTime}',
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11.5,
+                    ),
                   ),
                 ),
               ],

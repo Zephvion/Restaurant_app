@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/payment_method.dart';
 import '../../routes/app_routes.dart';
+import '../../services/session_manager.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/checkout_widgets.dart';
 import '../../widgets/payment_brand_mark.dart';
-import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 
 /// "Payment Options" — pick a payment method (cards, UPI, Net Banking, Wallet, Cash on Delivery).
@@ -22,6 +22,7 @@ class PaymentOptionsScreen extends StatefulWidget {
 
 class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
   String? _selectedId;
+  bool _isProcessing = false;
 
   late List<PaymentMethod> _cards;
   late List<PaymentMethod> _upi;
@@ -66,30 +67,42 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
   }
 
-  void _proceed() {
+  Future<void> _proceed() async {
+    if (_isProcessing) return;
     final method = _selected ??
         (_cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery);
     _cart.selectPayment(method);
 
-    PaymentGatewaySheet.show(
-      context: context,
-      amount: _cart.grandTotal,
-      selectedMethod: method,
-      onPaymentSuccess: (txnId, mode) async {
-        final order = await _cart.checkout();
-        if (mounted) {
-          AppBanner.showSuccess(
-            context,
-            'Payment successful via $mode! Order #${order.id} placed.',
-          );
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            AppRoutes.orderSuccess,
-            (r) => r.settings.name == AppRoutes.home || r.isFirst,
-            arguments: order.id,
-          );
-        }
-      },
-    );
+    setState(() => _isProcessing = true);
+
+    try {
+      // Realistic payment processing & authorization delay
+      await Future.delayed(const Duration(milliseconds: 900));
+
+      final order = await _cart.checkout();
+      await SessionManager.instance.setActiveOrderId(order.id);
+
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        AppBanner.showSuccess(
+          context,
+          'Payment successful via ${method.title}! Order #${order.id} placed.',
+        );
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.orderSuccess,
+          (r) => r.settings.name == AppRoutes.home || r.isFirst,
+          arguments: order.id,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        AppBanner.showError(
+          context,
+          'Failed to place order: $e',
+        );
+      }
+    }
   }
 
   @override
@@ -211,7 +224,11 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
       ),
       bottomNavigationBar: _selected == null
           ? const SizedBox.shrink()
-          : _ProceedBar(onTap: _proceed),
+          : _ProceedBar(
+              onTap: _proceed,
+              isProcessing: _isProcessing,
+              isCash: _selected?.kind == PaymentKind.cash,
+            ),
     );
   }
 
@@ -734,12 +751,22 @@ class _RadioDot extends StatelessWidget {
 }
 
 class _ProceedBar extends StatelessWidget {
-  const _ProceedBar({required this.onTap});
+  const _ProceedBar({
+    required this.onTap,
+    this.isProcessing = false,
+    this.isCash = false,
+  });
 
   final VoidCallback onTap;
+  final bool isProcessing;
+  final bool isCash;
 
   @override
   Widget build(BuildContext context) {
+    final label = isProcessing
+        ? 'AUTHORIZING PAYMENT...'
+        : (isCash ? 'PLACE ORDER (COD)' : 'PROCEED TO PAY');
+
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
@@ -749,21 +776,59 @@ class _ProceedBar extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: Material(
-            color: AppColors.accentRed,
+            color: isProcessing ? AppColors.copper : AppColors.accentRed,
             borderRadius: BorderRadius.circular(30),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: onTap,
-              child: const Center(
-                child: Text(
-                  'PROCEED TO PAY',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                  ),
-                ),
+              onTap: isProcessing ? null : onTap,
+              child: Center(
+                child: isProcessing
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'PROCESSING PAYMENT...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isCash
+                                ? Icons.check_circle_outline
+                                : Icons.lock_outline,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
