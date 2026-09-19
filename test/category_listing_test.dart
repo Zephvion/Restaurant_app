@@ -207,5 +207,31 @@ void main() {
       expect(find.text('Chicken Biriyani'), findsOneWidget);
       expect(find.text('Chicken Curry'), findsOneWidget);
     });
+
+    testWidgets('TEST 9: Sorting dishes in category listing modal updates order and label',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(412, 915);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: CategoryListingScreen(initialCategory: 'Chicken'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SORT BY'), findsOneWidget);
+      await tester.tap(find.text('SORT BY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sort Dishes By'), findsOneWidget);
+      expect(find.text('Price: Low to High'), findsOneWidget);
+
+      await tester.tap(find.text('Price: Low to High'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SORTED'), findsOneWidget);
+    });
   });
 }
