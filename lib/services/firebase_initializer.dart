@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,7 +13,13 @@ class FirebaseInitializer {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       isFirebaseReady = true;
-      debugPrint('🔥 Firebase initialized successfully.');
+      try {
+        FirebaseFirestore.instance.settings =
+            const Settings(persistenceEnabled: true);
+      } catch (settingsError) {
+        debugPrint('Firestore persistence setting note: $settingsError');
+      }
+      debugPrint('🔥 Firebase initialized successfully with offline persistence.');
     } catch (e) {
       isFirebaseReady = false;
       debugPrint(

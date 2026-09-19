@@ -274,7 +274,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                           fontSize: 14,
                         ),
                         decoration: const InputDecoration(
-                          hintText: 'Search takeaway dishes...',
+                          hintText: 'Search dishes across all categories...',
                           hintStyle: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,

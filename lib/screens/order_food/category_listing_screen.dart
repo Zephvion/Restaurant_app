@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
 import '../../routes/app_routes.dart';
+import '../../services/menu_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/basket_bar.dart';
@@ -81,16 +82,22 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
   }
 
   List<Dish> get _dishes {
-    final raw = MockData.getDishesForCategory(_selectedCategory);
     List<Dish> list;
     if (_searchQuery.trim().isEmpty) {
-      list = List<Dish>.from(raw);
+      list = List<Dish>.from(MockData.getDishesForCategory(_selectedCategory));
     } else {
       final q = _searchQuery.toLowerCase().trim();
-      list = raw.where((d) {
-        return d.name.toLowerCase().contains(q) ||
+      final allDishes = MenuService.instance.dishes.isNotEmpty
+          ? MenuService.instance.dishes
+          : MockData.dishes;
+      final seen = <String>{};
+      list = allDishes.where((d) {
+        final matches = d.name.toLowerCase().contains(q) ||
             (d.subtitle != null && d.subtitle!.toLowerCase().contains(q)) ||
-            d.description.toLowerCase().contains(q);
+            d.category.toLowerCase().contains(q) ||
+            d.description.toLowerCase().contains(q) ||
+            d.ingredients.any((ing) => ing.toLowerCase().contains(q));
+        return matches && seen.add(d.name.toLowerCase().trim());
       }).toList();
     }
 
@@ -203,7 +210,9 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${_dishes.length} ITEMS',
+                    _searchQuery.trim().isNotEmpty
+                        ? '${_dishes.length} SEARCH RESULTS'
+                        : '${_dishes.length} ITEMS',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -350,9 +359,9 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
                 color: AppColors.textPrimary,
                 fontSize: 14,
               ),
-              decoration: InputDecoration(
-                hintText: 'Search in $_selectedCategory dishes...',
-                hintStyle: const TextStyle(
+              decoration: const InputDecoration(
+                hintText: 'Search dishes across all categories...',
+                hintStyle: TextStyle(
                   color: AppColors.hint,
                   fontSize: 14,
                 ),
@@ -430,6 +439,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
   Widget _buildBody() {
     final items = _dishes;
     if (items.isEmpty) {
+      final isSearching = _searchQuery.trim().isNotEmpty;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -440,17 +450,22 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
                   size: 54, color: AppColors.hint),
               const SizedBox(height: 14),
               Text(
-                'No dishes found in $_selectedCategory',
+                isSearching
+                    ? 'No dishes matching "$_searchQuery"'
+                    : 'No dishes found in $_selectedCategory',
+                textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Try searching for another dish or choose a different category.',
+              Text(
+                isSearching
+                    ? 'Try searching for another dish or ingredient across all categories.'
+                    : 'Try searching for another dish or choose a different category.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               if (_searchQuery.isNotEmpty) ...[
                 const SizedBox(height: 16),

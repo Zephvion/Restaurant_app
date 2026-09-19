@@ -54,12 +54,18 @@ class AuthService {
     if (FirebaseInitializer.isFirebaseReady) {
       FirebaseAuth.instance.authStateChanges().listen((User? user) async {
         if (user == null) {
+          // If the user hasn't explicitly logged out and we have an active persistent session,
+          // keep the session active and never wipe out user credentials!
           if (!SessionManager.instance.isLoggedIn) {
             _currentUser = null;
             _authController.add(null);
           }
         } else {
-          final profile = await fetchUserProfile(user.uid) ??
+          final remoteProfile = await fetchUserProfile(user.uid);
+          final existing = _currentUser ?? SessionManager.instance.getCachedUserProfile();
+          // Never overwrite existing valid profile with generic mock data on offline errors!
+          final profile = remoteProfile ??
+              existing ??
               UserProfile(
                 uid: user.uid,
                 displayName: user.displayName ?? MockData.userName,
@@ -68,8 +74,19 @@ class AuthService {
                 photoUrl: user.photoURL ?? MockData.userAvatar,
               );
           _currentUser = profile;
+
+          String? token;
+          DateTime? expiresAt;
+          try {
+            token = await user.getIdToken();
+            final idTokenResult = await user.getIdTokenResult();
+            expiresAt = idTokenResult.expirationTime;
+          } catch (_) {}
+
           await SessionManager.instance.saveSession(
-            token: await user.getIdToken() ?? 'token_${user.uid}',
+            token: token ?? SessionManager.instance.authToken ?? 'token_${user.uid}',
+            refreshToken: user.refreshToken,
+            expiresAt: expiresAt,
             userId: user.uid,
             profile: profile,
           );
@@ -137,8 +154,18 @@ class AuthService {
 
         await _saveProfileToFirestore(profile);
         _currentUser = profile;
+        String? token;
+        DateTime? expiresAt;
+        try {
+          token = await user.getIdToken();
+          final idTokenResult = await user.getIdTokenResult();
+          expiresAt = idTokenResult.expirationTime;
+        } catch (_) {}
+
         await SessionManager.instance.saveSession(
-          token: await user.getIdToken() ?? 'token_${user.uid}',
+          token: token ?? 'token_${user.uid}',
+          refreshToken: user.refreshToken,
+          expiresAt: expiresAt,
           userId: user.uid,
           profile: profile,
         );
@@ -227,17 +254,30 @@ class AuthService {
           password: password,
         );
         final user = credential.user!;
-        final profile = await fetchUserProfile(user.uid) ??
+        final remoteProfile = await fetchUserProfile(user.uid);
+        final existing = _currentUser ?? SessionManager.instance.getCachedUserProfile();
+        final profile = remoteProfile ??
+            existing ??
             UserProfile(
               uid: user.uid,
-              displayName: user.displayName ?? MockData.userName,
+              displayName: user.displayName ?? (email.contains('@') ? email.split('@').first : MockData.userName),
               email: user.email ?? email,
               phone: user.phoneNumber ?? MockData.userPhone,
             );
 
         _currentUser = profile;
+        String? token;
+        DateTime? expiresAt;
+        try {
+          token = await user.getIdToken();
+          final idTokenResult = await user.getIdTokenResult();
+          expiresAt = idTokenResult.expirationTime;
+        } catch (_) {}
+
         await SessionManager.instance.saveSession(
-          token: await user.getIdToken() ?? 'token_${user.uid}',
+          token: token ?? 'token_${user.uid}',
+          refreshToken: user.refreshToken,
+          expiresAt: expiresAt,
           userId: user.uid,
           profile: profile,
         );
@@ -356,7 +396,42 @@ class AuthService {
     _authController.add(_currentUser);
   }
 
-  /// Sign out
+  /// Returns a valid non-expired access token, automatically refreshing via Firebase or local session.
+  Future<String?> getValidToken() async {
+    if (SessionManager.instance.isTokenExpired) {
+      if (FirebaseInitializer.isFirebaseReady) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          try {
+            final freshToken = await user.getIdToken(true);
+            final tokenResult = await user.getIdTokenResult(true);
+            if (freshToken != null) {
+              await SessionManager.instance.saveTokens(
+                token: freshToken,
+                refreshToken: user.refreshToken,
+                expiresAt: tokenResult.expirationTime,
+              );
+              return freshToken;
+            }
+          } catch (e) {
+            debugPrint('Failed to refresh Firebase token: $e');
+          }
+        }
+      }
+      // If offline, extend local token lifetime
+      final existingToken = SessionManager.instance.authToken;
+      if (existingToken != null) {
+        await SessionManager.instance.saveTokens(
+          token: existingToken,
+          expiresAt: DateTime.now().add(const Duration(days: 30)),
+        );
+        return existingToken;
+      }
+    }
+    return SessionManager.instance.authToken;
+  }
+
+  /// Sign out: clears active session tokens but leaves account records intact
   Future<void> signOut() async {
     if (FirebaseInitializer.isFirebaseReady) {
       try {
@@ -368,16 +443,42 @@ class AuthService {
     _authController.add(null);
   }
 
+  /// Permanently deletes the account and all associated user data from Firebase and local device.
+  Future<void> deleteAccount() async {
+    final uid = _currentUser?.uid ?? SessionManager.instance.currentUserId;
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        if (uid != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .delete()
+              .timeout(const Duration(seconds: 2));
+        }
+        await FirebaseAuth.instance.currentUser?.delete();
+      } catch (e) {
+        debugPrint('Note during account deletion in Firebase: $e');
+      }
+    }
+    _currentUser = null;
+    await SessionManager.instance.deleteAccount();
+    _authController.add(null);
+  }
+
   Future<UserProfile?> fetchUserProfile(String uid) async {
     if (!FirebaseInitializer.isFirebaseReady) return null;
     try {
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.serverAndCache))
+          .timeout(const Duration(seconds: 3));
       if (doc.exists && doc.data() != null) {
         return UserProfile.fromMap(doc.data()!, uid: uid);
       }
     } catch (e) {
-      debugPrint('Error fetching user profile from Firestore: $e');
+      // In offline situations, log friendly note and gracefully rely on local persistent cache
+      debugPrint('Firestore fetch profile note: $e (Falling back to persistent local storage)');
     }
     return null;
   }
@@ -388,9 +489,10 @@ class AuthService {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(profile.uid)
-          .set(profile.toMap(), SetOptions(merge: true));
+          .set(profile.toMap(), SetOptions(merge: true))
+          .timeout(const Duration(seconds: 3));
     } catch (e) {
-      debugPrint('Error saving user profile to Firestore: $e');
+      debugPrint('Firestore save profile note: $e (Profile safely stored in persistent local cache)');
     }
   }
 }
