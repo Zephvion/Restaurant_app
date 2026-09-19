@@ -5,6 +5,7 @@ import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
@@ -183,58 +184,413 @@ class _ReservationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCancelled = reservation.isCancelled;
+    final isCompleted = reservation.isCompleted;
+    final canCancel = reservation.canBeCancelled;
+
+    Color badgeBg;
+    Color badgeTextColor;
+    IconData badgeIcon;
+    String badgeText;
+
+    if (isCancelled) {
+      badgeBg = const Color(0xFF3E1E1E);
+      badgeTextColor = const Color(0xFFEF5350);
+      badgeIcon = Icons.cancel_outlined;
+      badgeText = 'CANCELLED';
+    } else if (isCompleted) {
+      badgeBg = Colors.white10;
+      badgeTextColor = AppColors.textSecondary;
+      badgeIcon = Icons.check_circle_outline;
+      badgeText = 'COMPLETED';
+    } else {
+      badgeBg = const Color(0xFF1E3A24);
+      badgeTextColor = const Color(0xFF4CAF50);
+      badgeIcon = Icons.schedule;
+      badgeText = 'CONFIRMED RESERVATION';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCancelled
+              ? Colors.redAccent.withValues(alpha: 0.25)
+              : isCompleted
+                  ? Colors.white12
+                  : AppColors.accentRed.withValues(alpha: 0.35),
+          width: 1,
+        ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Table icon (coloured circles pattern)
-          _TableIcon(tableNumber: reservation.tableNumber),
-          const SizedBox(width: 16),
-          // Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          // Header status badge and Table Number
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${reservation.restaurant.name}, '
-                        '${reservation.restaurant.city}',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
+                    Icon(badgeIcon, size: 13, color: badgeTextColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      badgeText,
+                      style: TextStyle(
+                        color: badgeTextColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Table ${reservation.tableDisplay}',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Details row with table icon and timings
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Table icon
+              _TableIcon(label: reservation.tableDisplay),
+              const SizedBox(width: 14),
+              // Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${reservation.restaurant.name}, ${reservation.restaurant.city}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _InfoRow(label: 'Date', value: reservation.formattedDate),
+                    _InfoRow(
+                      label: 'Arrival',
+                      value: reservation.arrivalTime,
+                      highlight: !isCancelled && !isCompleted,
+                    ),
+                    _InfoRow(
+                      label: 'Hold Until',
+                      value: '${reservation.waitingUntil} (15m grace)',
+                    ),
+                    _InfoRow(
+                      label: 'Dining',
+                      value: 'Until ${reservation.reservedUntil} (90 mins)',
+                    ),
+                    _InfoRow(label: 'Seats', value: '${reservation.seats} Guests'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 12),
+
+          // Customer Actions & Cancellation Status
+          if (canCancel)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _handleCancelReservation(context),
+                icon: const Icon(Icons.cancel_outlined, size: 16),
+                label: const Text(
+                  'Cancel Reservation',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFEF5350),
+                  side: const BorderSide(color: Color(0xFFEF5350), width: 1),
+                  backgroundColor: const Color(0xFF2C1515),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            )
+          else if (isCancelled)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.redAccent.shade100),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Reservation Cancelled',
+                        style: TextStyle(
+                          color: Colors.redAccent.shade100,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                    ],
+                  ),
+                  if (reservation.cancellationReason != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Reason: ${reservation.cancellationReason}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
-                    const Icon(Icons.edit_outlined,
-                        size: 16, color: AppColors.textSecondary),
                   ],
+                  const SizedBox(height: 4),
+                  const Text(
+                    'The table was returned to the available pool.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            const Row(
+              children: [
+                Icon(Icons.check_circle, size: 15, color: AppColors.textSecondary),
+                SizedBox(width: 6),
+                Text(
+                  'Reservation completed',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _InfoRow(label: 'Date', value: reservation.formattedDate),
-                _InfoRow(label: 'Time', value: reservation.timeSlot),
-                _InfoRow(label: 'Seats', value: '${reservation.seats}'),
-                _InfoRow(label: 'Table', value: '${reservation.tableNumber}'),
               ],
             ),
-          ),
         ],
       ),
     );
   }
+
+  Future<void> _handleCancelReservation(BuildContext context) async {
+    const reasons = [
+      'Change of schedule / plans',
+      'Booked wrong date or time',
+      'Guest count changed',
+      'Emergency or unwell',
+      'Other reasons',
+    ];
+    String selectedReason = reasons.first;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: Colors.white12)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cancel Table Reservation?',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Your reserved table will be made available for others.',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Please select a reason for cancellation:',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ...reasons.map((r) => InkWell(
+                    onTap: () => setSheetState(() => selectedReason = r),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedReason == r
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_off,
+                            color: selectedReason == r
+                                ? AppColors.accentRed
+                                : AppColors.textSecondary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              r,
+                              style: TextStyle(
+                                color: selectedReason == r
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                                fontSize: 13,
+                                fontWeight: selectedReason == r
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Keep Reservation'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF5350),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        'Cancel Booking',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ReservationController.instance.cancelReservation(
+        reservation,
+        reason: selectedReason,
+      );
+      if (context.mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Reservation for Table ${reservation.tableDisplay} has been cancelled.',
+          title: 'Reservation Cancelled',
+        );
+      }
+    }
+  }
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
   final String label;
   final String value;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +599,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 48,
+            width: 72,
             child: Text(
               label,
               style: const TextStyle(
@@ -252,12 +608,16 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: highlight
+                    ? const Color(0xFFFFB74D)
+                    : AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: highlight ? FontWeight.w600 : FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -268,11 +628,14 @@ class _InfoRow extends StatelessWidget {
 
 /// Decorative table icon with overlapping coloured circles (matches Figma card).
 class _TableIcon extends StatelessWidget {
-  const _TableIcon({required this.tableNumber});
-  final int tableNumber;
+  const _TableIcon({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) {
+    final cleanLabel = label.replaceAll('#', '').trim();
+    final isLong = cleanLabel.length > 3;
+
     return SizedBox(
       width: 68,
       height: 68,
@@ -286,19 +649,24 @@ class _TableIcon extends StatelessWidget {
           _circle(bottom: 0, right: 0, color: Colors.grey.shade700),
           // Table surface
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
-            child: Text(
-              '$tableNumber',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                cleanLabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: isLong ? 11 : 16,
+                ),
               ),
             ),
           ),

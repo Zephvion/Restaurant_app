@@ -786,9 +786,9 @@ class _CategoryMealSection extends StatelessWidget {
             Center(
               child: TextButton.icon(
                 onPressed: () => onAdd(mealType),
-                icon: const Icon(Icons.add, size: 16, color: AppColors.copper),
+                icon: const Icon(Icons.add, size: 18, color: AppColors.copper),
                 label: Text(
-                  '+ Add another item to ${mealType.displayName}',
+                  'Add another item to ${mealType.displayName}',
                   style: const TextStyle(
                     color: AppColors.copper,
                     fontSize: 12,

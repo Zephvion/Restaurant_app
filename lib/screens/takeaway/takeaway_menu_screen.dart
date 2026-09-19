@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/nutrition_badge.dart';
+import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/veg_indicator.dart';
 import 'takeaway_order_card.dart';
@@ -67,28 +68,39 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
 
   Future<void> _onNext() async {
     if (_ctrl.isCartEmpty || _isSubmitting) return;
-    setState(() => _isSubmitting = true);
-    try {
-      await _ctrl.placeOrder();
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        AppBanner.showSuccess(
-          context,
-          'Takeaway order placed successfully!',
-          title: 'Order Confirmed',
-        );
-        Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        AppBanner.showError(
-          context,
-          'Failed to place order: $e',
-          title: 'Order Error',
-        );
-      }
-    }
+
+    await PaymentGatewaySheet.show(
+      context: context,
+      amount: _ctrl.grandTotal,
+      isTakeaway: true,
+      onPaymentSuccess: (transactionId, paymentMode) async {
+        setState(() => _isSubmitting = true);
+        try {
+          await _ctrl.placeOrder(
+            paymentMethod: paymentMode,
+            transactionId: transactionId,
+          );
+          if (mounted) {
+            setState(() => _isSubmitting = false);
+            AppBanner.showSuccess(
+              context,
+              'Payment successful via $paymentMode! Takeaway order placed.',
+              title: 'Order Confirmed',
+            );
+            Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() => _isSubmitting = false);
+            AppBanner.showError(
+              context,
+              'Failed to place order: $e',
+              title: 'Order Error',
+            );
+          }
+        }
+      },
+    );
   }
 
   List<Dish> _getDishesForCategory(String category) {
@@ -169,14 +181,14 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                   children: [
                     _header(),
                     const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _menuSortRow(),
+                    ),
+                    const SizedBox(height: 14),
                     if (_isSearching) ...[
                       _searchBody(),
                     ] else ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _menuSortRow(),
-                      ),
-                      const SizedBox(height: 14),
                       _categoryTabs(),
                       const SizedBox(height: 18),
                       if (_selectedTab == 0) ...[
@@ -262,7 +274,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                           fontSize: 14,
                         ),
                         decoration: const InputDecoration(
-                          hintText: 'Search takeaway dishes...',
+                          hintText: 'Search dishes across all categories...',
                           hintStyle: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,

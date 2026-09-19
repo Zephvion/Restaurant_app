@@ -20,8 +20,26 @@ class FoodPlannerController extends ChangeNotifier {
   int _activeTabIndex = 0;
   int get activeTabIndex => _activeTabIndex;
 
-  int _selectedDayOffset = 0; // 0 for Jan 2 (Tue)
+  int _selectedDayOffset = 0; // 0 for Today
   int get selectedDayOffset => _selectedDayOffset;
+
+  DateTime get selectedDate =>
+      DateTime.now().add(Duration(days: _selectedDayOffset));
+
+  static const List<String> _weekdays = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  ];
+  static const List<String> _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+
+  String get formattedSelectedDate {
+    final d = selectedDate;
+    final weekday = _weekdays[d.weekday - 1];
+    final month = _months[d.month - 1];
+    return '$month ${d.day}, ${d.year} - $weekday';
+  }
 
   int _targetKcal = 2000;
   int get targetKcal => _targetKcal;

@@ -468,15 +468,23 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           _selectedCategory = categories.first;
         }
 
-        var activeDishes = _getDishesForCategory(mealType, _selectedCategory);
-
+        List<Dish> activeDishes;
         if (_searchQuery.trim().isNotEmpty) {
-          final q = _searchQuery.toLowerCase();
-          activeDishes = activeDishes.where((d) {
-            return d.name.toLowerCase().contains(q) ||
+          final q = _searchQuery.toLowerCase().trim();
+          final allMenuDishes = MenuService.instance.dishes.isNotEmpty
+              ? MenuService.instance.dishes
+              : MockData.dishes;
+          final seen = <String>{};
+          activeDishes = allMenuDishes.where((d) {
+            final matches = d.name.toLowerCase().contains(q) ||
+                (d.subtitle != null && d.subtitle!.toLowerCase().contains(q)) ||
+                d.category.toLowerCase().contains(q) ||
                 d.description.toLowerCase().contains(q) ||
-                d.category.toLowerCase().contains(q);
+                d.ingredients.any((ing) => ing.toLowerCase().contains(q));
+            return matches && seen.add(d.name.toLowerCase().trim());
           }).toList();
+        } else {
+          activeDishes = _getDishesForCategory(mealType, _selectedCategory);
         }
 
         return Scaffold(
@@ -570,9 +578,11 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _selectedCategory == 'Frequent order'
-                              ? '${mealType.label} Specials'
-                              : _selectedCategory,
+                          _searchQuery.trim().isNotEmpty
+                              ? 'Search Results ("$_searchQuery")'
+                              : (_selectedCategory == 'Frequent order'
+                                  ? '${mealType.label} Specials'
+                                  : _selectedCategory),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
@@ -580,7 +590,9 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                           ),
                         ),
                         Text(
-                          '${activeDishes.length} items',
+                          _searchQuery.trim().isNotEmpty
+                              ? '${activeDishes.length} found'
+                              : '${activeDishes.length} items',
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -747,7 +759,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
         onChanged: (val) => setState(() => _searchQuery = val),
         decoration: InputDecoration(
-          hintText: 'Search in this menu...',
+          hintText: 'Search dishes across all categories...',
           hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
@@ -809,6 +821,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
   Widget _featuredFoodCardsRail(FoodPlannerController ctrl, List<Dish> dishes) {
     if (dishes.isEmpty) {
+      final isSearching = _searchQuery.trim().isNotEmpty;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Container(
@@ -817,10 +830,12 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Center(
+          child: Center(
             child: Text(
-              'No items found in this category.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              isSearching
+                  ? 'No dishes matching "$_searchQuery" across categories.'
+                  : 'No items found in this category.',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
         ),

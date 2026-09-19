@@ -63,9 +63,10 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
   @override
   void initState() {
     super.initState();
-    // Default to at least 2 days in advance
-    final now = DateTime.now().add(const Duration(days: 2));
-    _weekStart = now.subtract(Duration(days: now.weekday % 7));
+    // Default to at least 2 days in advance from today
+    final minDate = DateTime.now().add(const Duration(days: 2));
+    _weekStart = DateTime(minDate.year, minDate.month, minDate.day);
+    _selectedDayOffset = 0;
   }
 
   bool get _canProceed =>
@@ -103,7 +104,13 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
-    return '${months[_weekStart.month - 1]} ${_weekStart.day} - ${end.day}';
+    final startMonth = months[_weekStart.month - 1];
+    final endMonth = months[end.month - 1];
+    if (startMonth == endMonth) {
+      return '$startMonth ${_weekStart.day} - ${end.day}, ${_weekStart.year}';
+    } else {
+      return '$startMonth ${_weekStart.day} - $endMonth ${end.day}, ${_weekStart.year}';
+    }
   }
 
   @override

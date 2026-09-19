@@ -99,6 +99,17 @@ class OrderService {
             ))
         .toList();
 
+    int maxPrep = 15;
+    for (final item in items) {
+      if (item.dish.prepTimeMinutes > maxPrep) {
+        maxPrep = item.dish.prepTimeMinutes;
+      }
+    }
+    final extraPrep = items.length > 3 ? 3 : 0;
+    final totalPrepTime = maxPrep + extraPrep;
+    const transitTime = 12;
+    final totalDeliveryMinutes = totalPrepTime + transitTime;
+
     final order = OrderModel(
       id: orderId,
       userId: uid,
@@ -112,7 +123,9 @@ class OrderService {
       deliveryAddress: address,
       paymentMethodLabel: '${payment.title} (${payment.subtitle ?? payment.kind.name})',
       status: OrderStatus.accepted,
-      estimatedDeliveryMinutes: 20,
+      prepTimeMinutes: totalPrepTime,
+      transitMinutes: transitTime,
+      estimatedDeliveryMinutes: totalDeliveryMinutes,
       deliveryPartnerName: MockData.deliveryPartnerName,
       deliveryPartnerPhone: MockData.deliveryPartnerPhone,
       createdAt: DateTime.now(),
@@ -264,6 +277,46 @@ class OrderService {
         }).catchError((_) {});
       }
     }
+  }
+
+  /// Cancels an active order with reason and processes refund
+  Future<OrderModel?> cancelOrder(String orderId, {required String reason}) async {
+    final current = _localOrders[orderId];
+    if (current == null) return null;
+
+    final refundMsg =
+        'Full refund of \$${current.grandTotal.toStringAsFixed(2)} processed to ${current.paymentMethodLabel}';
+
+    final updated = current.copyWith(
+      status: OrderStatus.cancelled,
+      cancellationReason: reason,
+      cancelledAt: DateTime.now(),
+      refundStatus: refundMsg,
+      estimatedDeliveryMinutes: 0,
+    );
+
+    _localOrders[orderId] = updated;
+    _orderStreams[orderId]?.add(updated);
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(orderId)
+            .update({
+              'status': OrderStatus.cancelled.name,
+              'cancellationReason': reason,
+              'cancelledAt': DateTime.now().toIso8601String(),
+              'refundStatus': refundMsg,
+              'estimatedDeliveryMinutes': 0,
+            })
+            .timeout(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint('Error cancelling order in Firestore: $e');
+      }
+    }
+
+    return updated;
   }
 }
 

@@ -206,6 +206,7 @@ class MockData {
     carbs: 45,
     fat: 12,
     protein: 8,
+    prepTimeMinutes: 10,
   );
 
   static const Dish kuzhipaniyaram = Dish(
@@ -229,6 +230,7 @@ class MockData {
     carbs: 40,
     fat: 10,
     protein: 7,
+    prepTimeMinutes: 12,
   );
 
   static const Dish meals = Dish(
@@ -252,6 +254,7 @@ class MockData {
     carbs: 90,
     fat: 18,
     protein: 15,
+    prepTimeMinutes: 20,
   );
 
   static const Dish freshJuiceOrange = Dish(
@@ -270,6 +273,7 @@ class MockData {
     carbs: 26,
     fat: 0,
     protein: 2,
+    prepTimeMinutes: 5,
   );
 
   /// Horizontal "Frequent order" cards at the top of the menu.
@@ -391,6 +395,7 @@ class MockData {
       carbs: 60,
       fat: 22,
       protein: 28,
+      prepTimeMinutes: 25,
     ),
     Dish(
       id: 'chicken_curry',
@@ -407,6 +412,7 @@ class MockData {
       carbs: 15,
       fat: 20,
       protein: 32,
+      prepTimeMinutes: 20,
     ),
   ];
 
@@ -426,6 +432,7 @@ class MockData {
       carbs: 65,
       fat: 12,
       protein: 10,
+      prepTimeMinutes: 20,
     ),
     Dish(
       id: 'mutton_biriyani',
@@ -442,6 +449,7 @@ class MockData {
       carbs: 55,
       fat: 28,
       protein: 35,
+      prepTimeMinutes: 28,
     ),
   ];
 
@@ -460,7 +468,8 @@ class MockData {
       ingredients: ['Fresh fish', 'Raw mango', 'Coconut & kokum gravy'],
       carbs: 12,
       fat: 18,
-      protein: 30,
+      protein: 26,
+      prepTimeMinutes: 22,
     ),
     Dish(
       id: 'fish_fry',

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
 import '../../routes/app_routes.dart';
+import '../../services/menu_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/menu_list_tile.dart';
@@ -24,19 +25,24 @@ class _SearchScreenState extends State<SearchScreen> {
   final CartController _cart = CartController.instance;
   String _query = '';
 
-  static final List<Dish> _all = [
-    MockData.plainDosa,
-    MockData.kuzhipaniyaram,
-    MockData.meals,
-    MockData.freshJuiceOrange,
-    ...MockData.combinationBreakfast,
-    ...MockData.recommendedBreakfast,
-  ];
+  List<Dish> get _all {
+    final list = MenuService.instance.dishes.isNotEmpty
+        ? MenuService.instance.dishes
+        : MockData.dishes;
+    final seen = <String>{};
+    return list.where((d) => seen.add(d.name.toLowerCase().trim())).toList();
+  }
 
   List<Dish> get _results {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return const [];
-    return _all.where((d) => d.name.toLowerCase().contains(q)).toList();
+    return _all.where((d) {
+      return d.name.toLowerCase().contains(q) ||
+          (d.subtitle != null && d.subtitle!.toLowerCase().contains(q)) ||
+          d.category.toLowerCase().contains(q) ||
+          d.description.toLowerCase().contains(q) ||
+          d.ingredients.any((ing) => ing.toLowerCase().contains(q));
+    }).toList();
   }
 
   @override
@@ -116,7 +122,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   color: AppColors.textPrimary, fontSize: 15),
               cursorColor: AppColors.copper,
               decoration: const InputDecoration(
-                hintText: 'Search for dishes',
+                hintText: 'Search dishes across all categories...',
                 hintStyle: TextStyle(color: AppColors.hint, fontSize: 14),
                 border: InputBorder.none,
                 isCollapsed: true,
@@ -139,6 +145,18 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _suggestions() {
+    const popularCategories = [
+      'Biriyani',
+      'Meals',
+      'Dosa',
+      'Chicken',
+      'Fish',
+      'Egg',
+      'Veg',
+      'Beverages',
+      'Desserts',
+    ];
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
@@ -155,6 +173,38 @@ class _SearchScreenState extends State<SearchScreen> {
           onTap: () =>
               Navigator.of(context).pushReplacementNamed(AppRoutes.foodHome),
         ),
+        const SizedBox(height: 24),
+        Text(
+          'POPULAR CATEGORIES & DISHES',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: popularCategories.map((cat) {
+            return ActionChip(
+              backgroundColor: AppColors.backgroundElevated,
+              side: const BorderSide(color: AppColors.border),
+              label: Text(
+                cat,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onPressed: () {
+                _controller.text = cat;
+                setState(() => _query = cat);
+              },
+            );
+          }).toList(),
+        ),
       ],
     );
   }
@@ -162,9 +212,32 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _resultsList() {
     final results = _results;
     if (results.isEmpty) {
-      return const Center(
-        child: Text('No dishes found',
-            style: TextStyle(color: AppColors.textSecondary)),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.search_off, size: 48, color: AppColors.hint),
+              const SizedBox(height: 12),
+              Text(
+                'No dishes matching "$_query"',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Try searching across other categories, ingredients, or dish names.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return AnimatedBuilder(

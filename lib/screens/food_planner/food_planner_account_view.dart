@@ -367,38 +367,61 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(7, (i) {
-                  final isDone = i < 2;
-                  return Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDone
-                          ? const Color(0xFF4CAF50)
-                          : AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${i + 2}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+            Builder(
+              builder: (context) {
+                final now = DateTime.now();
+                const months = [
+                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                ];
+                final untilDate = now.add(const Duration(days: 6));
+                final untilStr =
+                    'Food planned until ${months[untilDate.month - 1]} ${untilDate.day}';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(7, (i) {
+                          final dayDate = now.add(Duration(days: i));
+                          final isDone = i < 2;
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: isDone
+                                  ? const Color(0xFF4CAF50)
+                                  : AppColors.surfaceLight,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${dayDate.day}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
-                  );
-                }),
-              ),
+                    const SizedBox(height: 6),
+                    Text(
+                      untilStr,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 6),
-            const Text('Food planned until Jan 7',
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 11)),
             const SizedBox(height: 20),
             // Next week actions
             Row(

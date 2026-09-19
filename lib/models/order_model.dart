@@ -103,6 +103,9 @@ class OrderModel {
   final String deliveryPartnerPhotoUrl;
   final double riderLat;
   final double riderLng;
+  final String? cancellationReason;
+  final DateTime? cancelledAt;
+  final String? refundStatus;
   final DateTime createdAt;
 
   const OrderModel({
@@ -118,15 +121,57 @@ class OrderModel {
     required this.deliveryAddress,
     required this.paymentMethodLabel,
     this.status = OrderStatus.accepted,
-    this.estimatedDeliveryMinutes = 15,
+    this.prepTimeMinutes = 15,
+    this.transitMinutes = 12,
+    this.estimatedDeliveryMinutes = 27,
     this.deliveryPartnerName = 'John Doe',
     this.deliveryPartnerPhone = '+91 987654321',
     this.deliveryPartnerPhotoUrl =
         'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=120&q=70',
     this.riderLat = 11.2588,
     this.riderLng = 75.7804,
+    this.cancellationReason,
+    this.cancelledAt,
+    this.refundStatus,
     required this.createdAt,
   });
+
+  final int prepTimeMinutes;
+  final int transitMinutes;
+
+  bool get isCancelled => status == OrderStatus.cancelled;
+
+  bool get canBeCancelled =>
+      status != OrderStatus.delivered && status != OrderStatus.cancelled;
+
+  /// Estimated time when delivery will arrive
+  DateTime get estimatedDeliveryAt =>
+      createdAt.add(Duration(minutes: estimatedDeliveryMinutes));
+
+  String get formattedEstimatedDeliveryTime {
+    final t = estimatedDeliveryAt;
+    final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final m = t.minute.toString().padLeft(2, '0');
+    final period = t.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $period';
+  }
+
+  /// Formatted order time (e.g. "11:30 AM")
+  String get formattedTime {
+    final h = createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12;
+    final m = createdAt.minute.toString().padLeft(2, '0');
+    final period = createdAt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $period';
+  }
+
+  /// Formatted order date (e.g. "Sep 19, 2026")
+  String get formattedDate {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[createdAt.month - 1]} ${createdAt.day}, ${createdAt.year}';
+  }
 
   OrderModel copyWith({
     String? id,
@@ -141,14 +186,21 @@ class OrderModel {
     Address? deliveryAddress,
     String? paymentMethodLabel,
     OrderStatus? status,
+    int? prepTimeMinutes,
+    int? transitMinutes,
     int? estimatedDeliveryMinutes,
     String? deliveryPartnerName,
     String? deliveryPartnerPhone,
     String? deliveryPartnerPhotoUrl,
     double? riderLat,
     double? riderLng,
+    String? cancellationReason,
+    DateTime? cancelledAt,
+    String? refundStatus,
     DateTime? createdAt,
   }) {
+    final prep = prepTimeMinutes ?? this.prepTimeMinutes;
+    final transit = transitMinutes ?? this.transitMinutes;
     return OrderModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
@@ -162,14 +214,19 @@ class OrderModel {
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       paymentMethodLabel: paymentMethodLabel ?? this.paymentMethodLabel,
       status: status ?? this.status,
+      prepTimeMinutes: prep,
+      transitMinutes: transit,
       estimatedDeliveryMinutes:
-          estimatedDeliveryMinutes ?? this.estimatedDeliveryMinutes,
+          estimatedDeliveryMinutes ?? (prep + transit),
       deliveryPartnerName: deliveryPartnerName ?? this.deliveryPartnerName,
       deliveryPartnerPhone: deliveryPartnerPhone ?? this.deliveryPartnerPhone,
       deliveryPartnerPhotoUrl:
           deliveryPartnerPhotoUrl ?? this.deliveryPartnerPhotoUrl,
       riderLat: riderLat ?? this.riderLat,
       riderLng: riderLng ?? this.riderLng,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      refundStatus: refundStatus ?? this.refundStatus,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -187,12 +244,17 @@ class OrderModel {
         'deliveryAddress': deliveryAddress.toMap(),
         'paymentMethodLabel': paymentMethodLabel,
         'status': status.name,
+        'prepTimeMinutes': prepTimeMinutes,
+        'transitMinutes': transitMinutes,
         'estimatedDeliveryMinutes': estimatedDeliveryMinutes,
         'deliveryPartnerName': deliveryPartnerName,
         'deliveryPartnerPhone': deliveryPartnerPhone,
         'deliveryPartnerPhotoUrl': deliveryPartnerPhotoUrl,
         'riderLat': riderLat,
         'riderLng': riderLng,
+        'cancellationReason': cancellationReason,
+        'cancelledAt': cancelledAt?.toIso8601String(),
+        'refundStatus': refundStatus,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -224,8 +286,12 @@ class OrderModel {
       paymentMethodLabel:
           map['paymentMethodLabel'] as String? ?? 'Card ending with *8754',
       status: OrderStatus.fromString(map['status'] as String?),
+      prepTimeMinutes:
+          (map['prepTimeMinutes'] as num?)?.toInt() ?? 15,
+      transitMinutes:
+          (map['transitMinutes'] as num?)?.toInt() ?? 12,
       estimatedDeliveryMinutes:
-          (map['estimatedDeliveryMinutes'] as num?)?.toInt() ?? 15,
+          (map['estimatedDeliveryMinutes'] as num?)?.toInt() ?? 27,
       deliveryPartnerName:
           map['deliveryPartnerName'] as String? ?? 'John Doe',
       deliveryPartnerPhone:
@@ -234,6 +300,11 @@ class OrderModel {
           'https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=120&q=70',
       riderLat: (map['riderLat'] as num?)?.toDouble() ?? 11.2588,
       riderLng: (map['riderLng'] as num?)?.toDouble() ?? 75.7804,
+      cancellationReason: map['cancellationReason'] as String?,
+      cancelledAt: map['cancelledAt'] != null
+          ? DateTime.tryParse(map['cancelledAt'].toString())
+          : null,
+      refundStatus: map['refundStatus'] as String?,
       createdAt: map['createdAt'] != null
           ? (DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now())
           : DateTime.now(),

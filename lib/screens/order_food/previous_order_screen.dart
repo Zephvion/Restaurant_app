@@ -10,7 +10,6 @@ import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/checkout_widgets.dart';
 import '../../widgets/price_text.dart';
-import '../../widgets/primary_button.dart';
 
 /// Previous Order — a summary of the user's last order loaded from
 /// Firestore OrderService with a re-order action.
@@ -144,7 +143,7 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${order.createdAt.day}/${order.createdAt.month}/${order.createdAt.year} · ${order.items.length} items',
+                    '${order.formattedDate} · ${order.formattedTime} · ${order.items.length} items',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,

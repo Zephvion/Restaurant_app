@@ -32,6 +32,7 @@ class Dish {
     this.carbs = 45,
     this.fat = 12,
     this.protein = 8,
+    this.prepTimeMinutes = 15,
     this.subtitle,
   });
 
@@ -73,6 +74,9 @@ class Dish {
   final int fat;
   final int protein;
 
+  /// Kitchen preparation time in minutes.
+  final int prepTimeMinutes;
+
   /// Whether a discount is active (drives the strikethrough price display).
   bool get hasDiscount => oldPrice != null && oldPrice! > price;
 
@@ -93,6 +97,7 @@ class Dish {
         'carbs': carbs,
         'fat': fat,
         'protein': protein,
+        'prepTimeMinutes': prepTimeMinutes,
       };
 
   factory Dish.fromMap(Map<String, dynamic> map, {String? id}) {
@@ -116,6 +121,7 @@ class Dish {
       carbs: (map['carbs'] as num?)?.toInt() ?? 45,
       fat: (map['fat'] as num?)?.toInt() ?? 12,
       protein: (map['protein'] as num?)?.toInt() ?? 8,
+      prepTimeMinutes: (map['prepTimeMinutes'] as num?)?.toInt() ?? 15,
     );
   }
 
@@ -136,6 +142,7 @@ class Dish {
     int? carbs,
     int? fat,
     int? protein,
+    int? prepTimeMinutes,
   }) {
     return Dish(
       id: id ?? this.id,
@@ -154,6 +161,7 @@ class Dish {
       carbs: carbs ?? this.carbs,
       fat: fat ?? this.fat,
       protein: protein ?? this.protein,
+      prepTimeMinutes: prepTimeMinutes ?? this.prepTimeMinutes,
     );
   }
 }
