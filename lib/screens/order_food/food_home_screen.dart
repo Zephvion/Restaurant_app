@@ -77,16 +77,33 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     } else if (_activeCategoryFilter != 'All' && _activeCategoryFilter.isNotEmpty) {
       final filter = _activeCategoryFilter.toLowerCase();
       list = source.where((d) {
-        if (filter == 'veg') return d.isVeg;
         final cat = d.category.toLowerCase();
-        if (filter == 'breakfast') return cat.contains('breakfast') || cat.contains('dosa') || cat.contains('idli');
+        final name = d.name.toLowerCase();
+        if (filter == 'veg') return d.isVeg;
+        if (filter == 'non-veg' || filter == 'non veg') return !d.isVeg;
+        if (filter == 'fish') {
+          return cat.contains('fish') || cat.contains('seafood') || name.contains('fish') || name.contains('prawn') || name.contains('meen');
+        }
+        if (filter == 'chicken') return cat.contains('chicken') || name.contains('chicken') || name.contains('kozhi');
+        if (filter == 'egg') return cat.contains('egg') || name.contains('egg') || name.contains('mutta');
+        if (filter == 'beef') return cat.contains('beef') || name.contains('beef');
+        if (filter == 'mutton') return cat.contains('mutton') || name.contains('mutton');
+        if (filter == 'breakfast') {
+          return cat.contains('breakfast') || cat.contains('dosa') || cat.contains('idli') || name.contains('dosa') || name.contains('idli') || name.contains('appam') || name.contains('puttu');
+        }
         if (filter == 'lunch') return cat.contains('lunch') || cat.contains('biriyani') || cat.contains('rice') || cat.contains('curry');
         if (filter == 'dinner') return cat.contains('dinner') || cat.contains('roti') || cat.contains('starter');
         if (filter == 'beverages') return cat.contains('beverage') || cat.contains('juice') || cat.contains('shake') || cat.contains('tea');
         if (filter == 'desserts') return cat.contains('dessert') || cat.contains('sweet') || cat.contains('ice cream');
-        return cat.contains(filter) || d.name.toLowerCase().contains(filter);
+        return cat.contains(filter) || name.contains(filter);
       }).toList();
-      if (list.isEmpty) list = List<Dish>.from(source);
+
+      if (list.isEmpty) {
+        list = MockData.getDishesForCategory(_activeCategoryFilter);
+      }
+      if (list.isEmpty) {
+        list = source.where((d) => d.category.toLowerCase().contains(filter) || d.name.toLowerCase().contains(filter)).toList();
+      }
     } else {
       list = List<Dish>.from(source);
     }
@@ -389,34 +406,31 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
         itemCount: MockData.categoryTabs.length,
         separatorBuilder: (_, __) => const SizedBox(width: 22),
         itemBuilder: (context, i) {
-          final isFrequent = i == 0;
+          final isSelected = _selectedTab == i;
+          final tabName = MockData.categoryTabs[i];
           return GestureDetector(
             onTap: () {
-              if (isFrequent) {
-                setState(() {
-                  _selectedTab = 0;
-                  _activeCategoryFilter = 'All';
-                });
-              } else {
-                _openCategory(MockData.categoryTabs[i]);
-              }
+              setState(() {
+                _selectedTab = i;
+                _activeCategoryFilter = i == 0 ? 'All' : tabName;
+              });
             },
             behavior: HitTestBehavior.opaque,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  MockData.categoryTabs[i],
+                  tabName,
                   style: TextStyle(
-                    color: isFrequent
+                    color: isSelected
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
                     fontSize: 15,
-                    fontWeight: isFrequent ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 6),
-                if (isFrequent)
+                if (isSelected)
                   Container(
                     width: 22,
                     height: 3,
@@ -437,17 +451,35 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     return AnimatedBuilder(
       animation: _cart,
       builder: (context, _) {
-        final displayList =
-            dishes.isNotEmpty ? dishes : MockData.frequentOrders;
+        if (dishes.isEmpty) {
+          return Container(
+            height: 120,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(
+              'No $_activeCategoryFilter dishes available right now',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          );
+        }
         return SizedBox(
           height: 256,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: displayList.length,
+            itemCount: dishes.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, i) {
-              final dish = displayList[i];
+              final dish = dishes[i];
               return FeaturedDishCard(
                 dish: dish,
                 inCart: _cart.contains(dish),
