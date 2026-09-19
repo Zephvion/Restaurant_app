@@ -5,14 +5,88 @@ import '../models/address.dart';
 import '../services/map_route_service.dart';
 import '../theme/app_colors.dart';
 
-/// Display styles for the map canvas.
+/// Display styles for the real map tile layer.
 enum MapStyle {
   streets,
   darkLuxury,
 }
 
-/// An interactive, high-performance vector and raster map canvas for live delivery tracking
-/// and interactive GPS location selection, showcasing authentic Calicut cartography.
+/// Spherical Web Mercator projection (EPSG:3857) utility.
+/// Converts real GPS coordinates to pixel coordinates matching standard slippy tiles.
+class MercatorProjection {
+  static const double tileSize = 256.0;
+
+  /// World pixel X at given zoom level [0..20].
+  static double lngToPixelX(double lng, double zoom) {
+    return ((lng + 180.0) / 360.0) * tileSize * math.pow(2.0, zoom);
+  }
+
+  /// World pixel Y at given zoom level [0..20].
+  static double latToPixelY(double lat, double zoom) {
+    final sinLat = math.sin(lat * math.pi / 180.0).clamp(-0.9999, 0.9999);
+    final y = 0.5 - math.log((1.0 + sinLat) / (1.0 - sinLat)) / (4.0 * math.pi);
+    return y * tileSize * math.pow(2.0, zoom);
+  }
+
+  /// Converts world pixel X back to longitude.
+  static double pixelXToLng(double x, double zoom) {
+    return (x / (tileSize * math.pow(2.0, zoom))) * 360.0 - 180.0;
+  }
+
+  /// Converts world pixel Y back to latitude.
+  static double pixelYToLat(double y, double zoom) {
+    final yNorm = 0.5 - (y / (tileSize * math.pow(2.0, zoom)));
+    return 90.0 - 360.0 * math.atan(math.exp(-yNorm * 2.0 * math.pi)) / math.pi;
+  }
+
+  /// Converts a GPS coordinate to screen offset given the map center, screen dimensions, and zoom.
+  static Offset latLngToScreenOffset({
+    required double lat,
+    required double lng,
+    required double centerLat,
+    required double centerLng,
+    required double zoom,
+    required double screenWidth,
+    required double screenHeight,
+    double verticalCenterBias = 0.0,
+  }) {
+    final worldX = lngToPixelX(lng, zoom);
+    final worldY = latToPixelY(lat, zoom);
+    final centerWorldX = lngToPixelX(centerLng, zoom);
+    final centerWorldY = latToPixelY(centerLat, zoom);
+
+    final screenX = (screenWidth / 2.0) + (worldX - centerWorldX);
+    final screenY = (screenHeight / 2.0) + (worldY - centerWorldY) + verticalCenterBias;
+
+    return Offset(screenX, screenY);
+  }
+
+  /// Converts a screen touch offset back to real GPS coordinate.
+  static ({double lat, double lng}) screenOffsetToLatLng({
+    required Offset screenOffset,
+    required double centerLat,
+    required double centerLng,
+    required double zoom,
+    required double screenWidth,
+    required double screenHeight,
+    double verticalCenterBias = 0.0,
+  }) {
+    final centerWorldX = lngToPixelX(centerLng, zoom);
+    final centerWorldY = latToPixelY(centerLat, zoom);
+
+    final worldX = centerWorldX + (screenOffset.dx - (screenWidth / 2.0));
+    final worldY = centerWorldY + (screenOffset.dy - (screenHeight / 2.0) - verticalCenterBias);
+
+    final lng = pixelXToLng(worldX, zoom);
+    final lat = pixelYToLat(worldY, zoom);
+
+    return (lat: lat, lng: lng);
+  }
+}
+
+/// An authentic, high-performance real map canvas for live delivery tracking
+/// and interactive GPS location selection, powered by CartoDB Voyager / Dark Matter
+/// real street map tiles, Zomato/Swiggy-style route polylines, and live vehicle telemetry.
 class InteractiveMapView extends StatefulWidget {
   const InteractiveMapView({
     super.key,
@@ -65,13 +139,16 @@ class InteractiveMapView extends StatefulWidget {
 class _InteractiveMapViewState extends State<InteractiveMapView>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
-  final TransformationController _transformController =
-      TransformationController();
 
   DeliveryRoute? _route;
   bool _isLoadingRoute = true;
   Address? _currentDestination;
   MapStyle _mapStyle = MapStyle.streets;
+
+  // Manual pan and zoom state
+  Offset _panOffset = Offset.zero;
+  double? _userZoom;
+  bool _focusOnRider = false;
 
   @override
   void initState() {
@@ -81,6 +158,13 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat();
+    _route = MapRouteService.instance.getImmediateRoute(
+      destination: widget.destination,
+      customOriginLat: widget.customOriginLat,
+      customOriginLng: widget.customOriginLng,
+      customOriginTitle: widget.originTitle,
+      customOriginSubtitle: widget.originSubtitle,
+    );
     _loadRoute();
   }
 
@@ -93,6 +177,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
         oldWidget.customOriginLng != widget.customOriginLng ||
         oldWidget.originTitle != widget.originTitle) {
       _currentDestination = widget.destination;
+      _panOffset = Offset.zero;
       _loadRoute();
     }
   }
@@ -100,7 +185,6 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
   @override
   void dispose() {
     _pulseController.dispose();
-    _transformController.dispose();
     super.dispose();
   }
 
@@ -122,19 +206,32 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
   }
 
   void _zoomIn() {
-    final matrix = _transformController.value.clone();
-    matrix.scaleByDouble(1.25, 1.25, 1.0, 1.0);
-    _transformController.value = matrix;
+    setState(() {
+      final current = _userZoom ?? 14.0;
+      _userZoom = (current + 1.0).clamp(10.0, 18.0);
+    });
   }
 
   void _zoomOut() {
-    final matrix = _transformController.value.clone();
-    matrix.scaleByDouble(0.8, 0.8, 1.0, 1.0);
-    _transformController.value = matrix;
+    setState(() {
+      final current = _userZoom ?? 14.0;
+      _userZoom = (current - 1.0).clamp(10.0, 18.0);
+    });
   }
 
   void _resetView() {
-    _transformController.value = Matrix4.identity();
+    setState(() {
+      _panOffset = Offset.zero;
+      _userZoom = null;
+      _focusOnRider = false;
+    });
+  }
+
+  void _toggleRiderFocus() {
+    setState(() {
+      _focusOnRider = !_focusOnRider;
+      _panOffset = Offset.zero;
+    });
   }
 
   void _toggleMapStyle() {
@@ -145,400 +242,36 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
-
-        final route = _route;
-        final position = route?.getPositionAtProgress(widget.progress);
-
-        return Stack(
-          children: [
-            // ── Interactive Map Canvas ─────────────────────────────────────
-            InteractiveViewer(
-              transformationController: _transformController,
-              boundaryMargin: const EdgeInsets.all(160),
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: GestureDetector(
-                onTapUp: widget.isSelectingLocation
-                    ? (details) => _handleCanvasTap(details, width, height)
-                    : null,
-                child: SizedBox(
-                  width: width,
-                  height: height,
-                  child: Stack(
-                    children: [
-                      // 1. Real Slippy Raster Map Tile Layer (CartoDB / OpenStreetMap)
-                      if (route != null)
-                        _buildTileGrid(route, width, height),
-
-                      // 2. Rich Calicut Vector Cartography & Street Grid Overlay
-                      CustomPaint(
-                        size: Size(width, height),
-                        painter: _MapCanvasPainter(
-                          route: route,
-                          progress: widget.progress,
-                          isSelecting: widget.isSelectingLocation,
-                          mapStyle: _mapStyle,
-                          pulseValue: _pulseController.value,
-                        ),
-                      ),
-
-                      // 3. Calicut Landmark Badges (Rendered only when viewing Calicut region)
-                      if (route != null && _isCalicutRegion(route, widget.isSelectingLocation)) ...[
-                        _buildLandmark(
-                          lat: 11.2530,
-                          lng: 75.7800,
-                          title: 'Mananchira Square',
-                          icon: Icons.park_outlined,
-                          route: route,
-                          width: width,
-                          height: height,
-                        ),
-                        _buildLandmark(
-                          lat: 11.2590,
-                          lng: 75.7680,
-                          title: 'Calicut Beach',
-                          icon: Icons.beach_access_rounded,
-                          route: route,
-                          width: width,
-                          height: height,
-                        ),
-                        _buildLandmark(
-                          lat: 11.2384,
-                          lng: 75.8342,
-                          title: 'Hilite Mall / Palazhi',
-                          icon: Icons.shopping_bag_outlined,
-                          route: route,
-                          width: width,
-                          height: height,
-                        ),
-                        _buildLandmark(
-                          lat: 11.2310,
-                          lng: 75.8380,
-                          title: 'Cyberpark',
-                          icon: Icons.computer_rounded,
-                          route: route,
-                          width: width,
-                          height: height,
-                        ),
-                      ],
-
-                      // 4. Origin: Paragon Restaurant Pin (Rendered when tracking or in Calicut)
-                      if (route != null && !widget.isSelectingLocation)
-                        _buildPin(
-                          offset: _projectCoordinate(
-                            route.originLat,
-                            route.originLng,
-                            route,
-                            width,
-                            height,
-                            isSelecting: widget.isSelectingLocation,
-                          ),
-                          title: 'PARAGON',
-                          subtitle: route.originSubtitle.isNotEmpty
-                              ? route.originSubtitle
-                              : (widget.originSubtitle ?? 'Restaurant Outlet'),
-                          color: AppColors.accentRed,
-                          icon: Icons.restaurant,
-                        ),
-
-                      // 5. Destination: Customer Doorstep Pin
-                      if (route != null)
-                        _buildPin(
-                          offset: _projectCoordinate(
-                            route.destLat,
-                            route.destLng,
-                            route,
-                            width,
-                            height,
-                            isSelecting: widget.isSelectingLocation,
-                          ),
-                          title: (_currentDestination ?? widget.destination).label,
-                          subtitle: widget.isSelectingLocation ? 'Your Doorstep (GPS)' : 'Delivery Location',
-                          color: AppColors.copper,
-                          icon: Icons.home_rounded,
-                          iconColor: Colors.white,
-                        ),
-
-                      // 6. Moving Delivery Vehicle Pin (Scooter with Heading Rotation)
-                      if (!widget.isSelectingLocation &&
-                          route != null &&
-                          position != null)
-                        _buildMovingRider(
-                          position: position,
-                          route: route,
-                          width: width,
-                          height: height,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── City Identification Pill ──────────────────────────────────
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.copper.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.location_city_rounded,
-                        color: AppColors.copper, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_getCityLabel()} • LIVE GPS MAP (${_mapStyle == MapStyle.streets ? "STREETS" : "NIGHT"})',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Loading Route Overlay ─────────────────────────────────────
-            if (_isLoadingRoute)
-              Positioned(
-                top: 14,
-                left: 16,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppColors.copper.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.copper,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Updating Calicut GPS Route...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            // ── Live Telemetry HUD ─────────────────────────────────────────
-            if (widget.showTelemetry &&
-                !widget.isSelectingLocation &&
-                position != null &&
-                route != null)
-              Positioned(
-                top: 14,
-                left: 16,
-                right: 16,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1B1B22).withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.copper.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF4CAF50),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${position.distanceRemainingKm.toStringAsFixed(1)} km left',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${position.speedKmh.round()} km/h',
-                          style: const TextStyle(
-                            color: AppColors.copper,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${route.estimatedMinutes}m ETA',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // ── Floating Zoom / Recenter / Layer Controls ─────────────────
-            if (widget.showControls)
-              Positioned(
-                right: 16,
-                top: 80,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _controlButton(
-                      icon: Icons.add,
-                      onTap: _zoomIn,
-                      tooltip: 'Zoom In',
-                    ),
-                    const SizedBox(height: 8),
-                    _controlButton(
-                      icon: Icons.remove,
-                      onTap: _zoomOut,
-                      tooltip: 'Zoom Out',
-                    ),
-                    const SizedBox(height: 8),
-                    _controlButton(
-                      icon: Icons.crop_free,
-                      onTap: _resetView,
-                      tooltip: 'Reset View',
-                    ),
-                    const SizedBox(height: 8),
-                    _controlButton(
-                      icon: _mapStyle == MapStyle.streets
-                          ? Icons.dark_mode_outlined
-                          : Icons.map_outlined,
-                      onTap: _toggleMapStyle,
-                      tooltip: _mapStyle == MapStyle.streets
-                          ? 'Switch to Dark Mode'
-                          : 'Switch to Street Map',
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _controlButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required String tooltip,
-  }) {
-    return Material(
-      color: AppColors.surface.withValues(alpha: 0.9),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: AppColors.copper.withValues(alpha: 0.35),
-        ),
-      ),
-      elevation: 4,
-      clipBehavior: Clip.antiAlias,
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            width: 36,
-            height: 36,
-            child: Icon(icon, color: AppColors.copper, size: 20),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getCityLabel() {
+  /// Calculates the optimal center and zoom level to perfectly frame the route and leave room for the bottom sheet.
+  ({double centerLat, double centerLng, double zoom, double verticalBias})
+      _computeMapViewport(double width, double height) {
     final dest = _currentDestination ?? widget.destination;
-    final text = '${dest.label} ${dest.details}'.toLowerCase();
-    if (text.contains('bengaluru') ||
-        text.contains('bangalore') ||
-        (dest.lat >= 12.5 && dest.lat <= 13.5 && dest.lng >= 77.0 && dest.lng <= 78.0)) {
-      return 'BENGALURU';
-    }
-    if (text.contains('calicut') ||
-        text.contains('kozhikode') ||
-        (dest.lat >= 11.0 && dest.lat <= 11.5 && dest.lng >= 75.5 && dest.lng <= 76.2)) {
-      return 'CALICUT';
-    }
-    return 'DOORSTEP';
-  }
 
-  static Rect _computeViewportBounds(DeliveryRoute route, bool isSelecting) {
-    if (isSelecting) {
-      const span = 0.0075;
-      return Rect.fromLTRB(
-        route.destLng - span,
-        route.destLat - span,
-        route.destLng + span,
-        route.destLat + span,
+    // In location selection mode, zoom in close to the target doorstep
+    if (widget.isSelectingLocation || _route == null) {
+      final z = _userZoom ?? 15.5;
+      return (
+        centerLat: dest.lat,
+        centerLng: dest.lng,
+        zoom: z,
+        verticalBias: 0.0,
       );
     }
+
+    final route = _route!;
+    final position = route.getPositionAtProgress(widget.progress);
+
+    if (_focusOnRider) {
+      final z = _userZoom ?? 15.0;
+      return (
+        centerLat: position.lat,
+        centerLng: position.lng,
+        zoom: z,
+        verticalBias: -30.0,
+      );
+    }
+
+    // Compute bounding box covering origin, destination, and all road waypoints
     double minLat = math.min(route.originLat, route.destLat);
     double maxLat = math.max(route.originLat, route.destLat);
     double minLng = math.min(route.originLng, route.destLng);
@@ -551,91 +284,427 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
       if (p.lng > maxLng) maxLng = p.lng;
     }
 
-    const padFactor = 0.008;
-    return Rect.fromLTRB(
-      minLng - padFactor,
-      minLat - padFactor,
-      maxLng + padFactor,
-      maxLat + padFactor,
+    final centerLat = (minLat + maxLat) / 2.0;
+    final centerLng = (minLng + maxLng) / 2.0;
+
+    // Leave ample breathing space for bottom sheet (approx 200px) and top nav
+    const verticalBias = -40.0;
+    final availW = math.max(120.0, width - 80.0);
+    final availH = math.max(120.0, height - 240.0);
+
+    final spanLng = (maxLng - minLng).abs().clamp(0.001, 180.0);
+    final worldSpanXAtZoom0 = (spanLng / 360.0) * MercatorProjection.tileSize;
+    final zoomX = (math.log(availW / worldSpanXAtZoom0) / math.ln2);
+
+    final y1 = MercatorProjection.latToPixelY(minLat, 0.0);
+    final y2 = MercatorProjection.latToPixelY(maxLat, 0.0);
+    final worldSpanYAtZoom0 = (y1 - y2).abs().clamp(0.001, 256.0);
+    final zoomY = (math.log(availH / worldSpanYAtZoom0) / math.ln2);
+
+    final idealZoom = math.min(zoomX, zoomY).clamp(12.0, 16.5);
+    final z = _userZoom ?? idealZoom;
+
+    return (
+      centerLat: centerLat,
+      centerLng: centerLng,
+      zoom: z,
+      verticalBias: verticalBias,
     );
   }
 
-  static bool _isCalicutRegion(DeliveryRoute route, bool isSelecting) {
-    final bounds = _computeViewportBounds(route, isSelecting);
-    return bounds.top <= 11.35 &&
-        bounds.bottom >= 11.18 &&
-        bounds.left <= 75.92 &&
-        bounds.right >= 75.68;
+  void _handleTapToPick(
+    Offset tapPos,
+    double width,
+    double height,
+    double centerLat,
+    double centerLng,
+    double zoom,
+    double verticalBias,
+  ) {
+    if (!widget.isSelectingLocation) return;
+
+    // Apply pan offset inversely to locate tap in map coordinates
+    final effectiveTap = tapPos - _panOffset;
+    final result = MercatorProjection.screenOffsetToLatLng(
+      screenOffset: effectiveTap,
+      centerLat: centerLat,
+      centerLng: centerLng,
+      zoom: zoom,
+      screenWidth: width,
+      screenHeight: height,
+      verticalCenterBias: verticalBias,
+    );
+
+    final newAddr = Address(
+      id: 'addr_picked_${DateTime.now().millisecondsSinceEpoch}',
+      label: _currentDestination?.label ?? 'Doorstep Pin',
+      details:
+          'Doorstep Location (${result.lat.toStringAsFixed(4)}° N, ${result.lng.toStringAsFixed(4)}° E)',
+      lat: result.lat,
+      lng: result.lng,
+    );
+
+    setState(() => _currentDestination = newAddr);
+    _loadRoute();
+    widget.onLocationPicked?.call(newAddr);
   }
 
-  /// Builds a responsive grid of real Slippy Map tiles behind the canvas
-  Widget _buildTileGrid(DeliveryRoute route, double width, double height) {
-    final bounds = _computeViewportBounds(route, widget.isSelectingLocation);
-    final minLng = bounds.left;
-    final minLat = bounds.top;
-    final maxLng = bounds.right;
-    final maxLat = bounds.bottom;
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
 
-    final double span = math.max(maxLat - minLat, maxLng - minLng);
-    int zoom;
-    if (widget.isSelectingLocation) {
-      zoom = 15;
-    } else if (span < 0.06) {
-      zoom = 14;
-    } else if (span < 0.15) {
-      zoom = 13;
-    } else if (span < 0.4) {
-      zoom = 11;
-    } else if (span < 1.5) {
-      zoom = 9;
-    } else {
-      zoom = 7;
-    }
+        final viewport = _computeMapViewport(width, height);
+        final effectiveCenterLat = viewport.centerLat;
+        final effectiveCenterLng = viewport.centerLng;
+        final currentZoom = viewport.zoom;
+        final verticalBias = viewport.verticalBias;
+        final isDark = _mapStyle == MapStyle.darkLuxury;
 
-    final minTileX = _lngToTileX(minLng, zoom);
-    final maxTileX = _lngToTileX(maxLng, zoom);
-    final minTileY = _latToTileY(maxLat, zoom);
-    final maxTileY = _latToTileY(minLat, zoom);
+        final route = _route;
+        final position = route?.getPositionAtProgress(widget.progress);
+
+        // Screen offsets for pins
+        Offset? originOffset;
+        Offset? destOffset;
+        Offset? riderOffset;
+
+        if (route != null) {
+          originOffset = MercatorProjection.latLngToScreenOffset(
+                lat: route.originLat,
+                lng: route.originLng,
+                centerLat: effectiveCenterLat,
+                centerLng: effectiveCenterLng,
+                zoom: currentZoom,
+                screenWidth: width,
+                screenHeight: height,
+                verticalCenterBias: verticalBias,
+              ) +
+              _panOffset;
+
+          destOffset = MercatorProjection.latLngToScreenOffset(
+                lat: route.destLat,
+                lng: route.destLng,
+                centerLat: effectiveCenterLat,
+                centerLng: effectiveCenterLng,
+                zoom: currentZoom,
+                screenWidth: width,
+                screenHeight: height,
+                verticalCenterBias: verticalBias,
+              ) +
+              _panOffset;
+        } else {
+          final dest = _currentDestination ?? widget.destination;
+          destOffset = MercatorProjection.latLngToScreenOffset(
+                lat: dest.lat,
+                lng: dest.lng,
+                centerLat: effectiveCenterLat,
+                centerLng: effectiveCenterLng,
+                zoom: currentZoom,
+                screenWidth: width,
+                screenHeight: height,
+                verticalCenterBias: verticalBias,
+              ) +
+              _panOffset;
+        }
+
+        if (position != null && route != null) {
+          riderOffset = MercatorProjection.latLngToScreenOffset(
+                lat: position.lat,
+                lng: position.lng,
+                centerLat: effectiveCenterLat,
+                centerLng: effectiveCenterLng,
+                zoom: currentZoom,
+                screenWidth: width,
+                screenHeight: height,
+                verticalCenterBias: verticalBias,
+              ) +
+              _panOffset;
+        }
+
+        return Container(
+          width: width,
+          height: height,
+          color: isDark ? const Color(0xFF14141C) : const Color(0xFFF2EFE9),
+          child: Stack(
+            children: [
+              // ── 1. Pan & Tap Gesture Detector Layer ────────────────────────
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: (details) {
+                  setState(() {
+                    _panOffset += details.delta;
+                  });
+                },
+                onTapUp: (details) {
+                  _handleTapToPick(
+                    details.localPosition,
+                    width,
+                    height,
+                    effectiveCenterLat,
+                    effectiveCenterLng,
+                    currentZoom,
+                    verticalBias,
+                  );
+                },
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    // ── 2. Real Slippy Raster Map Tile Layer ─────────────────
+                    _buildSlippyTileGrid(
+                      width: width,
+                      height: height,
+                      centerLat: effectiveCenterLat,
+                      centerLng: effectiveCenterLng,
+                      zoom: currentZoom,
+                      verticalBias: verticalBias,
+                      panOffset: _panOffset,
+                      isDark: isDark,
+                    ),
+
+                    // ── 3. Zomato/Swiggy Delivery Route Overlay ───────────────
+                    if (route != null)
+                      CustomPaint(
+                        size: Size(width, height),
+                        painter: _RouteOverlayPainter(
+                          route: route,
+                          progress: widget.progress,
+                          isSelecting: widget.isSelectingLocation,
+                          isDark: isDark,
+                          pulseValue: _pulseController.value,
+                          centerLat: effectiveCenterLat,
+                          centerLng: effectiveCenterLng,
+                          zoom: currentZoom,
+                          verticalBias: verticalBias,
+                          panOffset: _panOffset,
+                        ),
+                      ),
+
+                    // ── 4. Origin Pin: Paragon Restaurant ────────────────────
+                    if (originOffset != null && !widget.isSelectingLocation)
+                      _buildRestaurantPin(
+                        offset: originOffset,
+                        title: 'PARAGON',
+                        subtitle: route?.originSubtitle ?? 'Restaurant Outlet',
+                      ),
+
+                    // ── 5. Destination Pin: Customer Doorstep ────────────────
+                    _buildDoorstepPin(
+                      offset: destOffset,
+                      title: (_currentDestination ?? widget.destination).label,
+                      isSelecting: widget.isSelectingLocation,
+                      pulseValue: _pulseController.value,
+                    ),
+
+                    // ── 6. Animated Moving Delivery Partner Scooter ──────────
+                    if (riderOffset != null &&
+                        position != null &&
+                        !widget.isSelectingLocation)
+                      _buildAnimatedRider(
+                        offset: riderOffset,
+                        bearingDegrees: position.bearingDegrees,
+                        speedKmh: position.speedKmh,
+                        pulseValue: _pulseController.value,
+                      ),
+                  ],
+                ),
+              ),
+
+              // ── 8. Floating Navigation & Map Controls ──────────────────────
+              if (widget.showControls)
+                Positioned(
+                  right: 16,
+                  top: 76,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _controlButton(
+                        icon: Icons.add,
+                        onTap: _zoomIn,
+                        tooltip: 'Zoom In',
+                      ),
+                      const SizedBox(height: 8),
+                      _controlButton(
+                        icon: Icons.remove,
+                        onTap: _zoomOut,
+                        tooltip: 'Zoom Out',
+                      ),
+                      const SizedBox(height: 8),
+                      _controlButton(
+                        icon: Icons.crop_free,
+                        onTap: _resetView,
+                        tooltip: 'Fit Delivery Route',
+                      ),
+                      if (!widget.isSelectingLocation && route != null) ...[
+                        const SizedBox(height: 8),
+                        _controlButton(
+                          icon: Icons.near_me_outlined,
+                          color: _focusOnRider ? AppColors.copper : null,
+                          onTap: _toggleRiderFocus,
+                          tooltip: 'Focus on Delivery Rider',
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      _controlButton(
+                        icon: isDark
+                            ? Icons.wb_sunny_outlined
+                            : Icons.dark_mode_outlined,
+                        onTap: _toggleMapStyle,
+                        tooltip: isDark
+                            ? 'Switch to Day Street Map'
+                            : 'Switch to Night Mode',
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── 9. Live City & Real Map Attribution Pill ───────────────────
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.78),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.copper.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.map_rounded,
+                        color: AppColors.copper,
+                        size: 13,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_getCityLabel()} • LIVE GOOGLE MAPS • REAL-TIME',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── 10. Route Fetching Indicator ───────────────────────────────
+              if (_isLoadingRoute)
+                Positioned(
+                  top: 14,
+                  left: 16,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.copper.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.copper,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Loading Live Road Route...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Builds a responsive grid of real Slippy Map tiles behind the route polyline.
+  Widget _buildSlippyTileGrid({
+    required double width,
+    required double height,
+    required double centerLat,
+    required double centerLng,
+    required double zoom,
+    required double verticalBias,
+    required Offset panOffset,
+    required bool isDark,
+  }) {
+    final int z = zoom.round().clamp(10, 18);
+    final centerWorldX =
+        MercatorProjection.lngToPixelX(centerLng, z.toDouble()) - panOffset.dx;
+    final centerWorldY =
+        MercatorProjection.latToPixelY(centerLat, z.toDouble()) - panOffset.dy;
+
+    // Determine visible tile range covering screen viewport + 1 tile buffer
+    final minTileX =
+        ((centerWorldX - (width / 2.0)) / MercatorProjection.tileSize).floor() -
+            1;
+    final maxTileX =
+        ((centerWorldX + (width / 2.0)) / MercatorProjection.tileSize).floor() +
+            1;
+    final minTileY = (((centerWorldY - (height / 2.0) - verticalBias)) /
+                MercatorProjection.tileSize)
+            .floor() -
+        1;
+    final maxTileY = (((centerWorldY + (height / 2.0) - verticalBias)) /
+                MercatorProjection.tileSize)
+            .floor() +
+        1;
 
     final tiles = <Widget>[];
 
-    // Cap to at most 4x4 tiles to guarantee smooth rendering performance
-    final startX = minTileX;
-    final endX = math.min(maxTileX, minTileX + 3);
-    final startY = minTileY;
-    final endY = math.min(maxTileY, minTileY + 3);
+    for (int tx = minTileX; tx <= maxTileX; tx++) {
+      for (int ty = minTileY; ty <= maxTileY; ty++) {
+        final tileLeft = (width / 2.0) +
+            (tx * MercatorProjection.tileSize - centerWorldX);
+        final tileTop = (height / 2.0) +
+            (ty * MercatorProjection.tileSize - centerWorldY) +
+            verticalBias;
 
-    for (int tx = startX; tx <= endX; tx++) {
-      for (int ty = startY; ty <= endY; ty++) {
-        final tileWest = _tileXToLng(tx, zoom);
-        final tileEast = _tileXToLng(tx + 1, zoom);
-        final tileNorth = _tileYToLat(ty, zoom);
-        final tileSouth = _tileYToLat(ty + 1, zoom);
-
-        final tl = _projectCoordinate(tileNorth, tileWest, route, width, height, isSelecting: widget.isSelectingLocation);
-        final br = _projectCoordinate(tileSouth, tileEast, route, width, height, isSelecting: widget.isSelectingLocation);
-
-        final tileW = (br.dx - tl.dx).abs();
-        final tileH = (br.dy - tl.dy).abs();
-        if (tileW <= 1 || tileH <= 1) continue;
-
-        final url = _mapStyle == MapStyle.streets
-            ? 'https://a.basemaps.cartocdn.com/rastertiles/voyager/$zoom/$tx/$ty.png'
-            : 'https://a.basemaps.cartocdn.com/dark_all/$zoom/$tx/$ty.png';
+        final gSub = (tx.abs() + ty.abs()) % 4;
+        final primaryUrl = isDark
+            ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/$z/$ty/$tx'
+            : 'https://mt$gSub.google.com/vt/lyrs=m&x=$tx&y=$ty&z=$z';
+        final fallbackUrl = isDark
+            ? 'https://mt$gSub.google.com/vt/lyrs=m&x=$tx&y=$ty&z=$z'
+            : 'https://a.tile.openstreetmap.fr/hot/$z/$tx/$ty.png';
 
         tiles.add(
           Positioned(
-            left: math.min(tl.dx, br.dx),
-            top: math.min(tl.dy, br.dy),
-            width: tileW,
-            height: tileH,
-            child: Opacity(
-              opacity: _mapStyle == MapStyle.darkLuxury ? 0.7 : 0.88,
-              child: Image.network(
-                url,
-                fit: BoxFit.fill,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
+            left: tileLeft,
+            top: tileTop,
+            width: MercatorProjection.tileSize,
+            height: MercatorProjection.tileSize,
+            child: _MapTileWidget(
+              key: ValueKey('tile_${z}_${tx}_${ty}_$isDark'),
+              url: primaryUrl,
+              fallbackUrl: fallbackUrl,
+              isDark: isDark,
             ),
           ),
         );
@@ -645,107 +714,33 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     return Stack(children: tiles);
   }
 
-  static int _lngToTileX(double lng, int zoom) {
-    return ((lng + 180.0) / 360.0 * (1 << zoom)).floor();
-  }
-
-  static int _latToTileY(double lat, int zoom) {
-    final latRad = lat * math.pi / 180.0;
-    return ((1.0 -
-                math.log(math.tan(latRad) + 1.0 / math.cos(latRad)) / math.pi) /
-            2.0 *
-            (1 << zoom))
-        .floor();
-  }
-
-  static double _tileXToLng(int x, int zoom) {
-    return x / (1 << zoom) * 360.0 - 180.0;
-  }
-
-  static double _tileYToLat(int y, int zoom) {
-    final n = math.pi - 2.0 * math.pi * y / (1 << zoom);
-    return 180.0 / math.pi * math.atan(0.5 * (math.exp(n) - math.exp(-n)));
-  }
-
-  Widget _buildLandmark({
-    required double lat,
-    required double lng,
-    required String title,
-    required IconData icon,
-    required DeliveryRoute route,
-    required double width,
-    required double height,
-  }) {
-    final offset = _projectCoordinate(lat, lng, route, width, height);
-
-    if (offset.dx < -20 ||
-        offset.dx > width + 20 ||
-        offset.dy < -20 ||
-        offset.dy > height + 20) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned(
-      left: offset.dx - 35,
-      top: offset.dy - 12,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white24,
-            width: 0.8,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white70, size: 10),
-            const SizedBox(width: 4),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 8.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPin({
+  Widget _buildRestaurantPin({
     required Offset offset,
     required String title,
     String? subtitle,
-    required Color color,
-    required IconData icon,
-    Color iconColor = Colors.white,
   }) {
     return Positioned(
       left: offset.dx - 45,
-      top: offset.dy - 52,
+      top: offset.dy - 56,
       child: SizedBox(
         width: 90,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.9),
+                color: Colors.black.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: color.withValues(alpha: 0.8),
+                  color: AppColors.copper,
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.5),
-                    blurRadius: 4,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -754,8 +749,8 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color,
+                style: const TextStyle(
+                  color: AppColors.copper,
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.4,
@@ -767,18 +762,22 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: color,
+                color: AppColors.accentRed,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withValues(alpha: 0.5),
+                    color: AppColors.accentRed.withValues(alpha: 0.6),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Icon(icon, color: iconColor, size: 16),
+              child: const Icon(
+                Icons.restaurant_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
             ),
           ],
         ),
@@ -786,364 +785,320 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     );
   }
 
-  Widget _buildMovingRider({
-    required RoutePosition position,
-    required DeliveryRoute route,
-    required double width,
-    required double height,
+  Widget _buildDoorstepPin({
+    required Offset offset,
+    required String title,
+    required bool isSelecting,
+    required double pulseValue,
   }) {
-    final offset = _projectCoordinate(
-      position.lat,
-      position.lng,
-      route,
-      width,
-      height,
-    );
-
     return Positioned(
-      left: offset.dx - 28,
-      top: offset.dy - 28,
-      child: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          final pulse = _pulseController.value;
-          return SizedBox(
-            width: 56,
-            height: 56,
-            child: Stack(
+      left: offset.dx - 45,
+      top: offset.dy - 56,
+      child: SizedBox(
+        width: 90,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.white70,
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Stack(
               alignment: Alignment.center,
               children: [
+                // Pulsing target radar circle
                 Container(
-                  width: 28 + (pulse * 26),
-                  height: 28 + (pulse * 26),
+                  width: 30 + (pulseValue * 22),
+                  height: 30 + (pulseValue * 22),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.copper.withValues(alpha: 1.0 - pulse),
-                      width: 2,
+                      color: AppColors.copper
+                          .withValues(alpha: (1.0 - pulseValue).clamp(0.0, 1.0)),
+                      width: 1.8,
                     ),
                   ),
                 ),
-                Transform.rotate(
-                  angle: position.bearingDegrees * (math.pi / 180.0),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.copper,
-                      border: Border.all(color: Colors.white, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.copper.withValues(alpha: 0.6),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.two_wheeler_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.copper,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.copper.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.home_rounded,
+                    color: Colors.white,
+                    size: 17,
                   ),
                 ),
               ],
             ),
-          );
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedRider({
+    required Offset offset,
+    required double bearingDegrees,
+    required double speedKmh,
+    required double pulseValue,
+  }) {
+    return Positioned(
+      left: offset.dx - 28,
+      top: offset.dy - 28,
+      child: SizedBox(
+        width: 56,
+        height: 56,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Dynamic expanding pulse ring
+            Container(
+              width: 26 + (pulseValue * 26),
+              height: 26 + (pulseValue * 26),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.copper
+                      .withValues(alpha: (1.0 - pulseValue).clamp(0.0, 1.0)),
+                  width: 2,
+                ),
+              ),
+            ),
+            // Rotated Delivery Partner Scooter Icon
+            Transform.rotate(
+              angle: bearingDegrees * (math.pi / 180.0),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.copper,
+                  border: Border.all(color: Colors.white, width: 2.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.copper.withValues(alpha: 0.7),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.two_wheeler_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _controlButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required String tooltip,
+    Color? color,
+  }) {
+    return Material(
+      color: AppColors.surface.withValues(alpha: 0.94),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: color ?? AppColors.copper.withValues(alpha: 0.4),
+        ),
+      ),
+      elevation: 4,
+      clipBehavior: Clip.antiAlias,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(icon, color: color ?? AppColors.copper, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getCityLabel() {
+    final dest = _currentDestination ?? widget.destination;
+    final text = '${dest.label} ${dest.details}'.toLowerCase();
+    if (text.contains('bengaluru') ||
+        text.contains('bangalore') ||
+        (dest.lat >= 12.5 &&
+            dest.lat <= 13.5 &&
+            dest.lng >= 77.0 &&
+            dest.lng <= 78.0)) {
+      return 'BENGALURU';
+    }
+    if (text.contains('calicut') ||
+        text.contains('kozhikode') ||
+        (dest.lat >= 11.0 &&
+            dest.lat <= 11.5 &&
+            dest.lng >= 75.5 &&
+            dest.lng <= 76.2)) {
+      return 'CALICUT';
+    }
+    return 'DOORSTEP';
+  }
+}
+
+/// A robust tile widget with multi-CDN fallback and background placeholder
+/// to ensure seamless, zero-white-space street map rendering.
+class _MapTileWidget extends StatefulWidget {
+  const _MapTileWidget({
+    super.key,
+    required this.url,
+    required this.fallbackUrl,
+    required this.isDark,
+  });
+
+  final String url;
+  final String fallbackUrl;
+  final bool isDark;
+
+  @override
+  State<_MapTileWidget> createState() => _MapTileWidgetState();
+}
+
+class _MapTileWidgetState extends State<_MapTileWidget> {
+  bool _useFallback = false;
+
+  @override
+  void didUpdateWidget(covariant _MapTileWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _useFallback = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: widget.isDark ? const Color(0xFF14141C) : const Color(0xFFF2EFE9),
+      child: Image.network(
+        _useFallback ? widget.fallbackUrl : widget.url,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          if (!_useFallback) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _useFallback = true);
+            });
+          }
+          return _buildTilePlaceholder(widget.isDark);
         },
       ),
     );
   }
 
-  void _handleCanvasTap(TapUpDetails details, double width, double height) {
-    if (_route == null) return;
-    final tapOffset = details.localPosition;
-
-    final bounds = _computeViewportBounds(_route!, widget.isSelectingLocation);
-    final minLng = bounds.left;
-    final minLat = bounds.top;
-    final maxLng = bounds.right;
-    final maxLat = bounds.bottom;
-
-    final padX = width * 0.10;
-    final padY = height * 0.10;
-    final drawW = width - (padX * 2);
-    final drawH = height - (padY * 2);
-
-    final normX = ((tapOffset.dx - padX) / drawW).clamp(0.0, 1.0);
-    final normY = (1.0 - ((tapOffset.dy - padY) / drawH)).clamp(0.0, 1.0);
-
-    final newLng = minLng + normX * (maxLng - minLng);
-    final newLat = minLat + normY * (maxLat - minLat);
-
-    final newAddress = Address(
-      id: 'addr_picked_${DateTime.now().millisecondsSinceEpoch}',
-      label: _currentDestination?.label ?? 'Doorstep Pin',
-      details:
-          'Doorstep Location (${newLat.toStringAsFixed(4)}° N, ${newLng.toStringAsFixed(4)}° E)',
-      lat: newLat,
-      lng: newLng,
-    );
-
-    setState(() => _currentDestination = newAddress);
-    _loadRoute();
-    widget.onLocationPicked?.call(newAddress);
-  }
-
-  static Offset _projectCoordinate(
-    double lat,
-    double lng,
-    DeliveryRoute route,
-    double width,
-    double height, {
-    bool isSelecting = false,
-  }) {
-    final bounds = _computeViewportBounds(route, isSelecting);
-    final minLng = bounds.left;
-    final minLat = bounds.top;
-    final maxLng = bounds.right;
-    final maxLat = bounds.bottom;
-
-    final padX = width * 0.10;
-    final padY = height * 0.10;
-    final drawW = width - (padX * 2);
-    final drawH = height - (padY * 2);
-
-    final normX = (lng - minLng) / (maxLng - minLng);
-    final normY = 1.0 - ((lat - minLat) / (maxLat - minLat));
-
-    return Offset(
-      padX + (normX * drawW),
-      padY + (normY * drawH),
+  Widget _buildTilePlaceholder(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181824) : const Color(0xFFEBE6DC),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.04),
+          width: 0.5,
+        ),
+      ),
     );
   }
 }
 
-class _MapCanvasPainter extends CustomPainter {
-  const _MapCanvasPainter({
+/// Custom painter for Zomato/Swiggy/Uber-style delivery routes.
+/// Paints a transparent overlay directly on top of the real street map tiles.
+class _RouteOverlayPainter extends CustomPainter {
+  const _RouteOverlayPainter({
     required this.route,
     required this.progress,
     required this.isSelecting,
-    required this.mapStyle,
+    required this.isDark,
     required this.pulseValue,
+    required this.centerLat,
+    required this.centerLng,
+    required this.zoom,
+    required this.verticalBias,
+    required this.panOffset,
   });
 
-  final DeliveryRoute? route;
+  final DeliveryRoute route;
   final double progress;
   final bool isSelecting;
-  final MapStyle mapStyle;
+  final bool isDark;
   final double pulseValue;
+  final double centerLat;
+  final double centerLng;
+  final double zoom;
+  final double verticalBias;
+  final Offset panOffset;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final isDark = mapStyle == MapStyle.darkLuxury;
+    if (route.points.length < 2) return;
 
-    // ── 1. Base Land Palette ────────────────────────────────────────────────
-    final baseBgColor = isDark ? const Color(0xFF14141C) : const Color(0xFFEBE6DC);
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = baseBgColor,
-    );
-
-    if (route == null) return;
-
-    final isCalicut = _InteractiveMapViewState._isCalicutRegion(route!, isSelecting);
-
-    // ── 2. Arabian Sea Coastline & Calicut Cartography (Only in Calicut region) ──
-    if (isCalicut) {
-      const coastLng = 75.7720;
-      final coastPt = _InteractiveMapViewState._projectCoordinate(
-        11.2588,
-        coastLng,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-
-      final seaRight = coastPt.dx.clamp(0.0, size.width * 0.45);
-      if (seaRight > 0) {
-        final seaPaint = Paint()
-          ..color = isDark ? const Color(0xFF0F2236) : const Color(0xFFB5D4EB);
-        canvas.drawRect(Rect.fromLTWH(0, 0, seaRight, size.height), seaPaint);
-
-        // Coastline beach promenade strip
-        final sandPaint = Paint()
-          ..color = isDark ? const Color(0xFF4A4434) : const Color(0xFFE4D5B4)
-          ..strokeWidth = 4;
-        canvas.drawLine(
-          Offset(seaRight, 0),
-          Offset(seaRight, size.height),
-          sandPaint,
-        );
-
-        // Sea waves and text
-        _drawLabel(
-          canvas,
-          '🌊 ARABIAN SEA',
-          Offset(math.max(10, seaRight * 0.3), size.height * 0.4),
-          isDark ? const Color(0xFF4D7298) : const Color(0xFF6F99BF),
-          fontSize: 10,
-          letterSpacing: 1.5,
-        );
-      }
-
-      // ── 3. Calicut Parks & Green Wetlands ──────────────────────────────────
-      // Mananchira Square
-      final mananchiraPt = _InteractiveMapViewState._projectCoordinate(
-        11.2530,
-        75.7800,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-      final parkPaint = Paint()
-        ..color = isDark ? const Color(0xFF1B2E24) : const Color(0xFFCCE8D0);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: mananchiraPt, width: 34, height: 34),
-          const Radius.circular(4),
-        ),
-        parkPaint,
-      );
-      final waterTankPaint = Paint()
-        ..color = isDark ? const Color(0xFF0F2236) : const Color(0xFF98C5E8);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: mananchiraPt, width: 16, height: 16),
-          const Radius.circular(2),
-        ),
-        waterTankPaint,
-      );
-
-      // ── 4. Major Calicut Arterial Highway Network ───────────────────────────
-      final highwayCasingPaint = Paint()
-        ..color = isDark ? const Color(0xFF282836) : const Color(0xFFC8C2B6)
-        ..strokeWidth = 9
-        ..strokeCap = StrokeCap.round;
-
-      final highwayPaint = Paint()
-        ..color = isDark ? const Color(0xFF38384A) : Colors.white
-        ..strokeWidth = 6.5
-        ..strokeCap = StrokeCap.round;
-
-      final localRoadPaint = Paint()
-        ..color = isDark ? const Color(0xFF22222E) : const Color(0xFFF7F5F0)
-        ..strokeWidth = 3.5
-        ..strokeCap = StrokeCap.round;
-
-      // Mavoor Road (Kannur Rd -> Arayidathupalam -> Medical College)
-      final mavoorStart = _InteractiveMapViewState._projectCoordinate(
-        11.2570,
-        75.7860,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-      final mavoorMid = _InteractiveMapViewState._projectCoordinate(
-        11.2610,
-        75.7980,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-      final mavoorEnd = _InteractiveMapViewState._projectCoordinate(
-        11.2720,
-        75.8360,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-
-      canvas.drawLine(mavoorStart, mavoorMid, highwayCasingPaint);
-      canvas.drawLine(mavoorMid, mavoorEnd, highwayCasingPaint);
-      canvas.drawLine(mavoorStart, mavoorMid, highwayPaint);
-      canvas.drawLine(mavoorMid, mavoorEnd, highwayPaint);
-
-      // NH 66 / Mini Bypass (North to Palazhi / Cyberpark)
-      final bypassNorth = _InteractiveMapViewState._projectCoordinate(
-        11.2750,
-        75.8150,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-      final bypassSouth = _InteractiveMapViewState._projectCoordinate(
-        11.2384,
-        75.8342,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: isSelecting,
-      );
-      canvas.drawLine(bypassNorth, bypassSouth, highwayCasingPaint);
-      canvas.drawLine(bypassNorth, bypassSouth, highwayPaint);
-
-      // Beach Road (Running along coastline)
-      if (seaRight > 0) {
-        canvas.drawLine(
-          Offset(seaRight + 6, 0),
-          Offset(seaRight + 6, size.height),
-          localRoadPaint,
-        );
-      }
-
-      // Street labels
-      _drawLabel(
-        canvas,
-        'MAVOOR ROAD',
-        Offset((mavoorStart.dx + mavoorMid.dx) / 2, (mavoorStart.dy + mavoorMid.dy) / 2 - 8),
-        isDark ? Colors.white38 : const Color(0xFF706B62),
-        fontSize: 8.5,
-      );
-      _drawLabel(
-        canvas,
-        'NH 66 BYPASS',
-        Offset((bypassNorth.dx + bypassSouth.dx) / 2 + 6, (bypassNorth.dy + bypassSouth.dy) / 2),
-        isDark ? Colors.white38 : const Color(0xFF706B62),
-        fontSize: 8.5,
-      );
-    }
-
-    // Radar pulse ring on the target doorstep pin
-    if (isSelecting) {
-      final destPt = _InteractiveMapViewState._projectCoordinate(
-        route!.destLat,
-        route!.destLng,
-        route!,
-        size.width,
-        size.height,
-        isSelecting: true,
-      );
-      final ringPaint = Paint()
-        ..color = AppColors.copper.withValues(alpha: (0.45 - (pulseValue * 0.35)).clamp(0.0, 1.0))
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawCircle(destPt, 22 + (pulseValue * 26), ringPaint);
-    }
-
-    // ── 5. Delivery Route Polyline ──────────────────────────────────────────
-    if (route!.points.length < 2) return;
-
+    // Project all route GPS points to screen coordinates
     final offsets = <Offset>[];
-    for (final p in route!.points) {
-      offsets.add(
-        _InteractiveMapViewState._projectCoordinate(
-          p.lat,
-          p.lng,
-          route!,
-          size.width,
-          size.height,
-          isSelecting: isSelecting,
-        ),
-      );
+    for (final p in route.points) {
+      final off = MercatorProjection.latLngToScreenOffset(
+            lat: p.lat,
+            lng: p.lng,
+            centerLat: centerLat,
+            centerLng: centerLng,
+            zoom: zoom,
+            screenWidth: size.width,
+            screenHeight: size.height,
+            verticalCenterBias: verticalBias,
+          ) +
+          panOffset;
+      offsets.add(off);
     }
+
+    if (offsets.length < 2) return;
 
     // Full Route Polyline Path
     final fullRoutePath = Path()..moveTo(offsets.first.dx, offsets.first.dy);
@@ -1151,25 +1106,36 @@ class _MapCanvasPainter extends CustomPainter {
       fullRoutePath.lineTo(offsets[i].dx, offsets[i].dy);
     }
 
-    // A. Ambient route glow
+    // A. Ambient outer route glow (gives depth and makes route pop over real streets)
     final glowPaint = Paint()
-      ..color = AppColors.accentRed.withValues(alpha: 0.3)
-      ..strokeWidth = 10
+      ..color = const Color(0xFFFF5722).withValues(alpha: 0.35)
+      ..strokeWidth = 11.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullRoutePath, glowPaint);
 
-    // B. Remaining Path (Vibrant Crimson)
+    // B. Inner route casing (crisp white/dark contrast border against street tiles)
+    final casingPaint = Paint()
+      ..color = isDark
+          ? Colors.black.withValues(alpha: 0.8)
+          : Colors.white.withValues(alpha: 0.95)
+      ..strokeWidth = 6.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(fullRoutePath, casingPaint);
+
+    // C. Remaining Delivery Path (Swiggy / Zomato energetic crimson-orange)
     final remainingPaint = Paint()
-      ..color = AppColors.accentRed
-      ..strokeWidth = 4.5
+      ..color = const Color(0xFFFF5232)
+      ..strokeWidth = 4.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullRoutePath, remainingPaint);
 
-    // C. Visited Path (Warm Copper Gold)
+    // D. Traveled Delivery Path (Warm Amber / Copper Gold)
     if (!isSelecting && progress > 0.0) {
       final visitedCount =
           (progress * offsets.length).ceil().clamp(1, offsets.length);
@@ -1180,22 +1146,24 @@ class _MapCanvasPainter extends CustomPainter {
 
       final visitedPaint = Paint()
         ..color = AppColors.copper
-        ..strokeWidth = 5
+        ..strokeWidth = 4.8
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(visitedPath, visitedPaint);
     }
 
-    // D. Route Directional Flow Indicators
+    // E. Directional Driving Chevrons along unvisited path
     final chevronPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
-      ..strokeWidth = 2
+      ..color = Colors.white.withValues(alpha: 0.9)
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    final stepInterval = math.max(3, offsets.length ~/ 6);
-    for (int i = stepInterval; i < offsets.length - 1; i += stepInterval) {
+    final startIndex = isSelecting ? 0 : (progress * offsets.length).floor();
+    final stepInterval = math.max(3, offsets.length ~/ 7);
+
+    for (int i = startIndex + 1; i < offsets.length - 1; i += stepInterval) {
       final p1 = offsets[i];
       final p2 = offsets[i + 1];
       final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
@@ -1205,43 +1173,38 @@ class _MapCanvasPainter extends CustomPainter {
       canvas.rotate(angle);
 
       final arrowPath = Path()
-        ..moveTo(-3, -3)
-        ..lineTo(2, 0)
-        ..lineTo(-3, 3);
+        ..moveTo(-3.5, -3.5)
+        ..lineTo(2.5, 0)
+        ..lineTo(-3.5, 3.5);
       canvas.drawPath(arrowPath, chevronPaint);
       canvas.restore();
     }
-  }
 
-  void _drawLabel(
-    Canvas canvas,
-    String text,
-    Offset offset,
-    Color color, {
-    double fontSize = 9,
-    double letterSpacing = 0.8,
-  }) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          letterSpacing: letterSpacing,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    // F. Key Turn Waypoint Nodes
+    final nodePaint = Paint()..color = Colors.white;
+    final nodeBorderPaint = Paint()
+      ..color = const Color(0xFFFF5232)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
 
-    textPainter.paint(canvas, offset);
+    final nodeInterval = math.max(4, offsets.length ~/ 5);
+    for (int i = nodeInterval; i < offsets.length - 1; i += nodeInterval) {
+      final pt = offsets[i];
+      canvas.drawCircle(pt, 2.8, nodePaint);
+      canvas.drawCircle(pt, 2.8, nodeBorderPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _MapCanvasPainter oldDelegate) =>
+  bool shouldRepaint(covariant _RouteOverlayPainter oldDelegate) =>
       oldDelegate.route != route ||
       oldDelegate.progress != progress ||
       oldDelegate.isSelecting != isSelecting ||
-      oldDelegate.mapStyle != mapStyle ||
-      oldDelegate.pulseValue != pulseValue;
+      oldDelegate.isDark != isDark ||
+      oldDelegate.pulseValue != pulseValue ||
+      oldDelegate.centerLat != centerLat ||
+      oldDelegate.centerLng != centerLng ||
+      oldDelegate.zoom != zoom ||
+      oldDelegate.verticalBias != verticalBias ||
+      oldDelegate.panOffset != panOffset;
 }

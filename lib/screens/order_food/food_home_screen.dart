@@ -314,11 +314,14 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           children: [
             const Icon(Icons.search, color: AppColors.textSecondary),
             const SizedBox(width: 12),
-            Text(
-              'Search dishes across all categories',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+            Expanded(
+              child: Text(
+                'Search dishes across all categories',
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+              ),
             ),
           ],
         ),

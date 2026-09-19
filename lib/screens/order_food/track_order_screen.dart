@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/mock_data.dart';
 import '../../models/address.dart';
 import '../../models/order_model.dart';
+import '../../routes/app_routes.dart';
 import '../../services/gps_detection_service.dart';
 import '../../services/location_service.dart';
 import '../../services/order_service.dart';
@@ -116,7 +117,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                           originSubtitle: originRestaurant.branch,
                           progress: currentProgress,
                           showControls: !_expanded,
-                          showTelemetry: !_expanded,
+                          showTelemetry: false,
                         );
                       },
                     ),
@@ -140,7 +141,16 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                               clipBehavior: Clip.antiAlias,
                               elevation: 4,
                               child: InkWell(
-                                onTap: () => Navigator.of(context).maybePop(),
+                                onTap: () {
+                                  if (Navigator.of(context).canPop()) {
+                                    Navigator.of(context).pop();
+                                  } else {
+                                    Navigator.of(context).pushNamedAndRemoveUntil(
+                                      AppRoutes.home,
+                                      (route) => false,
+                                    );
+                                  }
+                                },
                                 child: const SizedBox(
                                   width: 42,
                                   height: 42,
@@ -150,43 +160,6 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                                     size: 18,
                                   ),
                                 ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.75),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppColors.copper.withValues(alpha: 0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF4CAF50),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    status == OrderStatus.delivered
-                                        ? 'DELIVERED'
-                                        : 'LIVE TRACKING',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                             Material(

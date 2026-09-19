@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../services/session_manager.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 
 /// Order confirmation screen: a celebratory green check with confetti, the
-/// "Your order is placed" message, and dual redirection buttons (Redirect to Dashboard vs Track Order).
+/// "Your order is placed" message, automatic redirection to the live delivery tracking
+/// page with a visual countdown timer, and dual navigation buttons.
 /// Matches Figma design.
 class OrderSuccessScreen extends StatefulWidget {
   const OrderSuccessScreen({super.key});
@@ -19,6 +22,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
+
+  Timer? _redirectTimer;
+  int _secondsRemaining = 3;
+  static const int _totalSeconds = 3;
+  String? _orderId;
 
   @override
   void initState() {
@@ -33,15 +41,43 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     );
     _scale = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
     _controller.forward();
+
+    _startAutoRedirect();
+  }
+
+  void _startAutoRedirect() {
+    _redirectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 1) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+        _trackOrder();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _orderId ??= (ModalRoute.of(context)?.settings.arguments as String?) ??
+        SessionManager.instance.activeOrderId;
   }
 
   @override
   void dispose() {
+    _redirectTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _redirectToDashboard() {
+    _redirectTimer?.cancel();
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.home,
       (route) => false,
@@ -49,7 +85,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
   }
 
   void _trackOrder() {
-    final orderId = ModalRoute.of(context)?.settings.arguments as String?;
+    _redirectTimer?.cancel();
+    if (!mounted) return;
+    final orderId = _orderId ??
+        (ModalRoute.of(context)?.settings.arguments as String?) ??
+        SessionManager.instance.activeOrderId;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.trackOrder,
       (route) => route.settings.name == AppRoutes.home || route.isFirst,
@@ -59,7 +99,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final orderId = ModalRoute.of(context)?.settings.arguments as String?;
+    final orderId = _orderId ??
+        (ModalRoute.of(context)?.settings.arguments as String?) ??
+        SessionManager.instance.activeOrderId;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -86,7 +128,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     Icon(
                       Icons.restaurant,
                       size: 130,
-                      color: AppColors.surfaceLight.withOpacity(0.35),
+                      color: AppColors.surfaceLight.withValues(alpha: 0.35),
                     ),
                     // Confetti particles
                     const Positioned.fill(child: _Confetti()),
@@ -145,6 +187,50 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                   ),
                 ),
               ],
+              const SizedBox(height: 14),
+              // Automatic redirection countdown badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.copper.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                        value: (_totalSeconds - _secondsRemaining + 1) /
+                            _totalSeconds.toDouble(),
+                        strokeWidth: 2.2,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.copper,
+                        ),
+                        backgroundColor: AppColors.border,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Redirecting to delivery tracking in ${_secondsRemaining}s...',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Spacer(flex: 3),
 
               // ── Dual Redirection Buttons ─────────────────────────────────
@@ -162,9 +248,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.location_on_rounded, size: 20),
-                  label: const Text(
-                    'TRACK ORDER',
-                    style: TextStyle(
+                  label: Text(
+                    'TRACK ORDER (${_secondsRemaining}s)',
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1,

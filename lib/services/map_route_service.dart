@@ -209,6 +209,38 @@ class MapRouteService {
     }
   }
 
+  /// Synchronously generates an instant, valid road route without network latency.
+  DeliveryRoute getImmediateRoute({
+    required Address destination,
+    double? customOriginLat,
+    double? customOriginLng,
+    String? customOriginTitle,
+    String? customOriginSubtitle,
+  }) {
+    final destLat = destination.lat;
+    final destLng = destination.lng;
+
+    final nearest = LocationService.instance.getNearestRestaurant(
+      lat: destLat,
+      lng: destLng,
+    );
+
+    final startLat = customOriginLat ?? nearest.lat;
+    final startLng = customOriginLng ?? nearest.lng;
+    final originTitle = customOriginTitle ?? nearest.name;
+    final originSubtitle = customOriginSubtitle ?? nearest.branch;
+
+    return _generateLocalRoute(
+      startLat: startLat,
+      startLng: startLng,
+      destLat: destLat,
+      destLng: destLng,
+      destLabel: destination.label,
+      originTitle: originTitle,
+      originSubtitle: originSubtitle,
+    );
+  }
+
   /// Queries the open-source OSRM driving routing service.
   Future<DeliveryRoute> _fetchOsrmRoute({
     required double startLat,
