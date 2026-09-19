@@ -139,7 +139,13 @@ class OrderService {
         await FirebaseFirestore.instance
             .collection('orders')
             .doc(orderId)
-            .set(order.toMap());
+            .set(order.toMap())
+            .timeout(
+              const Duration(milliseconds: 1000),
+              onTimeout: () {
+                debugPrint('Firestore order write timed out, continuing locally.');
+              },
+            );
       } catch (e) {
         debugPrint('Error placing order in Firestore: $e');
       }

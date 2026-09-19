@@ -26,14 +26,14 @@ class PaymentGatewaySheet extends StatefulWidget {
   final double amount;
   final PaymentMethod? selectedMethod;
   final bool isTakeaway;
-  final Function(String transactionId, String paymentMode) onPaymentSuccess;
+  final FutureOr<void> Function(String transactionId, String paymentMode) onPaymentSuccess;
 
   static Future<void> show({
     required BuildContext context,
     required double amount,
     PaymentMethod? selectedMethod,
     bool isTakeaway = false,
-    required Function(String transactionId, String paymentMode) onPaymentSuccess,
+    required FutureOr<void> Function(String transactionId, String paymentMode) onPaymentSuccess,
   }) async {
     await showModalBottomSheet(
       context: context,
@@ -117,6 +117,27 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     }
   }
 
+  void _completePayment(String txn, String modeLabel) {
+    if (mounted) {
+      setState(() {
+        _status = PaymentGatewayStatus.success;
+      });
+    }
+
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      if (mounted) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        try {
+          await widget.onPaymentSuccess(txn, modeLabel);
+        } catch (e) {
+          debugPrint('Payment success callback error: $e');
+        }
+      }
+    });
+  }
+
   void _startPayment() {
     final modeLabel = _currentPaymentModeLabel;
 
@@ -124,15 +145,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     if (_activeKind == PaymentKind.cash) {
       final txn = 'TXN_CTR_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
       _txnId = txn;
-      setState(() {
-        _status = PaymentGatewayStatus.success;
-      });
-      Future.delayed(const Duration(milliseconds: 700), () {
-        if (mounted) {
-          Navigator.of(context).pop();
-          widget.onPaymentSuccess(txn, modeLabel);
-        }
-      });
+      _completePayment(txn, modeLabel);
       return;
     }
 
@@ -148,18 +161,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
         timer.cancel();
         final txn = 'TXN_PG_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
         _txnId = txn;
-        if (mounted) {
-          setState(() {
-            _status = PaymentGatewayStatus.success;
-          });
-        }
-
-        Future.delayed(const Duration(milliseconds: 900), () {
-          if (mounted) {
-            Navigator.of(context).pop();
-            widget.onPaymentSuccess(txn, modeLabel);
-          }
-        });
+        _completePayment(txn, modeLabel);
       }
     });
   }
