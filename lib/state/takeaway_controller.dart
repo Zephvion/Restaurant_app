@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/mock_data.dart';
 import '../models/cart_item.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../models/takeaway_order.dart';
 import '../services/auth_service.dart';
+import '../services/gps_detection_service.dart';
+import '../services/location_service.dart';
+import '../services/session_manager.dart';
 import '../services/takeaway_service.dart';
 
 /// Singleton [ChangeNotifier] for managing the Take Away flow:
@@ -26,6 +28,33 @@ class TakeawayController extends ChangeNotifier {
   bool get hasNoOrders => _orders.isEmpty;
 
   Restaurant? get selectedRestaurant => _selectedRestaurant;
+
+  /// Returns the selected restaurant or dynamically resolves the nearest one.
+  Restaurant get activeRestaurant {
+    if (_selectedRestaurant != null) return _selectedRestaurant!;
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    final lat = userAddr?.lat ?? 12.9753;
+    final lng = userAddr?.lng ?? 77.5910;
+    final nearest = LocationService.instance.getNearestRestaurant(lat: lat, lng: lng);
+    _selectedRestaurant = nearest;
+    return nearest;
+  }
+
+  /// Calculates straight-line distance to the active restaurant in km.
+  double get distanceToSelectedKm {
+    final rest = activeRestaurant;
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    final lat = userAddr?.lat ?? 12.9753;
+    final lng = userAddr?.lng ?? 77.5910;
+    return LocationService.instance.calculateDistanceKm(
+      startLat: lat,
+      startLng: lng,
+      endLat: rest.lat,
+      endLng: rest.lng,
+    );
+  }
 
   Future<void> _init() async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
@@ -95,16 +124,7 @@ class TakeawayController extends ChangeNotifier {
   // ── Place Order ─────────────────────────────────────────────────────────────
 
   Future<TakeawayOrder> placeOrder({Restaurant? restaurantOverride}) async {
-    final restaurant = restaurantOverride ??
-        _selectedRestaurant ??
-        (MockData.restaurants.isNotEmpty
-            ? MockData.restaurants.first
-            : const Restaurant(
-                id: 'rest_main',
-                name: 'Downtown Bistro',
-                address: 'Kannur Road',
-                city: 'Calicut',
-              ));
+    final restaurant = restaurantOverride ?? activeRestaurant;
 
     final order = await TakeawayService.instance.placeTakeawayOrder(
       restaurant: restaurant,

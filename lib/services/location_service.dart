@@ -1,12 +1,14 @@
 import 'dart:math';
+import '../data/mock_data.dart';
 import '../models/address.dart';
+import '../models/restaurant.dart';
 import 'session_manager.dart';
 
 class LocationService {
   LocationService._();
   static final LocationService instance = LocationService._();
 
-  // Restaurant default coordinates (Calicut, Kerala)
+  // Default fallback restaurant coordinates (Calicut, Kerala)
   static const double restaurantLat = 11.2588;
   static const double restaurantLng = 75.7804;
 
@@ -14,6 +16,56 @@ class LocationService {
 
   Future<void> updateDeliveryArea(String area) async {
     await SessionManager.instance.setDeliveryArea(area);
+  }
+
+  /// Finds the closest Paragon restaurant outlet to the given coordinates.
+  Restaurant getNearestRestaurant({
+    required double lat,
+    required double lng,
+    String? preferredCity,
+  }) {
+    const list = MockData.restaurants;
+    if (list.isEmpty) {
+      return const Restaurant(
+        id: 'default_paragon',
+        name: 'Paragon Restaurant',
+        address: 'Kannur road',
+        city: 'Calicut',
+        lat: restaurantLat,
+        lng: restaurantLng,
+      );
+    }
+
+    // If preferred city is specified, prioritize outlets in that city
+    if (preferredCity != null && preferredCity.isNotEmpty) {
+      final inCity = list.where((r) => r.city.toLowerCase() == preferredCity.toLowerCase()).toList();
+      if (inCity.isNotEmpty) {
+        inCity.sort((a, b) {
+          final distA = calculateDistanceKm(startLat: lat, startLng: lng, endLat: a.lat, endLng: a.lng);
+          final distB = calculateDistanceKm(startLat: lat, startLng: lng, endLat: b.lat, endLng: b.lng);
+          return distA.compareTo(distB);
+        });
+        return inCity.first;
+      }
+    }
+
+    Restaurant nearest = list.first;
+    double minDistance = double.infinity;
+
+    for (final r in list) {
+      final d = calculateDistanceKm(
+        startLat: lat,
+        startLng: lng,
+        endLat: r.lat,
+        endLng: r.lng,
+      );
+      if (d < minDistance) {
+        minDistance = d;
+        nearest = r;
+      }
+    }
+
+    return nearest;
   }
 
   /// Calculates straight-line distance in kilometers between two coordinates
@@ -33,11 +85,28 @@ class LocationService {
     return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
-  /// Estimates delivery fee based on distance
+  /// Distance from the user's location to the given restaurant branch
+  double getDistanceToRestaurant(
+    Restaurant r, {
+    double? userLat,
+    double? userLng,
+  }) {
+    final activeLat = userLat ?? SessionManager.instance.getSelectedAddress()?.lat ?? restaurantLat;
+    final activeLng = userLng ?? SessionManager.instance.getSelectedAddress()?.lng ?? restaurantLng;
+    return calculateDistanceKm(
+      startLat: activeLat,
+      startLng: activeLng,
+      endLat: r.lat,
+      endLng: r.lng,
+    );
+  }
+
+  /// Estimates delivery fee dynamically based on distance from the closest outlet
   double calculateDeliveryFee(Address destination) {
+    final nearest = getNearestRestaurant(lat: destination.lat, lng: destination.lng);
     final dist = calculateDistanceKm(
-      startLat: restaurantLat,
-      startLng: restaurantLng,
+      startLat: nearest.lat,
+      startLng: nearest.lng,
       endLat: destination.lat,
       endLng: destination.lng,
     );

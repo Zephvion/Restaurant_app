@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/mock_data.dart';
 import '../../models/address.dart';
 import '../../models/order_model.dart';
+import '../../services/gps_detection_service.dart';
+import '../../services/location_service.dart';
 import '../../services/order_service.dart';
 import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
@@ -59,6 +61,25 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
         final eta = order?.estimatedDeliveryMinutes ?? 15;
         final status = order?.status ?? OrderStatus.outForDelivery;
 
+        final savedAddr = SessionManager.instance.getSelectedAddress();
+        final Address activeDestination = order?.deliveryAddress ??
+            ((savedAddr != null && !savedAddr.details.toLowerCase().contains('palazhi'))
+                ? savedAddr
+                : GpsDetectionService.instance.lastDetectedAddress ??
+                    const Address(
+                      id: 'addr_live_blr',
+                      label: 'Bengaluru (Live GPS)',
+                      details: 'Church Street / Brigade Road Area, Bengaluru - 560001',
+                      lat: 12.9753,
+                      lng: 77.5910,
+                      isDefault: true,
+                    ));
+
+        final originRestaurant = LocationService.instance.getNearestRestaurant(
+          lat: activeDestination.lat,
+          lng: activeDestination.lng,
+        );
+
         return Scaffold(
           backgroundColor: AppColors.background,
           body: LayoutBuilder(
@@ -87,9 +108,11 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                           currentProgress = 0.05;
                         }
                         return InteractiveMapView(
-                          destination: order?.deliveryAddress ??
-                              SessionManager.instance.getSelectedAddress() ??
-                              MockData.addresses.first,
+                          destination: activeDestination,
+                          customOriginLat: originRestaurant.lat,
+                          customOriginLng: originRestaurant.lng,
+                          originTitle: originRestaurant.name,
+                          originSubtitle: originRestaurant.branch,
                           progress: currentProgress,
                           showControls: !_expanded,
                           showTelemetry: !_expanded,
@@ -258,6 +281,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                         orderId: orderId,
                         eta: eta,
                         status: status,
+                        destination: activeDestination,
+                        onAddressChanged: (newAddr) => setState(() {}),
                         onToggle: () => setState(() => _expanded = !_expanded),
                       ),
                     ),
@@ -283,6 +308,8 @@ class _TrackingSheet extends StatelessWidget {
     required this.orderId,
     required this.eta,
     required this.status,
+    required this.destination,
+    this.onAddressChanged,
   });
 
   final bool expanded;
@@ -291,6 +318,8 @@ class _TrackingSheet extends StatelessWidget {
   final String orderId;
   final int eta;
   final OrderStatus status;
+  final Address destination;
+  final ValueChanged<Address>? onAddressChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -434,19 +463,20 @@ class _TrackingSheet extends StatelessWidget {
                   _InfoLine(
                     icon: Icons.location_on_outlined,
                     label: 'Delivering to',
-                    value: order?.deliveryAddress.label.isNotEmpty == true
-                        ? '${order!.deliveryAddress.label} · ${order!.deliveryAddress.details}'
-                        : 'Palazhi, Calicut',
+                    value: destination.label.isNotEmpty == true
+                        ? '${destination.label} · ${destination.details}'
+                        : destination.details,
                     actionLabel: 'Change ✏️',
                     onTap: () {
                       GpsLocationPickerSheet.show(
                         context: context,
-                        initialAddress: order?.deliveryAddress,
+                        initialAddress: destination,
                         onAddressSelected: (Address newAddr) async {
                           await OrderService.instance.updateDeliveryAddress(
                             order?.id ?? orderId,
                             newAddr,
                           );
+                          onAddressChanged?.call(newAddr);
                           if (context.mounted) {
                             AppBanner.showSuccess(
                               context,

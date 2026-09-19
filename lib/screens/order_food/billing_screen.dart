@@ -61,7 +61,6 @@ class BillingScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                     ],
                     const PanelDivider(),
-                    AddressRow(address: cart.selectedAddress.details),
                     AddressRow(
                       address: cart.selectedAddress.details,
                       onEdit: () {

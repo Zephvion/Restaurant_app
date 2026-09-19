@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../data/mock_data.dart';
+import '../../models/address.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/gps_detection_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/address_picker_sheet.dart';
+import '../../widgets/gps_location_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
@@ -47,29 +48,77 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _detectLocation() {
-    final currentArea = LocationService.instance.currentDeliveryArea;
-    if (_landmarkController.text.trim().isEmpty) {
-      _landmarkController.text = currentArea.isNotEmpty ? currentArea : 'Palazhi, Calicut';
+  bool _isDetectingLocation = false;
+  double? _detectedLat;
+  double? _detectedLng;
+
+  Future<void> _detectLocation() async {
+    setState(() => _isDetectingLocation = true);
+    try {
+      final location = await GpsDetectionService.instance.detectLiveLocation();
+      if (!mounted) return;
+
+      setState(() {
+        _isDetectingLocation = false;
+        _detectedLat = location.lat;
+        _detectedLng = location.lng;
+        _addressController.text = location.details;
+        _landmarkController.text =
+            '${location.label} (GPS: ${location.lat.toStringAsFixed(4)}° N, ${location.lng.toStringAsFixed(4)}° E)';
+      });
+
+      await LocationService.instance.updateDeliveryArea(location.label);
+
+      if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Live GPS Locked: ${location.label}',
+          title: 'Location Detected',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isDetectingLocation = false);
+        AppBanner.showError(
+          context,
+          'Could not detect live location. Please pick doorstep on the map.',
+          title: 'GPS Notice',
+        );
+      }
     }
-    if (_addressController.text.trim().isEmpty) {
-      _addressController.text = 'Flat 4B, Emerald Heights, Hilite City';
-    }
-    AppBanner.showInfo(
-      context,
-      'Location detected: ${currentArea.isNotEmpty ? currentArea : "Palazhi, Calicut"}',
-      title: 'GPS Location',
-    );
   }
 
-  void _openAddressPicker() {
-    AddressPickerSheet.show(
+  Future<void> _openMapPicker() async {
+    final currentLat = _detectedLat ?? 12.9753;
+    final currentLng = _detectedLng ?? 77.5910;
+    final currentLabel = _landmarkController.text.trim().isNotEmpty
+        ? _landmarkController.text.trim().split(' (GPS:').first
+        : 'Live GPS Location';
+    final currentDetails = _addressController.text.trim().isNotEmpty
+        ? _addressController.text.trim()
+        : 'Selected Doorstep Location';
+
+    await GpsLocationPickerSheet.show(
       context: context,
+      initialAddress: Address(
+        id: 'signup_map_picker',
+        label: currentLabel,
+        details: currentDetails,
+        lat: currentLat,
+        lng: currentLng,
+      ),
       onAddressSelected: (addr) {
         setState(() {
+          _detectedLat = addr.lat;
+          _detectedLng = addr.lng;
           _landmarkController.text = addr.label;
           _addressController.text = addr.details;
         });
+        AppBanner.showSuccess(
+          context,
+          'Delivery location set to ${addr.label}',
+          title: 'Location Confirmed from Map',
+        );
       },
     );
   }
@@ -149,8 +198,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.sizeOf(context).height;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -235,17 +282,31 @@ class _SignupScreenState extends State<SignupScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildSectionHeader('2. Delivery Location', Icons.location_on_outlined),
+                    Expanded(
+                      child: _buildSectionHeader('2. Delivery Location', Icons.location_on_outlined),
+                    ),
                     TextButton.icon(
-                      onPressed: _detectLocation,
+                      onPressed: _isDetectingLocation ? null : _detectLocation,
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.copper,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      icon: const Icon(Icons.my_location, size: 14),
-                      label: const Text('Detect GPS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      icon: _isDetectingLocation
+                          ? const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.copper,
+                              ),
+                            )
+                          : const Icon(Icons.my_location, size: 14),
+                      label: Text(
+                        _isDetectingLocation ? 'Detecting...' : 'Detect GPS',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ],
                 ),
@@ -269,6 +330,43 @@ class _SignupScreenState extends State<SignupScreen> {
                     if (v == null || v.trim().isEmpty) return 'Landmark / Area is required';
                     return null;
                   },
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _openMapPicker,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundElevated,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.copper.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.map_rounded, color: AppColors.copper, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pinpoint live location & driving route on map',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Open Map →',
+                          style: TextStyle(
+                            color: AppColors.copper,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 24),

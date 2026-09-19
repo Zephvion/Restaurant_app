@@ -5,12 +5,22 @@ import '../models/address.dart';
 import '../services/map_route_service.dart';
 import '../theme/app_colors.dart';
 
-/// An interactive, high-performance vector map canvas for live delivery tracking
-/// and interactive GPS location selection.
+/// Display styles for the map canvas.
+enum MapStyle {
+  streets,
+  darkLuxury,
+}
+
+/// An interactive, high-performance vector and raster map canvas for live delivery tracking
+/// and interactive GPS location selection, showcasing authentic Calicut cartography.
 class InteractiveMapView extends StatefulWidget {
   const InteractiveMapView({
     super.key,
     required this.destination,
+    this.customOriginLat,
+    this.customOriginLng,
+    this.originTitle,
+    this.originSubtitle,
     this.progress = 0.45,
     this.isSelectingLocation = false,
     this.onLocationPicked,
@@ -20,6 +30,18 @@ class InteractiveMapView extends StatefulWidget {
 
   /// The target customer delivery address.
   final Address destination;
+
+  /// Optional custom origin latitude (e.g. from selected/nearest restaurant).
+  final double? customOriginLat;
+
+  /// Optional custom origin longitude.
+  final double? customOriginLng;
+
+  /// Custom origin display title (e.g. 'PARAGON').
+  final String? originTitle;
+
+  /// Custom origin display subtitle (e.g. 'Brigade Road').
+  final String? originSubtitle;
 
   /// Delivery progress from 0.0 (restaurant origin) to 1.0 (destination doorstep).
   final double progress;
@@ -49,6 +71,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
   DeliveryRoute? _route;
   bool _isLoadingRoute = true;
   Address? _currentDestination;
+  MapStyle _mapStyle = MapStyle.streets;
 
   @override
   void initState() {
@@ -65,7 +88,10 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
   void didUpdateWidget(covariant InteractiveMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.destination.lat != widget.destination.lat ||
-        oldWidget.destination.lng != widget.destination.lng) {
+        oldWidget.destination.lng != widget.destination.lng ||
+        oldWidget.customOriginLat != widget.customOriginLat ||
+        oldWidget.customOriginLng != widget.customOriginLng ||
+        oldWidget.originTitle != widget.originTitle) {
       _currentDestination = widget.destination;
       _loadRoute();
     }
@@ -82,6 +108,10 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     setState(() => _isLoadingRoute = true);
     final route = await MapRouteService.instance.getDeliveryRoute(
       destination: _currentDestination ?? widget.destination,
+      customOriginLat: widget.customOriginLat,
+      customOriginLng: widget.customOriginLng,
+      customOriginTitle: widget.originTitle,
+      customOriginSubtitle: widget.originSubtitle,
     );
     if (mounted) {
       setState(() {
@@ -107,6 +137,14 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     _transformController.value = Matrix4.identity();
   }
 
+  void _toggleMapStyle() {
+    setState(() {
+      _mapStyle = _mapStyle == MapStyle.streets
+          ? MapStyle.darkLuxury
+          : MapStyle.streets;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -119,12 +157,12 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
 
         return Stack(
           children: [
-            // ── Interactive Vector Canvas ─────────────────────────────────
+            // ── Interactive Map Canvas ─────────────────────────────────────
             InteractiveViewer(
               transformationController: _transformController,
-              boundaryMargin: const EdgeInsets.all(120),
-              minScale: 0.6,
-              maxScale: 3.5,
+              boundaryMargin: const EdgeInsets.all(160),
+              minScale: 0.5,
+              maxScale: 4.0,
               child: GestureDetector(
                 onTapUp: widget.isSelectingLocation
                     ? (details) => _handleCanvasTap(details, width, height)
@@ -134,18 +172,64 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                   height: height,
                   child: Stack(
                     children: [
-                      // Base roads and route painter
+                      // 1. Real Slippy Raster Map Tile Layer (CartoDB / OpenStreetMap)
+                      if (route != null)
+                        _buildTileGrid(route, width, height),
+
+                      // 2. Rich Calicut Vector Cartography & Street Grid Overlay
                       CustomPaint(
                         size: Size(width, height),
                         painter: _MapCanvasPainter(
                           route: route,
                           progress: widget.progress,
                           isSelecting: widget.isSelectingLocation,
+                          mapStyle: _mapStyle,
+                          pulseValue: _pulseController.value,
                         ),
                       ),
 
-                      // Origin: Paragon Restaurant Pin
-                      if (route != null)
+                      // 3. Calicut Landmark Badges (Rendered only when viewing Calicut region)
+                      if (route != null && _isCalicutRegion(route, widget.isSelectingLocation)) ...[
+                        _buildLandmark(
+                          lat: 11.2530,
+                          lng: 75.7800,
+                          title: 'Mananchira Square',
+                          icon: Icons.park_outlined,
+                          route: route,
+                          width: width,
+                          height: height,
+                        ),
+                        _buildLandmark(
+                          lat: 11.2590,
+                          lng: 75.7680,
+                          title: 'Calicut Beach',
+                          icon: Icons.beach_access_rounded,
+                          route: route,
+                          width: width,
+                          height: height,
+                        ),
+                        _buildLandmark(
+                          lat: 11.2384,
+                          lng: 75.8342,
+                          title: 'Hilite Mall / Palazhi',
+                          icon: Icons.shopping_bag_outlined,
+                          route: route,
+                          width: width,
+                          height: height,
+                        ),
+                        _buildLandmark(
+                          lat: 11.2310,
+                          lng: 75.8380,
+                          title: 'Cyberpark',
+                          icon: Icons.computer_rounded,
+                          route: route,
+                          width: width,
+                          height: height,
+                        ),
+                      ],
+
+                      // 4. Origin: Paragon Restaurant Pin (Rendered when tracking or in Calicut)
+                      if (route != null && !widget.isSelectingLocation)
                         _buildPin(
                           offset: _projectCoordinate(
                             route.originLat,
@@ -153,13 +237,17 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                             route,
                             width,
                             height,
+                            isSelecting: widget.isSelectingLocation,
                           ),
                           title: 'PARAGON',
+                          subtitle: route.originSubtitle.isNotEmpty
+                              ? route.originSubtitle
+                              : (widget.originSubtitle ?? 'Restaurant Outlet'),
                           color: AppColors.accentRed,
                           icon: Icons.restaurant,
                         ),
 
-                      // Destination: Customer Pin
+                      // 5. Destination: Customer Doorstep Pin
                       if (route != null)
                         _buildPin(
                           offset: _projectCoordinate(
@@ -168,14 +256,16 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                             route,
                             width,
                             height,
+                            isSelecting: widget.isSelectingLocation,
                           ),
                           title: (_currentDestination ?? widget.destination).label,
-                          color: Colors.white,
+                          subtitle: widget.isSelectingLocation ? 'Your Doorstep (GPS)' : 'Delivery Location',
+                          color: AppColors.copper,
                           icon: Icons.home_rounded,
-                          iconColor: const Color(0xFF141419),
+                          iconColor: Colors.white,
                         ),
 
-                      // Moving Delivery Vehicle Pin (Scooter with Heading Rotation)
+                      // 6. Moving Delivery Vehicle Pin (Scooter with Heading Rotation)
                       if (!widget.isSelectingLocation &&
                           route != null &&
                           position != null)
@@ -191,6 +281,39 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
               ),
             ),
 
+            // ── City Identification Pill ──────────────────────────────────
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.copper.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_city_rounded,
+                        color: AppColors.copper, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_getCityLabel()} • LIVE GPS MAP (${_mapStyle == MapStyle.streets ? "STREETS" : "NIGHT"})',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // ── Loading Route Overlay ─────────────────────────────────────
             if (_isLoadingRoute)
               Positioned(
@@ -200,7 +323,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
+                    color: Colors.black.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: AppColors.copper.withValues(alpha: 0.4),
@@ -219,7 +342,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Fetching OSRM GPS Route...',
+                        'Updating Calicut GPS Route...',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -245,10 +368,10 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1B1B22).withValues(alpha: 0.92),
+                      color: const Color(0xFF1B1B22).withValues(alpha: 0.94),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppColors.copper.withValues(alpha: 0.35),
+                        color: AppColors.copper.withValues(alpha: 0.4),
                         width: 1,
                       ),
                       boxShadow: [
@@ -317,7 +440,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                 ),
               ),
 
-            // ── Floating Zoom / Recenter Controls ─────────────────────────
+            // ── Floating Zoom / Recenter / Layer Controls ─────────────────
             if (widget.showControls)
               Positioned(
                 right: 16,
@@ -342,6 +465,16 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                       onTap: _resetView,
                       tooltip: 'Reset View',
                     ),
+                    const SizedBox(height: 8),
+                    _controlButton(
+                      icon: _mapStyle == MapStyle.streets
+                          ? Icons.dark_mode_outlined
+                          : Icons.map_outlined,
+                      onTap: _toggleMapStyle,
+                      tooltip: _mapStyle == MapStyle.streets
+                          ? 'Switch to Dark Mode'
+                          : 'Switch to Street Map',
+                    ),
                   ],
                 ),
               ),
@@ -357,11 +490,11 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     required String tooltip,
   }) {
     return Material(
-      color: AppColors.surface.withValues(alpha: 0.88),
+      color: AppColors.surface.withValues(alpha: 0.9),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(
-          color: AppColors.copper.withValues(alpha: 0.3),
+          color: AppColors.copper.withValues(alpha: 0.35),
         ),
       ),
       elevation: 4,
@@ -380,30 +513,241 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     );
   }
 
+  String _getCityLabel() {
+    final dest = _currentDestination ?? widget.destination;
+    final text = '${dest.label} ${dest.details}'.toLowerCase();
+    if (text.contains('bengaluru') ||
+        text.contains('bangalore') ||
+        (dest.lat >= 12.5 && dest.lat <= 13.5 && dest.lng >= 77.0 && dest.lng <= 78.0)) {
+      return 'BENGALURU';
+    }
+    if (text.contains('calicut') ||
+        text.contains('kozhikode') ||
+        (dest.lat >= 11.0 && dest.lat <= 11.5 && dest.lng >= 75.5 && dest.lng <= 76.2)) {
+      return 'CALICUT';
+    }
+    return 'DOORSTEP';
+  }
+
+  static Rect _computeViewportBounds(DeliveryRoute route, bool isSelecting) {
+    if (isSelecting) {
+      const span = 0.0075;
+      return Rect.fromLTRB(
+        route.destLng - span,
+        route.destLat - span,
+        route.destLng + span,
+        route.destLat + span,
+      );
+    }
+    double minLat = math.min(route.originLat, route.destLat);
+    double maxLat = math.max(route.originLat, route.destLat);
+    double minLng = math.min(route.originLng, route.destLng);
+    double maxLng = math.max(route.originLng, route.destLng);
+
+    for (final p in route.points) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+
+    const padFactor = 0.008;
+    return Rect.fromLTRB(
+      minLng - padFactor,
+      minLat - padFactor,
+      maxLng + padFactor,
+      maxLat + padFactor,
+    );
+  }
+
+  static bool _isCalicutRegion(DeliveryRoute route, bool isSelecting) {
+    final bounds = _computeViewportBounds(route, isSelecting);
+    return bounds.top <= 11.35 &&
+        bounds.bottom >= 11.18 &&
+        bounds.left <= 75.92 &&
+        bounds.right >= 75.68;
+  }
+
+  /// Builds a responsive grid of real Slippy Map tiles behind the canvas
+  Widget _buildTileGrid(DeliveryRoute route, double width, double height) {
+    final bounds = _computeViewportBounds(route, widget.isSelectingLocation);
+    final minLng = bounds.left;
+    final minLat = bounds.top;
+    final maxLng = bounds.right;
+    final maxLat = bounds.bottom;
+
+    final double span = math.max(maxLat - minLat, maxLng - minLng);
+    int zoom;
+    if (widget.isSelectingLocation) {
+      zoom = 15;
+    } else if (span < 0.06) {
+      zoom = 14;
+    } else if (span < 0.15) {
+      zoom = 13;
+    } else if (span < 0.4) {
+      zoom = 11;
+    } else if (span < 1.5) {
+      zoom = 9;
+    } else {
+      zoom = 7;
+    }
+
+    final minTileX = _lngToTileX(minLng, zoom);
+    final maxTileX = _lngToTileX(maxLng, zoom);
+    final minTileY = _latToTileY(maxLat, zoom);
+    final maxTileY = _latToTileY(minLat, zoom);
+
+    final tiles = <Widget>[];
+
+    // Cap to at most 4x4 tiles to guarantee smooth rendering performance
+    final startX = minTileX;
+    final endX = math.min(maxTileX, minTileX + 3);
+    final startY = minTileY;
+    final endY = math.min(maxTileY, minTileY + 3);
+
+    for (int tx = startX; tx <= endX; tx++) {
+      for (int ty = startY; ty <= endY; ty++) {
+        final tileWest = _tileXToLng(tx, zoom);
+        final tileEast = _tileXToLng(tx + 1, zoom);
+        final tileNorth = _tileYToLat(ty, zoom);
+        final tileSouth = _tileYToLat(ty + 1, zoom);
+
+        final tl = _projectCoordinate(tileNorth, tileWest, route, width, height, isSelecting: widget.isSelectingLocation);
+        final br = _projectCoordinate(tileSouth, tileEast, route, width, height, isSelecting: widget.isSelectingLocation);
+
+        final tileW = (br.dx - tl.dx).abs();
+        final tileH = (br.dy - tl.dy).abs();
+        if (tileW <= 1 || tileH <= 1) continue;
+
+        final url = _mapStyle == MapStyle.streets
+            ? 'https://a.basemaps.cartocdn.com/rastertiles/voyager/$zoom/$tx/$ty.png'
+            : 'https://a.basemaps.cartocdn.com/dark_all/$zoom/$tx/$ty.png';
+
+        tiles.add(
+          Positioned(
+            left: math.min(tl.dx, br.dx),
+            top: math.min(tl.dy, br.dy),
+            width: tileW,
+            height: tileH,
+            child: Opacity(
+              opacity: _mapStyle == MapStyle.darkLuxury ? 0.7 : 0.88,
+              child: Image.network(
+                url,
+                fit: BoxFit.fill,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return Stack(children: tiles);
+  }
+
+  static int _lngToTileX(double lng, int zoom) {
+    return ((lng + 180.0) / 360.0 * (1 << zoom)).floor();
+  }
+
+  static int _latToTileY(double lat, int zoom) {
+    final latRad = lat * math.pi / 180.0;
+    return ((1.0 -
+                math.log(math.tan(latRad) + 1.0 / math.cos(latRad)) / math.pi) /
+            2.0 *
+            (1 << zoom))
+        .floor();
+  }
+
+  static double _tileXToLng(int x, int zoom) {
+    return x / (1 << zoom) * 360.0 - 180.0;
+  }
+
+  static double _tileYToLat(int y, int zoom) {
+    final n = math.pi - 2.0 * math.pi * y / (1 << zoom);
+    return 180.0 / math.pi * math.atan(0.5 * (math.exp(n) - math.exp(-n)));
+  }
+
+  Widget _buildLandmark({
+    required double lat,
+    required double lng,
+    required String title,
+    required IconData icon,
+    required DeliveryRoute route,
+    required double width,
+    required double height,
+  }) {
+    final offset = _projectCoordinate(lat, lng, route, width, height);
+
+    if (offset.dx < -20 ||
+        offset.dx > width + 20 ||
+        offset.dy < -20 ||
+        offset.dy > height + 20) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      left: offset.dx - 35,
+      top: offset.dy - 12,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white24,
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white70, size: 10),
+            const SizedBox(width: 4),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 8.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPin({
     required Offset offset,
     required String title,
+    String? subtitle,
     required Color color,
     required IconData icon,
     Color iconColor = Colors.white,
   }) {
     return Positioned(
-      left: offset.dx - 40,
-      top: offset.dy - 48,
+      left: offset.dx - 45,
+      top: offset.dy - 52,
       child: SizedBox(
-        width: 80,
+        width: 90,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.85),
+                color: Colors.black.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: color.withValues(alpha: 0.6),
-                  width: 1,
+                  color: color.withValues(alpha: 0.8),
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
               child: Text(
                 title,
@@ -412,7 +756,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: color,
-                  fontSize: 9,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.4,
                 ),
@@ -425,9 +769,10 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withValues(alpha: 0.45),
+                    color: color.withValues(alpha: 0.5),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -455,38 +800,39 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
       height,
     );
 
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, _) {
-        final t = _pulseController.value;
-        return Positioned(
-          left: offset.dx - 32,
-          top: offset.dy - 32,
-          child: SizedBox(
-            width: 64,
-            height: 64,
+    return Positioned(
+      left: offset.dx - 28,
+      top: offset.dy - 28,
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final pulse = _pulseController.value;
+          return SizedBox(
+            width: 56,
+            height: 56,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Concentric radar pulse
                 Container(
-                  width: 28 + (t * 26),
-                  height: 28 + (t * 26),
+                  width: 28 + (pulse * 26),
+                  height: 28 + (pulse * 26),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.copper.withValues(alpha: (1.0 - t) * 0.4),
+                    border: Border.all(
+                      color: AppColors.copper.withValues(alpha: 1.0 - pulse),
+                      width: 2,
+                    ),
                   ),
                 ),
-                // Heading rotation wrapper for vehicle
                 Transform.rotate(
                   angle: position.bearingDegrees * (math.pi / 180.0),
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: AppColors.copper,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      color: AppColors.copper,
+                      border: Border.all(color: Colors.white, width: 2.2),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.copper.withValues(alpha: 0.6),
@@ -504,9 +850,9 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                 ),
               ],
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -514,14 +860,14 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     if (_route == null) return;
     final tapOffset = details.localPosition;
 
-    // Invert projection to get approximate lat/lng
-    final minLat = math.min(_route!.originLat, _route!.destLat) - 0.008;
-    final maxLat = math.max(_route!.originLat, _route!.destLat) + 0.008;
-    final minLng = math.min(_route!.originLng, _route!.destLng) - 0.008;
-    final maxLng = math.max(_route!.originLng, _route!.destLng) + 0.008;
+    final bounds = _computeViewportBounds(_route!, widget.isSelectingLocation);
+    final minLng = bounds.left;
+    final minLat = bounds.top;
+    final maxLng = bounds.right;
+    final maxLat = bounds.bottom;
 
-    final padX = width * 0.14;
-    final padY = height * 0.14;
+    final padX = width * 0.10;
+    final padY = height * 0.10;
     final drawW = width - (padX * 2);
     final drawH = height - (padY * 2);
 
@@ -533,8 +879,9 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
 
     final newAddress = Address(
       id: 'addr_picked_${DateTime.now().millisecondsSinceEpoch}',
-      label: 'Selected Location',
-      details: 'Calicut City (${newLat.toStringAsFixed(4)}, ${newLng.toStringAsFixed(4)})',
+      label: _currentDestination?.label ?? 'Doorstep Pin',
+      details:
+          'Doorstep Location (${newLat.toStringAsFixed(4)}° N, ${newLng.toStringAsFixed(4)}° E)',
       lat: newLat,
       lng: newLng,
     );
@@ -549,30 +896,17 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
     double lng,
     DeliveryRoute route,
     double width,
-    double height,
-  ) {
-    // Find bounding box across all route points
-    double minLat = math.min(route.originLat, route.destLat);
-    double maxLat = math.max(route.originLat, route.destLat);
-    double minLng = math.min(route.originLng, route.destLng);
-    double maxLng = math.max(route.originLng, route.destLng);
+    double height, {
+    bool isSelecting = false,
+  }) {
+    final bounds = _computeViewportBounds(route, isSelecting);
+    final minLng = bounds.left;
+    final minLat = bounds.top;
+    final maxLng = bounds.right;
+    final maxLat = bounds.bottom;
 
-    for (final p in route.points) {
-      if (p.lat < minLat) minLat = p.lat;
-      if (p.lat > maxLat) maxLat = p.lat;
-      if (p.lng < minLng) minLng = p.lng;
-      if (p.lng > maxLng) maxLng = p.lng;
-    }
-
-    // Generous padding around the route
-    const padFactor = 0.006;
-    minLat -= padFactor;
-    maxLat += padFactor;
-    minLng -= padFactor;
-    maxLng += padFactor;
-
-    final padX = width * 0.14;
-    final padY = height * 0.14;
+    final padX = width * 0.10;
+    final padY = height * 0.10;
     final drawW = width - (padX * 2);
     final drawH = height - (padY * 2);
 
@@ -591,61 +925,212 @@ class _MapCanvasPainter extends CustomPainter {
     required this.route,
     required this.progress,
     required this.isSelecting,
+    required this.mapStyle,
+    required this.pulseValue,
   });
 
   final DeliveryRoute? route;
   final double progress;
   final bool isSelecting;
+  final MapStyle mapStyle;
+  final double pulseValue;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Dark theme luxury background
+    final isDark = mapStyle == MapStyle.darkLuxury;
+
+    // ── 1. Base Land Palette ────────────────────────────────────────────────
+    final baseBgColor = isDark ? const Color(0xFF14141C) : const Color(0xFFEBE6DC);
     canvas.drawRect(
       Offset.zero & size,
-      Paint()..color = const Color(0xFF141419),
+      Paint()..color = baseBgColor,
     );
 
-    // City street grid
-    final gridStreetPaint = Paint()
-      ..color = const Color(0xFF202029)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
+    if (route == null) return;
 
-    final secondaryStreetPaint = Paint()
-      ..color = const Color(0xFF1A1A22)
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round;
+    final isCalicut = _InteractiveMapViewState._isCalicutRegion(route!, isSelecting);
 
-    // Background road network lines
-    canvas.drawLine(
-      Offset(0, size.height * 0.25),
-      Offset(size.width, size.height * 0.22),
-      gridStreetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.22, 0),
-      Offset(size.width * 0.35, size.height),
-      gridStreetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.78, 0),
-      Offset(size.width * 0.62, size.height),
-      gridStreetPaint,
-    );
-    canvas.drawLine(
-      Offset(0, size.height * 0.62),
-      Offset(size.width, size.height * 0.68),
-      gridStreetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.1, size.height * 0.82),
-      Offset(size.width * 0.9, size.height * 0.78),
-      secondaryStreetPaint,
-    );
+    // ── 2. Arabian Sea Coastline & Calicut Cartography (Only in Calicut region) ──
+    if (isCalicut) {
+      const coastLng = 75.7720;
+      final coastPt = _InteractiveMapViewState._projectCoordinate(
+        11.2588,
+        coastLng,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
 
-    if (route == null || route!.points.isEmpty) return;
+      final seaRight = coastPt.dx.clamp(0.0, size.width * 0.45);
+      if (seaRight > 0) {
+        final seaPaint = Paint()
+          ..color = isDark ? const Color(0xFF0F2236) : const Color(0xFFB5D4EB);
+        canvas.drawRect(Rect.fromLTWH(0, 0, seaRight, size.height), seaPaint);
 
-    // Convert route points to screen offsets
+        // Coastline beach promenade strip
+        final sandPaint = Paint()
+          ..color = isDark ? const Color(0xFF4A4434) : const Color(0xFFE4D5B4)
+          ..strokeWidth = 4;
+        canvas.drawLine(
+          Offset(seaRight, 0),
+          Offset(seaRight, size.height),
+          sandPaint,
+        );
+
+        // Sea waves and text
+        _drawLabel(
+          canvas,
+          '🌊 ARABIAN SEA',
+          Offset(math.max(10, seaRight * 0.3), size.height * 0.4),
+          isDark ? const Color(0xFF4D7298) : const Color(0xFF6F99BF),
+          fontSize: 10,
+          letterSpacing: 1.5,
+        );
+      }
+
+      // ── 3. Calicut Parks & Green Wetlands ──────────────────────────────────
+      // Mananchira Square
+      final mananchiraPt = _InteractiveMapViewState._projectCoordinate(
+        11.2530,
+        75.7800,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+      final parkPaint = Paint()
+        ..color = isDark ? const Color(0xFF1B2E24) : const Color(0xFFCCE8D0);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: mananchiraPt, width: 34, height: 34),
+          const Radius.circular(4),
+        ),
+        parkPaint,
+      );
+      final waterTankPaint = Paint()
+        ..color = isDark ? const Color(0xFF0F2236) : const Color(0xFF98C5E8);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: mananchiraPt, width: 16, height: 16),
+          const Radius.circular(2),
+        ),
+        waterTankPaint,
+      );
+
+      // ── 4. Major Calicut Arterial Highway Network ───────────────────────────
+      final highwayCasingPaint = Paint()
+        ..color = isDark ? const Color(0xFF282836) : const Color(0xFFC8C2B6)
+        ..strokeWidth = 9
+        ..strokeCap = StrokeCap.round;
+
+      final highwayPaint = Paint()
+        ..color = isDark ? const Color(0xFF38384A) : Colors.white
+        ..strokeWidth = 6.5
+        ..strokeCap = StrokeCap.round;
+
+      final localRoadPaint = Paint()
+        ..color = isDark ? const Color(0xFF22222E) : const Color(0xFFF7F5F0)
+        ..strokeWidth = 3.5
+        ..strokeCap = StrokeCap.round;
+
+      // Mavoor Road (Kannur Rd -> Arayidathupalam -> Medical College)
+      final mavoorStart = _InteractiveMapViewState._projectCoordinate(
+        11.2570,
+        75.7860,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+      final mavoorMid = _InteractiveMapViewState._projectCoordinate(
+        11.2610,
+        75.7980,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+      final mavoorEnd = _InteractiveMapViewState._projectCoordinate(
+        11.2720,
+        75.8360,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+
+      canvas.drawLine(mavoorStart, mavoorMid, highwayCasingPaint);
+      canvas.drawLine(mavoorMid, mavoorEnd, highwayCasingPaint);
+      canvas.drawLine(mavoorStart, mavoorMid, highwayPaint);
+      canvas.drawLine(mavoorMid, mavoorEnd, highwayPaint);
+
+      // NH 66 / Mini Bypass (North to Palazhi / Cyberpark)
+      final bypassNorth = _InteractiveMapViewState._projectCoordinate(
+        11.2750,
+        75.8150,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+      final bypassSouth = _InteractiveMapViewState._projectCoordinate(
+        11.2384,
+        75.8342,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: isSelecting,
+      );
+      canvas.drawLine(bypassNorth, bypassSouth, highwayCasingPaint);
+      canvas.drawLine(bypassNorth, bypassSouth, highwayPaint);
+
+      // Beach Road (Running along coastline)
+      if (seaRight > 0) {
+        canvas.drawLine(
+          Offset(seaRight + 6, 0),
+          Offset(seaRight + 6, size.height),
+          localRoadPaint,
+        );
+      }
+
+      // Street labels
+      _drawLabel(
+        canvas,
+        'MAVOOR ROAD',
+        Offset((mavoorStart.dx + mavoorMid.dx) / 2, (mavoorStart.dy + mavoorMid.dy) / 2 - 8),
+        isDark ? Colors.white38 : const Color(0xFF706B62),
+        fontSize: 8.5,
+      );
+      _drawLabel(
+        canvas,
+        'NH 66 BYPASS',
+        Offset((bypassNorth.dx + bypassSouth.dx) / 2 + 6, (bypassNorth.dy + bypassSouth.dy) / 2),
+        isDark ? Colors.white38 : const Color(0xFF706B62),
+        fontSize: 8.5,
+      );
+    }
+
+    // Radar pulse ring on the target doorstep pin
+    if (isSelecting) {
+      final destPt = _InteractiveMapViewState._projectCoordinate(
+        route!.destLat,
+        route!.destLng,
+        route!,
+        size.width,
+        size.height,
+        isSelecting: true,
+      );
+      final ringPaint = Paint()
+        ..color = AppColors.copper.withValues(alpha: (0.45 - (pulseValue * 0.35)).clamp(0.0, 1.0))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawCircle(destPt, 22 + (pulseValue * 26), ringPaint);
+    }
+
+    // ── 5. Delivery Route Polyline ──────────────────────────────────────────
+    if (route!.points.length < 2) return;
+
     final offsets = <Offset>[];
     for (final p in route!.points) {
       offsets.add(
@@ -655,39 +1140,39 @@ class _MapCanvasPainter extends CustomPainter {
           route!,
           size.width,
           size.height,
+          isSelecting: isSelecting,
         ),
       );
     }
 
-    if (offsets.length < 2) return;
-
-    // Build overall smooth route path
+    // Full Route Polyline Path
     final fullRoutePath = Path()..moveTo(offsets.first.dx, offsets.first.dy);
     for (int i = 1; i < offsets.length; i++) {
       fullRoutePath.lineTo(offsets[i].dx, offsets[i].dy);
     }
 
-    // 1. Ambient route glow
+    // A. Ambient route glow
     final glowPaint = Paint()
-      ..color = AppColors.accentRed.withValues(alpha: 0.25)
-      ..strokeWidth = 9
+      ..color = AppColors.accentRed.withValues(alpha: 0.3)
+      ..strokeWidth = 10
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullRoutePath, glowPaint);
 
-    // 2. Remaining path (Red accent)
+    // B. Remaining Path (Vibrant Crimson)
     final remainingPaint = Paint()
       ..color = AppColors.accentRed
-      ..strokeWidth = 4
+      ..strokeWidth = 4.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullRoutePath, remainingPaint);
 
-    // 3. Visited path (Copper/Green trail behind rider)
+    // C. Visited Path (Warm Copper Gold)
     if (!isSelecting && progress > 0.0) {
-      final visitedCount = (progress * offsets.length).ceil().clamp(1, offsets.length);
+      final visitedCount =
+          (progress * offsets.length).ceil().clamp(1, offsets.length);
       final visitedPath = Path()..moveTo(offsets.first.dx, offsets.first.dy);
       for (int i = 1; i < visitedCount; i++) {
         visitedPath.lineTo(offsets[i].dx, offsets[i].dy);
@@ -695,17 +1180,68 @@ class _MapCanvasPainter extends CustomPainter {
 
       final visitedPaint = Paint()
         ..color = AppColors.copper
-        ..strokeWidth = 4.5
+        ..strokeWidth = 5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(visitedPath, visitedPaint);
     }
+
+    // D. Route Directional Flow Indicators
+    final chevronPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final stepInterval = math.max(3, offsets.length ~/ 6);
+    for (int i = stepInterval; i < offsets.length - 1; i += stepInterval) {
+      final p1 = offsets[i];
+      final p2 = offsets[i + 1];
+      final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
+
+      canvas.save();
+      canvas.translate(p1.dx, p1.dy);
+      canvas.rotate(angle);
+
+      final arrowPath = Path()
+        ..moveTo(-3, -3)
+        ..lineTo(2, 0)
+        ..lineTo(-3, 3);
+      canvas.drawPath(arrowPath, chevronPaint);
+      canvas.restore();
+    }
+  }
+
+  void _drawLabel(
+    Canvas canvas,
+    String text,
+    Offset offset,
+    Color color, {
+    double fontSize = 9,
+    double letterSpacing = 0.8,
+  }) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          letterSpacing: letterSpacing,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(canvas, offset);
   }
 
   @override
   bool shouldRepaint(covariant _MapCanvasPainter oldDelegate) =>
       oldDelegate.route != route ||
       oldDelegate.progress != progress ||
-      oldDelegate.isSelecting != isSelecting;
+      oldDelegate.isSelecting != isSelecting ||
+      oldDelegate.mapStyle != mapStyle ||
+      oldDelegate.pulseValue != pulseValue;
 }

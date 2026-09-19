@@ -848,24 +848,61 @@ class MockData {
 
   /// All Paragon restaurant branches grouped by city.
   static const List<Restaurant> restaurants = [
+    // Bengaluru
+    Restaurant(
+      id: 'blr_paragon',
+      name: 'Paragon Restaurant',
+      address: '44/1, Brigade Road / Church Street',
+      city: 'Bengaluru',
+      lat: 12.9745,
+      lng: 77.6073,
+      rating: 4.9,
+    ),
+    Restaurant(
+      id: 'blr_mgrill',
+      name: 'M Grill - Paragon Group',
+      address: '80 Feet Road, 4th Block, Koramangala',
+      city: 'Bengaluru',
+      lat: 12.9352,
+      lng: 77.6245,
+      rating: 4.8,
+    ),
+    Restaurant(
+      id: 'blr_browntown',
+      name: 'Brown Town - Paragon Group',
+      address: '100 Feet Road, HAL 2nd Stage, Indiranagar',
+      city: 'Bengaluru',
+      lat: 12.9716,
+      lng: 77.6412,
+      rating: 4.7,
+    ),
     // Calicut
     Restaurant(
       id: 'calicut_paragon',
       name: 'Paragon Restaurant',
       address: 'Kannur road, Near CH over bridge',
       city: 'Calicut',
+      lat: 11.2588,
+      lng: 75.7804,
+      rating: 4.9,
     ),
     Restaurant(
       id: 'calicut_mgrill',
       name: 'M Grill - Paragon Group',
       address: 'Focus Mall, Rajaji Road',
       city: 'Calicut',
+      lat: 11.2545,
+      lng: 75.7839,
+      rating: 4.8,
     ),
     Restaurant(
       id: 'calicut_browntown',
       name: 'Brown Town - Paragon Group',
       address: 'Pottamal Junction, Pottamal',
       city: 'Calicut',
+      lat: 11.2612,
+      lng: 75.8035,
+      rating: 4.7,
     ),
     // Kochi
     Restaurant(
@@ -873,18 +910,27 @@ class MockData {
       name: 'Paragon Restaurant',
       address: 'MG Road, Ernakulam, Kochi',
       city: 'Kochi',
+      lat: 9.9816,
+      lng: 76.2845,
+      rating: 4.8,
     ),
     Restaurant(
       id: 'kochi_mgrill',
       name: 'M Grill - Paragon Group',
       address: 'Lulu Mall, Edappally, Kochi',
       city: 'Kochi',
+      lat: 10.0270,
+      lng: 76.3080,
+      rating: 4.9,
     ),
     Restaurant(
       id: 'kochi_browntown',
       name: 'Brown Town - Paragon Group',
       address: 'Panampilly Nagar, Kochi',
       city: 'Kochi',
+      lat: 9.9625,
+      lng: 76.2941,
+      rating: 4.7,
     ),
     // Trivandrum
     Restaurant(
@@ -892,18 +938,27 @@ class MockData {
       name: 'Paragon Restaurant',
       address: 'MG Road, Thiruvananthapuram',
       city: 'Trivandrum',
+      lat: 8.4997,
+      lng: 76.9535,
+      rating: 4.8,
     ),
     Restaurant(
       id: 'tvm_mgrill',
       name: 'M Grill - Paragon Group',
       address: 'Technopark, Thiruvananthapuram',
       city: 'Trivandrum',
+      lat: 8.5566,
+      lng: 76.8821,
+      rating: 4.8,
     ),
     Restaurant(
       id: 'tvm_browntown',
       name: 'Brown Town - Paragon Group',
       address: 'Karamana Junction, Trivandrum',
       city: 'Trivandrum',
+      lat: 8.4812,
+      lng: 76.9698,
+      rating: 4.7,
     ),
   ];
 

@@ -6,6 +6,8 @@ class Restaurant {
     required this.name,
     required this.address,
     required this.city,
+    this.lat = 11.2588,
+    this.lng = 75.7804,
     this.logoUrl,
     this.rating = 4.8,
     this.openTime = '11:00 AM',
@@ -16,6 +18,8 @@ class Restaurant {
   final String name;
   final String address;
   final String city;
+  final double lat;
+  final double lng;
   final String? logoUrl;
   final double rating;
   final String openTime;
@@ -29,6 +33,8 @@ class Restaurant {
         'name': name,
         'address': address,
         'city': city,
+        'lat': lat,
+        'lng': lng,
         'logoUrl': logoUrl,
         'rating': rating,
         'openTime': openTime,
@@ -41,6 +47,8 @@ class Restaurant {
       name: map['name'] as String? ?? '',
       address: map['address'] as String? ?? '',
       city: map['city'] as String? ?? '',
+      lat: (map['lat'] as num?)?.toDouble() ?? 11.2588,
+      lng: (map['lng'] as num?)?.toDouble() ?? 75.7804,
       logoUrl: map['logoUrl'] as String?,
       rating: (map['rating'] as num?)?.toDouble() ?? 4.8,
       openTime: map['openTime'] as String? ?? '11:00 AM',

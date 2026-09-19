@@ -6,6 +6,7 @@ import '../models/cart_item.dart';
 import '../models/dish.dart';
 import '../models/order_model.dart';
 import '../models/payment_method.dart';
+import '../services/gps_detection_service.dart';
 import '../services/location_service.dart';
 import '../services/order_service.dart';
 import '../services/session_manager.dart';
@@ -25,9 +26,15 @@ class CartController extends ChangeNotifier {
 
   final List<CartItem> _items = [];
 
-  /// Currently selected delivery address (defaults to the first saved one).
   /// Currently selected delivery address.
-  Address selectedAddress = MockData.addresses.first;
+  Address selectedAddress = const Address(
+    id: 'addr_live_blr',
+    label: 'Bengaluru (Live GPS)',
+    details: 'Church Street / Brigade Road, Bengaluru - 560001',
+    lat: 12.9753,
+    lng: 77.5910,
+    isDefault: true,
+  );
 
   /// Currently selected payment method (defaults to the first saved card).
   /// Currently selected payment method.
@@ -38,8 +45,10 @@ class CartController extends ChangeNotifier {
 
   void _initFromSession() {
     final cachedAddr = SessionManager.instance.getSelectedAddress();
-    if (cachedAddr != null) {
+    if (cachedAddr != null && !cachedAddr.details.toLowerCase().contains('palazhi')) {
       selectedAddress = cachedAddr;
+    } else if (GpsDetectionService.instance.lastDetectedAddress != null) {
+      selectedAddress = GpsDetectionService.instance.lastDetectedAddress!;
     }
   }
 

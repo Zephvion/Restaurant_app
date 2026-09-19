@@ -300,6 +300,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
       );
     }
 
+    final activeOutlet = _ctrl.activeRestaurant;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
       child: Row(
@@ -310,15 +311,50 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 4),
-          const Text(
-            'Takeaway orders',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.takeawaySelectRestaurant),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Takeaway orders',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: AppColors.copper,
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${activeOutlet.name} • ${activeOutlet.branch}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          const Spacer(),
           IconButton(
             icon: const Icon(Icons.search, color: AppColors.textPrimary),
             onPressed: () => setState(() => _isSearching = true),

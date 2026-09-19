@@ -111,27 +111,27 @@ void main() {
       // Verify sheet title and action buttons
       expect(find.text('Select Live Delivery Location'), findsOneWidget);
       expect(find.text('Detect Live Location'), findsOneWidget);
-      expect(find.text('POPULAR DELIVERY HUBS'), findsOneWidget);
+      expect(find.text('SELECTED ADDRESS'), findsOneWidget);
 
-      // Tap Cyberpark preset
-      await tester.tap(find.text('Cyberpark'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      // Verify that popular hubs and delivery fee are removed
+      expect(find.text('POPULAR DELIVERY HUBS'), findsNothing);
+      expect(find.text('Delivery Fee'), findsNothing);
 
-      // Drag up to reveal bottom confirm button
-      await tester.drag(find.text('POPULAR DELIVERY HUBS'), const Offset(0, -500));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      // Verify distance and ETA are present in telemetry bar
+      expect(find.text('Distance'), findsOneWidget);
+      expect(find.text('Delivery ETA'), findsOneWidget);
 
       final confirmBtn = find.byKey(const Key('confirm_location_btn'));
       expect(confirmBtn, findsOneWidget);
+      expect(find.text('CONFIRM LIVE LOCATION & ROUTE'), findsOneWidget);
+
       await tester.tap(confirmBtn);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify address was selected
+      // Verify address was confirmed
       expect(pickedAddress, isNotNull);
-      expect(pickedAddress!.lat, closeTo(11.2825, 0.01));
+      expect(pickedAddress!.lat, closeTo(11.2562, 0.01));
     });
   });
 }

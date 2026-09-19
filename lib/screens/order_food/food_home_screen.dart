@@ -9,6 +9,7 @@ import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../services/location_service.dart';
 import '../../services/menu_service.dart';
+import '../../services/session_manager.dart';
 import '../../state/cart_controller.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
@@ -324,7 +325,9 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          currentArea.isNotEmpty ? currentArea : MockData.deliveryArea,
+                          (currentArea.isNotEmpty && !currentArea.toLowerCase().contains('palazhi'))
+                              ? currentArea
+                              : (SessionManager.instance.getSelectedAddress()?.label ?? 'Current Location'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

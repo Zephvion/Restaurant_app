@@ -9,6 +9,7 @@ import '../models/order_model.dart';
 import '../models/payment_method.dart';
 import 'auth_service.dart';
 import 'firebase_initializer.dart';
+import 'gps_detection_service.dart';
 import 'session_manager.dart';
 
 class OrderService {
@@ -19,6 +20,19 @@ class OrderService {
   final Map<String, StreamController<OrderModel>> _orderStreams = {};
 
   Future<void> init() async {
+    final savedAddr = SessionManager.instance.getSelectedAddress();
+    final Address activeAddr = (savedAddr != null && !savedAddr.details.toLowerCase().contains('palazhi'))
+        ? savedAddr
+        : GpsDetectionService.instance.lastDetectedAddress ??
+            const Address(
+              id: 'addr_live_blr',
+              label: 'Bengaluru (Live GPS)',
+              details: 'Church Street / Brigade Road, Bengaluru - 560001',
+              lat: 12.9753,
+              lng: 77.5910,
+              isDefault: true,
+            );
+
     // Populate an initial default mock order for tracking demo
     final defaultOrder = OrderModel(
       id: MockData.orderId,
@@ -46,7 +60,7 @@ class OrderService {
       deliveryFee: 30,
       discount: 0,
       grandTotal: 220,
-      deliveryAddress: MockData.addresses.first,
+      deliveryAddress: activeAddr,
       paymentMethodLabel: 'Card Payment Ending with *8754',
       status: OrderStatus.taken,
       estimatedDeliveryMinutes: 15,
@@ -209,6 +223,9 @@ class OrderService {
 
   /// Updates delivery address for an active order in real-time
   Future<void> updateDeliveryAddress(String orderId, Address newAddress) async {
+    await SessionManager.instance.saveSelectedAddress(newAddress);
+    await SessionManager.instance.setDeliveryArea(newAddress.label);
+
     final current = _localOrders[orderId];
     if (current != null) {
       final updated = current.copyWith(

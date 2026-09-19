@@ -35,8 +35,15 @@ class SessionManager {
 
   String? get activeOrderId => _prefs?.getString(_keyActiveOrderId);
 
-  String get deliveryArea =>
-      _prefs?.getString(_keyCustomLocation) ?? 'Palazhi , Calicut';
+  String get deliveryArea {
+    final custom = _prefs?.getString(_keyCustomLocation);
+    if (custom != null && custom.isNotEmpty) return custom;
+    final selected = getSelectedAddress();
+    if (selected != null && selected.label.isNotEmpty) {
+      return selected.label;
+    }
+    return 'Select Delivery Location';
+  }
 
   Future<void> setDeliveryArea(String area) async {
     await _prefs?.setString(_keyCustomLocation, area);

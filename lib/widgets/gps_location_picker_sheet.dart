@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import '../data/mock_data.dart';
 import '../models/address.dart';
 import '../services/auth_service.dart';
+import '../services/gps_detection_service.dart';
 import '../services/location_service.dart';
 import '../services/map_route_service.dart';
 import '../services/session_manager.dart';
 import '../theme/app_colors.dart';
 import 'app_banner.dart';
 import 'interactive_map_view.dart';
-import 'primary_button.dart';
 
 /// Interactive GPS Live Location & Route Picker.
 /// Allows the customer to detect live GPS location, tap on map, preview real driving route,
@@ -55,52 +55,6 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
   final _landmarkCtrl = TextEditingController();
   String _selectedTag = 'Home';
 
-  // Popular Calicut delivery neighborhoods
-  static final List<Address> _neighborhoodPresets = [
-    const Address(
-      id: 'preset_palazhi',
-      label: 'Palazhi (Hilite Mall)',
-      details: 'Hilite City, Near Cyberpark, Palazhi, Calicut - 673014',
-      lat: 11.2562,
-      lng: 75.8335,
-    ),
-    const Address(
-      id: 'preset_cyberpark',
-      label: 'Cyberpark',
-      details: 'IT Park SEZ, Nellikode, Calicut - 673016',
-      lat: 11.2825,
-      lng: 75.8611,
-    ),
-    const Address(
-      id: 'preset_mavoor',
-      label: 'Mavoor Road',
-      details: 'Mavoor Road Junction, Calicut - 673004',
-      lat: 11.2612,
-      lng: 75.7950,
-    ),
-    const Address(
-      id: 'preset_beach',
-      label: 'Calicut Beach',
-      details: 'Beach Road, Near Old Pier, Calicut - 673032',
-      lat: 11.2635,
-      lng: 75.7680,
-    ),
-    const Address(
-      id: 'preset_mananchira',
-      label: 'Mananchira',
-      details: 'Mananchira Square, Town Hall, Calicut - 673001',
-      lat: 11.2514,
-      lng: 75.7801,
-    ),
-    const Address(
-      id: 'preset_medcollege',
-      label: 'Medical College',
-      details: 'Govt Medical College Hospital, Calicut - 673008',
-      lat: 11.2721,
-      lng: 75.8368,
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -132,29 +86,35 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
 
   Future<void> _detectLiveLocation() async {
     setState(() => _isDetectingGps = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+    try {
+      final location = await GpsDetectionService.instance.detectLiveLocation();
+      if (!mounted) return;
 
-    // Simulated high-precision device GPS fix
-    final liveAddr = Address(
-      id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
-      label: 'Live GPS Location',
-      details: 'Hilite Mall Bypass Road, Palazhi, Calicut - 673014',
-      lat: 11.2588 + (math.Random().nextDouble() * 0.006 - 0.003),
-      lng: 75.8300 + (math.Random().nextDouble() * 0.006 - 0.003),
-      isDefault: true,
-    );
+      final liveAddr = location.toAddress(
+        id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
+      );
 
-    if (mounted) {
       setState(() {
         _currentAddress = liveAddr;
         _isDetectingGps = false;
       });
       _updateRoute();
-      AppBanner.showSuccess(
-        context,
-        'GPS Locked: ${liveAddr.details}',
-        title: 'Location Acquired',
-      );
+      if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Live GPS Locked: ${liveAddr.label} (${liveAddr.lat.toStringAsFixed(4)}° N, ${liveAddr.lng.toStringAsFixed(4)}° E)',
+          title: 'Location Acquired',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isDetectingGps = false);
+        AppBanner.showError(
+          context,
+          'Could not lock onto live GPS position. Tap on the map to place pin.',
+          title: 'GPS Notice',
+        );
+      }
     }
   }
 
@@ -206,7 +166,6 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
           endLat: _currentAddress.lat,
           endLng: _currentAddress.lng,
         );
-    final deliveryFee = LocationService.instance.calculateDeliveryFee(_currentAddress);
     final etaMinutes = _route?.estimatedMinutes ?? math.max(12, (distKm * 2.8).round());
 
     final maxH = MediaQuery.of(context).size.height * 0.88;
@@ -303,9 +262,9 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
             ),
           ),
 
-          // ── Route Telemetry Bar ───────────────────────────────────────
+          // ── Route Telemetry Bar (Distance & Live ETA) ─────────────────
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.backgroundElevated,
               border: Border(
@@ -334,14 +293,6 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
                     value: _isLoadingRoute ? '...' : '$etaMinutes mins',
                   ),
                 ),
-                _metricDivider(),
-                Expanded(
-                  child: _metricTile(
-                    icon: Icons.local_shipping_rounded,
-                    label: 'Delivery Fee',
-                    value: '₹${deliveryFee.round()}',
-                  ),
-                ),
               ],
             ),
           ),
@@ -353,49 +304,6 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'POPULAR DELIVERY HUBS',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      letterSpacing: 1,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _neighborhoodPresets.map((preset) {
-                      final selected = _currentAddress.lat == preset.lat &&
-                          _currentAddress.lng == preset.lng;
-                      return ChoiceChip(
-                        label: Text(preset.label),
-                        selected: selected,
-                        selectedColor: AppColors.copper,
-                        backgroundColor: AppColors.backgroundElevated,
-                        labelStyle: TextStyle(
-                          color: selected ? Colors.white : AppColors.textPrimary,
-                          fontSize: 12,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                        side: BorderSide(
-                          color: selected
-                              ? AppColors.copper
-                              : AppColors.border.withValues(alpha: 0.6),
-                        ),
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() => _currentAddress = preset);
-                            _updateRoute();
-                          }
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 18),
-
                   const Text(
                     'SELECTED ADDRESS',
                     style: TextStyle(
@@ -517,10 +425,58 @@ class _GpsLocationPickerSheetState extends State<GpsLocationPickerSheet> {
                   ),
                   const SizedBox(height: 24),
 
-                  PrimaryButton(
+                  Container(
                     key: const Key('confirm_location_btn'),
-                    label: 'Confirm Live Location & Route',
-                    onPressed: _confirmLocation,
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2E2419), Color(0xFF1E1E24)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.copper,
+                        width: 1.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.copper.withValues(alpha: 0.28),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: _confirmLocation,
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.copper,
+                                size: 20,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'CONFIRM LIVE LOCATION & ROUTE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

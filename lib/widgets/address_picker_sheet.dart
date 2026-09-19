@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/mock_data.dart';
 import '../models/address.dart';
 import '../services/auth_service.dart';
+import '../services/gps_detection_service.dart';
 import '../services/location_service.dart';
 import '../services/session_manager.dart';
 import '../theme/app_colors.dart';
@@ -42,9 +43,20 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
   bool _isDetectingGps = false;
   final _flatNoCtrl = TextEditingController();
   final _landmarkCtrl = TextEditingController();
-  final _areaCtrl = TextEditingController(text: 'Palazhi, Calicut');
+  late final TextEditingController _areaCtrl;
   final _labelCtrl = TextEditingController(text: 'Home');
   bool _showAddCustom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentArea = SessionManager.instance.deliveryArea;
+    final initialText = (!currentArea.toLowerCase().contains('palazhi') &&
+            currentArea != 'Select Delivery Location')
+        ? currentArea
+        : '';
+    _areaCtrl = TextEditingController(text: initialText);
+  }
 
   @override
   void dispose() {
@@ -57,10 +69,28 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
 
   List<Address> _getLiveAddresses() {
     final user = AuthService.instance.currentUser;
-    if (user != null && user.savedAddresses.isNotEmpty) {
-      return user.savedAddresses;
+    final savedInSession = SessionManager.instance.getSelectedAddress();
+    final list = <Address>[];
+
+    if (savedInSession != null && !savedInSession.details.toLowerCase().contains('palazhi')) {
+      list.add(savedInSession);
     }
-    return MockData.addresses;
+    if (user != null && user.savedAddresses.isNotEmpty) {
+      for (final a in user.savedAddresses) {
+        if (!list.any((existing) => existing.details == a.details)) {
+          list.add(a);
+        }
+      }
+    }
+    if (list.isEmpty) {
+      final lastGps = GpsDetectionService.instance.lastDetectedAddress;
+      if (lastGps != null) {
+        list.add(lastGps);
+      } else {
+        list.addAll(MockData.addresses);
+      }
+    }
+    return list;
   }
 
   Future<void> _select(Address addr) async {
@@ -74,32 +104,35 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
 
   Future<void> _detectCurrentLocation() async {
     setState(() => _isDetectingGps = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    try {
+      final result = await GpsDetectionService.instance.detectLiveLocation();
+      final currentGpsAddr = result.toAddress();
 
-    final currentGpsAddr = Address(
-      id: 'addr_gps_${DateTime.now().millisecondsSinceEpoch}',
-      label: 'Live Location',
-      details: 'Hilite Mall Road, Near Cyber Park, Palazhi, Calicut, 673014',
-      lat: 11.2588,
-      lng: 75.7804,
-      isDefault: true,
-    );
+      // Save to user profile if logged in
+      final user = AuthService.instance.currentUser;
+      if (user != null) {
+        final updatedList = List<Address>.from(user.savedAddresses)..insert(0, currentGpsAddr);
+        await AuthService.instance.updateProfile(user.copyWith(savedAddresses: updatedList));
+      }
 
-    // Save to user profile if logged in
-    final user = AuthService.instance.currentUser;
-    if (user != null) {
-      final updatedList = List<Address>.from(user.savedAddresses)..insert(0, currentGpsAddr);
-      await AuthService.instance.updateProfile(user.copyWith(savedAddresses: updatedList));
-    }
-
-    if (mounted) {
-      setState(() => _isDetectingGps = false);
-      AppBanner.showSuccess(
-        context,
-        'GPS Location resolved: Hilite Mall Road, Palazhi',
-        title: 'Location Detected',
-      );
-      _select(currentGpsAddr);
+      if (mounted) {
+        setState(() => _isDetectingGps = false);
+        AppBanner.showSuccess(
+          context,
+          'GPS Location resolved: ${currentGpsAddr.label} (${currentGpsAddr.details.split(',').take(2).join(', ')})',
+          title: 'Location Detected',
+        );
+        _select(currentGpsAddr);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDetectingGps = false);
+        AppBanner.showError(
+          context,
+          'Failed to detect GPS location. Please choose on map.',
+          title: 'Detection Error',
+        );
+      }
     }
   }
 
