@@ -248,7 +248,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Initially on Meals
-      expect(find.text('Paragon Special Non-Veg Meals'), findsWidgets);
+      expect(find.text('Non-Veg Meals'), findsWidgets);
       expect(find.text('Chicken Biriyani'), findsNothing);
 
       // Search for Biriyani (which is in Chicken/Biriyani category, not Meals)
@@ -264,7 +264,7 @@ void main() {
       // Clear search restores Meals
       await tester.enterText(searchField, '');
       await tester.pumpAndSettle();
-      expect(find.text('Paragon Special Non-Veg Meals'), findsWidgets);
+      expect(find.text('Non-Veg Meals'), findsWidgets);
     });
   });
 }

@@ -483,13 +483,16 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final childAspectRatio = screenWidth < 380 ? 0.60 : 0.65;
+
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 0.69,
+        childAspectRatio: childAspectRatio,
       ),
       itemCount: items.length,
       itemBuilder: (context, i) {
@@ -547,31 +550,32 @@ class _CategoryFoodCard extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Food image with rounded corners matching Food Planner
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                height: 110,
-                width: double.infinity,
-                child: NetworkImageWithFallback(
-                  url: dish.imageUrl,
-                  fallbackIcon: Icons.restaurant,
-                  fit: BoxFit.cover,
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: NetworkImageWithFallback(
+                    url: dish.imageUrl,
+                    fallbackIcon: Icons.restaurant,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             // Title & Veg / Non-Veg Indicator
             Row(
               children: [
                 Container(
-                  width: 9,
-                  height: 9,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     color: dish.isVeg
                         ? const Color(0xFF22C55E)
@@ -585,7 +589,7 @@ class _CategoryFoodCard extends StatelessWidget {
                     dish.name,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
@@ -604,13 +608,13 @@ class _CategoryFoodCard extends StatelessWidget {
                   '₹ ${dish.price.toInt()}',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 13),
+                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 12),
                     const SizedBox(width: 2),
                     Text(
                       dish.rating.toStringAsFixed(1),
@@ -624,7 +628,7 @@ class _CategoryFoodCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
 
             // Macro details (Calories & Weight)
             Text(
@@ -637,7 +641,7 @@ class _CategoryFoodCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const Spacer(),
+            const SizedBox(height: 8),
 
             // Stepper / ADD Button
             _CategoryQuantityButton(
