@@ -143,6 +143,12 @@ class TakeawayController extends ChangeNotifier {
     return order;
   }
 
+  /// Adds an externally created takeaway order (e.g. from global cart checkout)
+  void addDirectOrder(TakeawayOrder order) {
+    _orders.insert(0, order);
+    notifyListeners();
+  }
+
   Future<TakeawayOrder?> cancelOrder(
     String orderId, {
     required String reason,

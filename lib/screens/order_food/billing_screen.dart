@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../state/app_mode_controller.dart';
 import '../../state/cart_controller.dart';
+import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/checkout_widgets.dart';
@@ -27,7 +29,7 @@ class BillingScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Billing')),
       body: AnimatedBuilder(
-        animation: cart,
+        animation: Listenable.merge([cart, AppModeController.instance, TakeawayController.instance]),
         builder: (context, _) {
           if (cart.isEmpty) {
             return const Center(
@@ -35,6 +37,9 @@ class BillingScreen extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary)),
             );
           }
+          final isTakeaway = AppModeController.instance.isTakeAway;
+          final takeawayRest = TakeawayController.instance.activeRestaurant;
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
@@ -61,31 +66,105 @@ class BillingScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                     ],
                     const PanelDivider(),
-                    AddressRow(
-                      address: cart.selectedAddress.details,
-                      onEdit: () {
-                        AddressPickerSheet.show(
-                          context: context,
-                          onAddressSelected: (addr) => cart.selectAddress(addr),
-                        );
-                      },
-                    ),
-                    const PanelDivider(),
-                    Row(
-                      children: const [
-                        Icon(Icons.access_time,
-                            color: AppColors.textSecondary, size: 18),
-                        SizedBox(width: 10),
-                        Text(
-                          'Breakfast - 7:30 AM',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                    if (isTakeaway) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.storefront_outlined,
+                              color: AppColors.copper, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      takeawayRest.name,
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.copper
+                                            .withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'PICKUP',
+                                        style: TextStyle(
+                                          color: AppColors.copper,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${takeawayRest.address}, ${takeawayRest.city}',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const PanelDivider(),
+                      const Row(
+                        children: [
+                          Icon(Icons.timer_outlined,
+                              color: AppColors.copper, size: 18),
+                          SizedBox(width: 10),
+                          Text(
+                            'Estimated pickup - In 15-20 mins',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      AddressRow(
+                        address: cart.selectedAddress.details,
+                        onEdit: () {
+                          AddressPickerSheet.show(
+                            context: context,
+                            onAddressSelected: (addr) => cart.selectAddress(addr),
+                          );
+                        },
+                      ),
+                      const PanelDivider(),
+                      const Row(
+                        children: [
+                          Icon(Icons.access_time,
+                              color: AppColors.textSecondary, size: 18),
+                          SizedBox(width: 10),
+                          Text(
+                            'Breakfast - 7:30 AM',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const PanelDivider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -117,13 +196,46 @@ class BillingScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     PriceLine(label: 'GST', value: cart.gst),
                     const SizedBox(height: 12),
-                    PriceLine(label: 'Delivery fee', value: cart.deliveryFee),
+                    if (isTakeaway)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Delivery fee (Takeaway)',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'FREE',
+                              style: TextStyle(
+                                color: Color(0xFF4CAF50),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      PriceLine(label: 'Delivery fee', value: cart.deliveryFee),
                     if (cart.discount > 0) ...[
                       const SizedBox(height: 12),
                       PriceLine(
                         label: 'Coupon discount',
                         value: -cart.discount,
-                        valueColor: Color(0xFF3FA34D),
+                        valueColor: const Color(0xFF3FA34D),
                       ),
                     ],
                     const PanelDivider(),
@@ -137,7 +249,7 @@ class BillingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
               PrimaryButton(
-                label: 'Place Order',
+                label: isTakeaway ? 'Proceed to Pay (Takeaway)' : 'Place Order',
                 onPressed: () => Navigator.of(context)
                     .pushNamed(AppRoutes.paymentOptions),
               ),

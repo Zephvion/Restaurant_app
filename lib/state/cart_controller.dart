@@ -6,10 +6,13 @@ import '../models/cart_item.dart';
 import '../models/dish.dart';
 import '../models/order_model.dart';
 import '../models/payment_method.dart';
+import '../models/takeaway_order.dart';
 import '../services/gps_detection_service.dart';
 import '../services/location_service.dart';
 import '../services/order_service.dart';
 import '../services/session_manager.dart';
+import 'app_mode_controller.dart';
+import 'takeaway_controller.dart';
 
 /// In-app basket + checkout state for the Order Food flow.
 ///
@@ -149,9 +152,13 @@ class CartController extends ChangeNotifier {
   double get gst => (subtotal * 0.15).roundToDouble();
 
   /// Delivery partner fee calculated dynamically based on distance.
-  double get deliveryFee => isEmpty
-      ? 0
-      : LocationService.instance.calculateDeliveryFee(selectedAddress);
+  /// Waived (0) for Take Away orders.
+  double get deliveryFee {
+    if (isEmpty || AppModeController.instance.isTakeAway) {
+      return 0.0;
+    }
+    return LocationService.instance.calculateDeliveryFee(selectedAddress);
+  }
 
   /// A small mock discount applied when any coupon is active.
   double get discount =>
@@ -161,6 +168,7 @@ class CartController extends ChangeNotifier {
 
   /// Places order via [OrderService] and clears cart
   Future<OrderModel> checkout() async {
+    final isTakeaway = AppModeController.instance.isTakeAway;
     final order = await OrderService.instance.placeOrder(
       items: List.from(_items),
       address: selectedAddress,
@@ -172,6 +180,16 @@ class CartController extends ChangeNotifier {
       grandTotal: grandTotal,
       coupon: appliedCoupon,
     );
+    if (isTakeaway) {
+      final takeawayOrder = TakeawayOrder(
+        id: order.id,
+        restaurant: TakeawayController.instance.activeRestaurant,
+        items: List.from(_items),
+        paymentMethod: selectedPayment.title,
+        status: TakeawayStatus.preparing,
+      );
+      TakeawayController.instance.addDirectOrder(takeawayOrder);
+    }
     clear();
     return order;
   }

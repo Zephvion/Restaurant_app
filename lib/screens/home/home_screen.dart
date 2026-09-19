@@ -103,7 +103,10 @@ class _HomeScreenState extends State<HomeScreen>
               child: BasketBar(
                 itemCount: cart.totalQuantity,
                 label: 'VIEW CART',
-                onNext: () => Navigator.of(context).pushNamed(AppRoutes.cart),
+                onNext: () => Navigator.of(context).pushNamed(
+                  AppRoutes.cart,
+                  arguments: const {'isGlobal': true},
+                ),
               ),
             ),
           );
@@ -177,7 +180,10 @@ class _HomeScreenState extends State<HomeScreen>
                               size: 24,
                             ),
                             onPressed: () =>
-                                Navigator.of(context).pushNamed(AppRoutes.cart),
+                                Navigator.of(context).pushNamed(
+                              AppRoutes.cart,
+                              arguments: const {'isGlobal': true},
+                            ),
                           ),
                           if (count > 0)
                             Positioned(
