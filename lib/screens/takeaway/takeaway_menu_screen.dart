@@ -69,38 +69,43 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   Future<void> _onNext() async {
     if (_ctrl.isCartEmpty || _isSubmitting) return;
 
-    await PaymentGatewaySheet.show(
+    final result = await PaymentGatewaySheet.show(
       context: context,
       amount: _ctrl.grandTotal,
       isTakeaway: true,
-      onPaymentSuccess: (transactionId, paymentMode) async {
-        setState(() => _isSubmitting = true);
-        try {
-          await _ctrl.placeOrder(
-            paymentMethod: paymentMode,
-            transactionId: transactionId,
-          );
-          if (mounted) {
-            setState(() => _isSubmitting = false);
-            AppBanner.showSuccess(
-              context,
-              'Payment successful via $paymentMode! Takeaway order placed.',
-              title: 'Order Confirmed',
-            );
-            Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
-          }
-        } catch (e) {
-          if (mounted) {
-            setState(() => _isSubmitting = false);
-            AppBanner.showError(
-              context,
-              'Failed to place order: $e',
-              title: 'Order Error',
-            );
-          }
-        }
-      },
     );
+
+    // User dismissed without paying
+    if (result == null || !mounted) return;
+
+    final transactionId = result['txnId'] ?? '';
+    final paymentMode = result['mode'] ?? '';
+
+    setState(() => _isSubmitting = true);
+    try {
+      await _ctrl.placeOrder(
+        paymentMethod: paymentMode,
+        transactionId: transactionId,
+      );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        AppBanner.showSuccess(
+          context,
+          'Payment successful via $paymentMode! Takeaway order placed.',
+          title: 'Order Confirmed',
+        );
+        Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        AppBanner.showError(
+          context,
+          'Failed to place order: $e',
+          title: 'Order Error',
+        );
+      }
+    }
   }
 
   List<Dish> _getDishesForCategory(String category) {

@@ -20,22 +20,23 @@ class PaymentGatewaySheet extends StatefulWidget {
     required this.amount,
     this.selectedMethod,
     this.isTakeaway = false,
-    required this.onPaymentSuccess,
   });
 
   final double amount;
   final PaymentMethod? selectedMethod;
   final bool isTakeaway;
-  final FutureOr<void> Function(String transactionId, String paymentMode) onPaymentSuccess;
 
-  static Future<void> show({
+  /// Shows the payment gateway sheet and returns a result map
+  /// {'txnId': String, 'mode': String} on success, or null if dismissed.
+  static Future<Map<String, String>?> show({
     required BuildContext context,
     required double amount,
     PaymentMethod? selectedMethod,
     bool isTakeaway = false,
-    required FutureOr<void> Function(String transactionId, String paymentMode) onPaymentSuccess,
+    // Keep the old callback parameter for backward compat but ignore it
+    FutureOr<void> Function(String transactionId, String paymentMode)? onPaymentSuccess,
   }) async {
-    await showModalBottomSheet(
+    final result = await showModalBottomSheet<Map<String, String>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -43,9 +44,9 @@ class PaymentGatewaySheet extends StatefulWidget {
         amount: amount,
         selectedMethod: selectedMethod,
         isTakeaway: isTakeaway,
-        onPaymentSuccess: onPaymentSuccess,
       ),
     );
+    return result;
   }
 
   @override
@@ -124,16 +125,13 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
       });
     }
 
-    Future.delayed(const Duration(milliseconds: 800), () async {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-        try {
-          await widget.onPaymentSuccess(txn, modeLabel);
-        } catch (e) {
-          debugPrint('Payment success callback error: $e');
-        }
+        // Pop the sheet with the result — PaymentOptionsScreen handles navigation
+        Navigator.of(context).pop<Map<String, String>>({
+          'txnId': txn,
+          'mode': modeLabel,
+        });
       }
     });
   }

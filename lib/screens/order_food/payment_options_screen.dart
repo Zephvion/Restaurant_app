@@ -67,41 +67,47 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
   }
 
-  void _proceed() {
+  Future<void> _proceed() async {
     final method = _selected ??
         (_cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery);
     _cart.selectPayment(method);
 
-    PaymentGatewaySheet.show(
+    // Show the payment gateway sheet and wait for the result
+    final result = await PaymentGatewaySheet.show(
       context: context,
       amount: _cart.grandTotal,
       selectedMethod: method,
-      onPaymentSuccess: (txnId, mode) async {
-        try {
-          final order = await _cart.checkout();
-          await SessionManager.instance.setActiveOrderId(order.id);
-          if (mounted) {
-            AppBanner.showSuccess(
-              context,
-              'Payment successful via $mode! Order #${order.id} placed.',
-            );
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              AppRoutes.orderSuccess,
-              (r) => r.settings.name == AppRoutes.home || r.isFirst,
-              arguments: order.id,
-            );
-          }
-        } catch (e) {
-          debugPrint('Checkout error: $e');
-          if (mounted) {
-            AppBanner.showError(
-              context,
-              'Order placement error: $e',
-            );
-          }
-        }
-      },
     );
+
+    // If user dismissed the sheet without paying, result is null
+    if (result == null || !mounted) return;
+
+    final txnId = result['txnId'] ?? '';
+    final mode = result['mode'] ?? method.title;
+
+    try {
+      final order = await _cart.checkout();
+      await SessionManager.instance.setActiveOrderId(order.id);
+      if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Payment successful via $mode! Order #${order.id} placed.',
+        );
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.orderSuccess,
+          (r) => r.settings.name == AppRoutes.home || r.isFirst,
+          arguments: order.id,
+        );
+      }
+    } catch (e) {
+      debugPrint('Checkout error: $e');
+      if (mounted) {
+        AppBanner.showError(
+          context,
+          'Order placement error: $e',
+        );
+      }
+    }
   }
 
   @override

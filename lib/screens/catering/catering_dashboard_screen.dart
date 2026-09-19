@@ -426,10 +426,10 @@ class _CateringOrderCard extends StatelessWidget {
     );
   }
 
-  void _proceedToPayment(BuildContext context) {
+  Future<void> _proceedToPayment(BuildContext context) async {
     final payAmount = order.totalAmount > 0 ? order.totalAmount : 25000.0;
 
-    PaymentGatewaySheet.show(
+    final result = await PaymentGatewaySheet.show(
       context: context,
       amount: payAmount,
       selectedMethod: const PaymentMethod(
@@ -439,21 +439,25 @@ class _CateringOrderCard extends StatelessWidget {
         kind: PaymentKind.upi,
         assetKind: 'gpay',
       ),
-      onPaymentSuccess: (txnId, mode) async {
-        await CateringController.instance.confirmPayment(
-          order.id,
-          txnId: txnId,
-          paymentMode: mode,
-        );
-        if (context.mounted) {
-          AppBanner.showSuccess(
-            context,
-            'Payment of ₹${payAmount.toInt()} verified! Catering booking ${order.id} is confirmed.',
-            title: 'Booking Confirmed',
-          );
-        }
-      },
     );
+
+    if (result == null || !context.mounted) return;
+
+    final txnId = result['txnId'] ?? '';
+    final mode = result['mode'] ?? '';
+
+    await CateringController.instance.confirmPayment(
+      order.id,
+      txnId: txnId,
+      paymentMode: mode,
+    );
+    if (context.mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Payment of ₹${payAmount.toInt()} verified! Catering booking ${order.id} is confirmed.',
+        title: 'Booking Confirmed',
+      );
+    }
   }
 
   void _confirmCancelOrder(BuildContext context) {

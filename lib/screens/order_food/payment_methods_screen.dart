@@ -55,19 +55,19 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     ];
   }
 
-  void _openPaymentModal(PaymentMethod method) {
-    PaymentGatewaySheet.show(
+  Future<void> _openPaymentModal(PaymentMethod method) async {
+    final result = await PaymentGatewaySheet.show(
       context: context,
       amount: 450.0,
       selectedMethod: method,
-      onPaymentSuccess: (txnId, mode) {
-        AppBanner.showSuccess(
-          context,
-          'Test transaction of ₹450 with ${method.title} verified successfully! Txn: $txnId',
-          title: 'Payment Successful',
-        );
-      },
     );
+    if (result != null && mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Test transaction of ₹450 with ${method.title} verified successfully! Txn: ${result['txnId']}',
+        title: 'Payment Successful',
+      );
+    }
   }
 
   void _showAddCardSheet() {
