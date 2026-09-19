@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import '../services/session_manager.dart';
 import '../theme/app_colors.dart';
 import 'app_banner.dart';
+import 'gps_location_picker_sheet.dart';
 
 /// Interactive address & location chooser bottom sheet.
 /// Supports saved address selection, custom address creation with full persistence,
@@ -184,10 +185,10 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
               const SizedBox(height: 18),
 
               // Title
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
-                  children: const [
+                  children: [
                     Icon(Icons.location_on, color: AppColors.accentRed, size: 22),
                     SizedBox(width: 8),
                     Text(
@@ -204,6 +205,61 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
               const SizedBox(height: 16),
               const Divider(color: AppColors.border, height: 1),
 
+              // Interactive GPS Route Map Picker Button
+              InkWell(
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await GpsLocationPickerSheet.show(
+                    context: context,
+                    onAddressSelected: widget.onAddressSelected,
+                    initialAddress: currentSelected,
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.copper.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.map_rounded, color: AppColors.copper, size: 20),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Select on Map & Live GPS Route',
+                              style: TextStyle(
+                                color: AppColors.copper,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Pinpoint live location & view driving route from Paragon',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.copper),
+                    ],
+                  ),
+                ),
+              ),
+
+              const Divider(color: AppColors.border, height: 1),
+
               // GPS Button
               InkWell(
                 onTap: _isDetectingGps ? null : _detectCurrentLocation,
@@ -215,7 +271,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.accentRed.withOpacity(0.15),
+                          color: AppColors.accentRed.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: _isDetectingGps
@@ -229,10 +285,10 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
                             : const Icon(Icons.my_location, color: AppColors.accentRed, size: 20),
                       ),
                       const SizedBox(width: 14),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
                               'Use Current GPS Location',
                               style: TextStyle(
@@ -261,9 +317,9 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
               const Divider(color: AppColors.border, height: 1),
 
               // Saved Addresses
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                child: const Text(
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Text(
                   'SAVED ADDRESSES',
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -284,10 +340,10 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
               if (!_showAddCustom)
                 InkWell(
                   onTap: () => setState(() => _showAddCustom = true),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.add_location_alt_outlined,
                             color: AppColors.copper, size: 22),
                         SizedBox(width: 14),

@@ -8,9 +8,10 @@ import '../../models/order_model.dart';
 import '../../services/order_service.dart';
 import '../../services/session_manager.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/customer_support_sheet.dart';
+import '../../widgets/gps_location_picker_sheet.dart';
+import '../../widgets/interactive_map_view.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
@@ -27,20 +28,20 @@ class TrackOrderScreen extends StatefulWidget {
 class _TrackOrderScreenState extends State<TrackOrderScreen>
     with SingleTickerProviderStateMixin {
   bool _expanded = false;
-  late AnimationController _pulseController;
+  late AnimationController _progressController;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(seconds: 22),
     )..repeat();
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
@@ -71,12 +72,29 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  // ── Map Layer (takes full background, elements positioned in visible zone) ──
+                  // ── Map Layer with Dynamic GPS Route & Animated Rider ───
                   Positioned.fill(
-                    child: _MapBackground(
-                      pulseAnimation: _pulseController,
-                      status: status,
-                      visibleHeight: maxH - collapsedHeight,
+                    child: AnimatedBuilder(
+                      animation: _progressController,
+                      builder: (context, _) {
+                        double currentProgress = 0.45;
+                        if (status == OrderStatus.delivered) {
+                          currentProgress = 1.0;
+                        } else if (status == OrderStatus.outForDelivery) {
+                          currentProgress =
+                              0.15 + (_progressController.value * 0.75);
+                        } else {
+                          currentProgress = 0.05;
+                        }
+                        return InteractiveMapView(
+                          destination: order?.deliveryAddress ??
+                              SessionManager.instance.getSelectedAddress() ??
+                              MockData.addresses.first,
+                          progress: currentProgress,
+                          showControls: !_expanded,
+                          showTelemetry: !_expanded,
+                        );
+                      },
                     ),
                   ),
 
@@ -421,8 +439,9 @@ class _TrackingSheet extends StatelessWidget {
                         : 'Palazhi, Calicut',
                     actionLabel: 'Change ✏️',
                     onTap: () {
-                      AddressPickerSheet.show(
+                      GpsLocationPickerSheet.show(
                         context: context,
+                        initialAddress: order?.deliveryAddress,
                         onAddressSelected: (Address newAddr) async {
                           await OrderService.instance.updateDeliveryAddress(
                             order?.id ?? orderId,
@@ -935,264 +954,5 @@ class _TotalLine extends StatelessWidget {
       children: [Text(label, style: style), Text(value, style: style)],
     );
   }
-}
-
-/// A responsive stylized dark map with animated pulse, clean routes and markers
-class _MapBackground extends StatelessWidget {
-  const _MapBackground({
-    required this.pulseAnimation,
-    required this.status,
-    required this.visibleHeight,
-  });
-
-  final Animation<double> pulseAnimation;
-  final OrderStatus status;
-  final double visibleHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final safeH = math.max(260.0, visibleHeight);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const DecoratedBox(
-          decoration: BoxDecoration(color: Color(0xFF141419)),
-        ),
-        CustomPaint(
-          painter: _MapPainter(safeHeight: safeH),
-          child: const SizedBox.expand(),
-        ),
-
-        // ── Street Labels ──────────────────────────────────────────────
-        Positioned(
-          left: 24,
-          top: safeH * 0.28,
-          child: const Text(
-            'Mavoor Road',
-            style: TextStyle(
-              color: Color(0xFF4A4A58),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        Positioned(
-          right: 28,
-          top: safeH * 0.48,
-          child: const Text(
-            'Hilite Mall Way',
-            style: TextStyle(
-              color: Color(0xFF4A4A58),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-
-        // ── Restaurant Marker (Origin) ─────────────────────────────────
-        Positioned(
-          left: 48,
-          top: safeH * 0.16,
-          child: const _MapPin(
-            title: 'PARAGON',
-            color: AppColors.accentRed,
-            icon: Icons.restaurant,
-          ),
-        ),
-
-        // ── Rider Marker (Moving Pin with Pulse) ───────────────────────
-        AnimatedBuilder(
-          animation: pulseAnimation,
-          builder: (context, child) {
-            final t = pulseAnimation.value;
-            return Positioned(
-              right: 60,
-              top: safeH * 0.38,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer radar pulse
-                  Container(
-                    width: 44 + (t * 22),
-                    height: 44 + (t * 22),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.copper.withValues(alpha: (1.0 - t) * 0.4),
-                    ),
-                  ),
-                  const _MapPin(
-                    title: 'Rider',
-                    color: AppColors.copper,
-                    icon: Icons.two_wheeler,
-                    isRider: true,
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-
-        // ── Destination Marker (Customer Location) ─────────────────────
-        Positioned(
-          left: 80,
-          top: safeH * 0.62,
-          child: const _MapPin(
-            title: 'Your Location',
-            color: Colors.white,
-            icon: Icons.home_rounded,
-            iconColor: Color(0xFF141419),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MapPin extends StatelessWidget {
-  const _MapPin({
-    required this.title,
-    required this.color,
-    required this.icon,
-    this.iconColor = Colors.white,
-    this.isRider = false,
-  });
-
-  final String title;
-  final Color color;
-  final IconData icon;
-  final Color iconColor;
-  final bool isRider;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
-          ),
-          child: Text(
-            title,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ),
-        const SizedBox(height: 3),
-        Container(
-          width: isRider ? 38 : 34,
-          height: isRider ? 38 : 34,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.4),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: iconColor, size: isRider ? 20 : 17),
-        ),
-      ],
-    );
-  }
-}
-
-class _MapPainter extends CustomPainter {
-  const _MapPainter({required this.safeHeight});
-
-  final double safeHeight;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final streetPaint = Paint()
-      ..color = const Color(0xFF22222B)
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round;
-
-    final secondaryStreetPaint = Paint()
-      ..color = const Color(0xFF1B1B22)
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-
-    // Background road network
-    canvas.drawLine(
-      Offset(0, safeHeight * 0.22),
-      Offset(size.width, safeHeight * 0.18),
-      streetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.2, 0),
-      Offset(size.width * 0.38, size.height),
-      streetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.82, 0),
-      Offset(size.width * 0.65, size.height),
-      streetPaint,
-    );
-    canvas.drawLine(
-      Offset(0, safeHeight * 0.52),
-      Offset(size.width, safeHeight * 0.58),
-      streetPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.1, safeHeight * 0.8),
-      Offset(size.width * 0.9, safeHeight * 0.72),
-      secondaryStreetPaint,
-    );
-
-    // Dynamic Delivery Route (smooth curved line connecting restaurant -> rider -> destination)
-    final routeGlow = Paint()
-      ..color = AppColors.accentRed.withValues(alpha: 0.3)
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final routePath = Path()
-      ..moveTo(68, safeHeight * 0.22)
-      ..cubicTo(
-        size.width * 0.5,
-        safeHeight * 0.20,
-        size.width - 50,
-        safeHeight * 0.30,
-        size.width - 70,
-        safeHeight * 0.44,
-      )
-      ..cubicTo(
-        size.width - 80,
-        safeHeight * 0.56,
-        140,
-        safeHeight * 0.55,
-        100,
-        safeHeight * 0.68,
-      );
-
-    canvas.drawPath(routePath, routeGlow);
-
-    final routeMain = Paint()
-      ..color = AppColors.accentRed
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawPath(routePath, routeMain);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MapPainter oldDelegate) =>
-      oldDelegate.safeHeight != safeHeight;
 }
 

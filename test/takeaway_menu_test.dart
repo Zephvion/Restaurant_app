@@ -79,6 +79,13 @@ void main() {
     await tester.tap(closeButton.last);
     await tester.pumpAndSettle();
 
+    // If search mode is active, dismiss it to reveal the main menu sort row
+    final backIcon = find.byIcon(Icons.arrow_back_ios_new);
+    if (backIcon.evaluate().isNotEmpty) {
+      await tester.tap(backIcon);
+      await tester.pumpAndSettle();
+    }
+
     // 5. Test SORT BY / ORDER BY Button
     final sortByButton = find.text('SORT BY');
     expect(sortByButton, findsOneWidget);
