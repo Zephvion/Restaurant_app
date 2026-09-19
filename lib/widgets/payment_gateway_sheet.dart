@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/payment_method.dart';
+import '../services/razorpay_gateway_service.dart';
 import '../theme/app_colors.dart';
 
 enum PaymentGatewayStatus {
@@ -62,8 +63,6 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   final _cvvCtrl = TextEditingController(text: '789');
   final _upiIdCtrl = TextEditingController();
   bool _useCustomUpi = false;
-  int _countdown = 3;
-  Timer? _timer;
   String? _txnId;
 
   final List<String> _popularBanks = [
@@ -95,7 +94,6 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     _cvvCtrl.dispose();
     _upiIdCtrl.dispose();
     super.dispose();
@@ -136,10 +134,10 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     });
   }
 
-  void _startPayment() {
+  Future<void> _startPayment() async {
     final modeLabel = _currentPaymentModeLabel;
 
-    // Fast-track Pay at Counter / COD without unnecessary countdown
+    // Fast-track Pay at Counter / COD without gateway
     if (_activeKind == PaymentKind.cash) {
       final txn = 'TXN_CTR_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
       _txnId = txn;
@@ -149,19 +147,42 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
 
     setState(() {
       _status = PaymentGatewayStatus.processing;
-      _countdown = 3;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdown > 1) {
-        if (mounted) setState(() => _countdown--);
-      } else {
-        timer.cancel();
-        final txn = 'TXN_PG_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-        _txnId = txn;
-        _completePayment(txn, modeLabel);
-      }
-    });
+    final subMethod = _activeKind == PaymentKind.upi
+        ? _selectedUpiApp
+        : (_activeKind == PaymentKind.card ? _selectedCard : _selectedBank);
+
+    final result = await RazorpayGatewayService.instance.processPayment(
+      amount: widget.amount,
+      kind: _activeKind,
+      subMethod: subMethod,
+      cardCvv: _cvvCtrl.text.trim(),
+      customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      final txn = result.paymentId ??
+          'pay_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+      _txnId = txn;
+      _completePayment(txn, result.paymentMode ?? modeLabel);
+    } else if (result.isDismissed) {
+      setState(() {
+        _status = PaymentGatewayStatus.selecting;
+      });
+    } else {
+      setState(() {
+        _status = PaymentGatewayStatus.selecting;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.error ?? 'Payment was cancelled or failed'),
+          backgroundColor: AppColors.accentRed,
+        ),
+      );
+    }
   }
 
   @override
@@ -799,8 +820,8 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
       child: Column(
         children: [
           SizedBox(
-            width: 70,
-            height: 70,
+            width: 76,
+            height: 76,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -808,13 +829,14 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.copper),
                   strokeWidth: 3.5,
                 ),
-                Text(
-                  '$_countdown',
-                  style: const TextStyle(
-                    color: AppColors.copper,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Icon(
+                  _activeKind == PaymentKind.upi
+                      ? Icons.account_balance_wallet
+                      : (_activeKind == PaymentKind.card
+                          ? Icons.credit_card
+                          : Icons.account_balance),
+                  color: AppColors.copper,
+                  size: 28,
                 ),
               ],
             ),

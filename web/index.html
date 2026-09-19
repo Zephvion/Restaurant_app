@@ -36,6 +36,53 @@
       padding: 0;
     }
   </style>
+
+  <!-- Razorpay Standard Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    window.openRazorpayCheckout = function(optionsJson, callbackName) {
+      try {
+        var options = typeof optionsJson === 'string' ? JSON.parse(optionsJson) : optionsJson;
+        options.handler = function(response) {
+          if (window[callbackName]) {
+            window[callbackName](JSON.stringify({
+              status: 'success',
+              paymentId: response.razorpay_payment_id || ('pay_' + Date.now()),
+              orderId: response.razorpay_order_id || '',
+              signature: response.razorpay_signature || ''
+            }));
+          }
+        };
+        options.modal = {
+          ondismiss: function() {
+            if (window[callbackName]) {
+              window[callbackName](JSON.stringify({
+                status: 'dismissed'
+              }));
+            }
+          }
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(response) {
+          if (window[callbackName]) {
+            window[callbackName](JSON.stringify({
+              status: 'failed',
+              error: (response && response.error && response.error.description) || 'Payment failed'
+            }));
+          }
+        });
+        rzp.open();
+      } catch (e) {
+        console.error("Razorpay open error: ", e);
+        if (window[callbackName]) {
+          window[callbackName](JSON.stringify({
+            status: 'error',
+            error: e.toString()
+          }));
+        }
+      }
+    };
+  </script>
 </head>
 <body style="background-color: #121212;">
   <!--
