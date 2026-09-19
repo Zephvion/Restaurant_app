@@ -5,13 +5,9 @@ import '../../models/dish.dart';
 import '../../routes/app_routes.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/add_button.dart';
 import '../../widgets/basket_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
-import '../../widgets/price_text.dart';
-import '../../widgets/quantity_stepper.dart';
-import '../../widgets/veg_indicator.dart';
 
 /// A reusable category listing screen that displays dishes belonging to a
 /// selected category (Meals, Chicken, Biriyani, Breakfast, Fish, Egg, Veg, etc.).
@@ -376,7 +372,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
   }
 }
 
-/// Food card displayed in the 2-column category grid.
+/// Food card displayed in the 2-column category grid matching the Food Planner design system.
 class _CategoryFoodCard extends StatelessWidget {
   const _CategoryFoodCard({
     required this.dish,
@@ -398,134 +394,201 @@ class _CategoryFoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Food image
-            SizedBox(
-              height: 114,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImageWithFallback(
-                    url: dish.imageUrl,
-                    fit: BoxFit.cover,
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: VegIndicator(isVeg: dish.isVeg, size: 12),
-                    ),
-                  ),
-                  if (dish.rating > 0)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star,
-                                color: Color(0xFFF5B942), size: 12),
-                            const SizedBox(width: 3),
-                            Text(
-                              dish.rating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Details
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          dish.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          dish.subtitle ?? dish.description,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Price + Add button row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: PriceText(price: dish.price, size: 15),
-                        ),
-                        const SizedBox(width: 4),
-                        if (quantity > 0)
-                          QuantityStepper(
-                            quantity: quantity,
-                            size: 24,
-                            fontSize: 12,
-                            onIncrement: onIncrement,
-                            onDecrement: onDecrement,
-                          )
-                        else
-                          AddCircleButton(
-                            onTap: onAdd,
-                            inCart: false,
-                            size: 30,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Food image with rounded corners matching Food Planner
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 110,
+                width: double.infinity,
+                child: NetworkImageWithFallback(
+                  url: dish.imageUrl,
+                  fallbackIcon: Icons.restaurant,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Title & Veg / Non-Veg Indicator
+            Row(
+              children: [
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: dish.isVeg
+                        ? const Color(0xFF22C55E)
+                        : AppColors.accentRed,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    dish.name,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Price & Star Rating
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '₹ ${dish.price.toInt()}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 13),
+                    const SizedBox(width: 2),
+                    Text(
+                      dish.rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Macro details (Calories & Weight)
+            Text(
+              '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+
+            // Stepper / ADD Button
+            _CategoryQuantityButton(
+              quantity: quantity,
+              onAdd: onAdd,
+              onIncrement: onIncrement,
+              onDecrement: onDecrement,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact full-width quantity button matching the Food Planner design.
+class _CategoryQuantityButton extends StatelessWidget {
+  const _CategoryQuantityButton({
+    required this.quantity,
+    required this.onAdd,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  final int quantity;
+  final VoidCallback onAdd;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+
+  @override
+  Widget build(BuildContext context) {
+    if (quantity == 0) {
+      return SizedBox(
+        width: double.infinity,
+        height: 32,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentRed,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, size: 14, color: Colors.white),
+          label: const Text(
+            'ADD',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.accentRed,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.remove, color: Colors.white, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: onDecrement,
+          ),
+          Text(
+            '$quantity',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: onIncrement,
+          ),
+        ],
       ),
     );
   }
