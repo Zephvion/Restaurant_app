@@ -110,10 +110,34 @@ class TableLockService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Receptionist / Staff action to manually unlock or free a table
+  /// Receptionist / Staff / Owner action to manually unlock or free a table after guests leave
   void receptionistReleaseTable(int tableNumber) {
     final lock = getLock(tableNumber);
-    _transferOrRelease(lock, reason: 'Receptionist / Staff manual override');
+    lock.status = TableLockStatus.available;
+    lock.holderUserId = null;
+    lock.holderUserName = null;
+    lock.lockedAt = null;
+    lock.expiresAt = null;
+    lock.waitlist.clear();
+    final msg = 'Table #$tableNumber has been freed and is now available.';
+    _notifications.add(msg);
+    debugPrint('[TableLockService] $msg (Owner / Receptionist manual release)');
+    notifyListeners();
+  }
+
+  /// Guest cancellation: releases the permanently reserved table back to free
+  void cancelReservation(int tableNumber) {
+    final lock = getLock(tableNumber);
+    lock.status = TableLockStatus.available;
+    lock.holderUserId = null;
+    lock.holderUserName = null;
+    lock.lockedAt = null;
+    lock.expiresAt = null;
+    lock.waitlist.clear();
+    final msg = 'Reservation for Table #$tableNumber cancelled by guest. Table is free!';
+    _notifications.add(msg);
+    debugPrint('[TableLockService] $msg');
+    notifyListeners();
   }
 
   /// Receptionist / Staff action to mark a table as occupied/reserved

@@ -12,6 +12,7 @@ import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/customer_support_sheet.dart';
 import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/order_cancellation_sheet.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
 /// Track Order — a world-class, production-ready live delivery tracker
@@ -348,6 +349,17 @@ class _TrackingSheet extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
+                        if (status != OrderStatus.delivered && order != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '(${order?.formattedEstimatedDeliveryTime})',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -370,6 +382,17 @@ class _TrackingSheet extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (status != OrderStatus.delivered && order != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Kitchen Prep: ~${order?.prepTimeMinutes}m · Transit: ~${order?.transitMinutes}m',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -391,7 +414,11 @@ class _TrackingSheet extends StatelessWidget {
                   const Divider(color: AppColors.border, height: 20),
 
                   // ── Stepper ───────────────────────────────────────────
-                  _TrackStepper(status: status),
+                  _TrackStepper(
+                    status: status,
+                    prepTimeMinutes: order?.prepTimeMinutes,
+                    transitMinutes: order?.transitMinutes,
+                  ),
                   const SizedBox(height: 20),
 
                   // ── Delivery Partner Card ─────────────────────────────
@@ -484,6 +511,110 @@ class _TrackingSheet extends StatelessWidget {
                     value: '₹${(order?.grandTotal ?? 410).toInt()}',
                     bold: true,
                   ),
+
+                  // ── Order Cancellation Actions / Details ──────────────
+                  if (order?.canBeCancelled ?? true) ...[
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.cancel_outlined, size: 16),
+                        label: const Text(
+                          'Cancel Order (100% Instant Refund)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accentRed,
+                          side: BorderSide(
+                            color: AppColors.accentRed.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          OrderCancellationSheet.show(
+                            context: context,
+                            orderId: order?.id ?? orderId,
+                            amount: order?.grandTotal ?? 410.0,
+                            paymentMode: order?.paymentMethodLabel ??
+                                'Original Payment Source',
+                            isTakeaway: false,
+                            onConfirmCancel: (reason) async {
+                              await OrderService.instance.cancelOrder(
+                                order?.id ?? orderId,
+                                reason: reason,
+                              );
+                              if (context.mounted) {
+                                AppBanner.showSuccess(
+                                  context,
+                                  'Order #${order?.id ?? orderId} cancelled. Refund processed to ${order?.paymentMethodLabel ?? "source account"}!',
+                                  title: 'Order Cancelled',
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ] else if (order?.isCancelled == true) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentRed.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.accentRed.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.cancel,
+                                  color: AppColors.accentRed, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'ORDER CANCELLED',
+                                style: TextStyle(
+                                  color: AppColors.accentRed,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (order?.cancellationReason != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Reason: ${order!.cancellationReason}',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            order?.refundStatus ??
+                                'Full refund of ₹${(order?.grandTotal ?? 410).toInt()} has been processed to original payment method.',
+                            style: const TextStyle(
+                              color: Color(0xFF81C784),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -585,9 +716,15 @@ class _QuickCallButton extends StatelessWidget {
 }
 
 class _TrackStepper extends StatelessWidget {
-  const _TrackStepper({this.status = OrderStatus.outForDelivery});
+  const _TrackStepper({
+    this.status = OrderStatus.outForDelivery,
+    this.prepTimeMinutes,
+    this.transitMinutes,
+  });
 
   final OrderStatus status;
+  final int? prepTimeMinutes;
+  final int? transitMinutes;
 
   @override
   Widget build(BuildContext context) {
@@ -605,13 +742,21 @@ class _TrackStepper extends StatelessWidget {
 
     final isDone = status == OrderStatus.delivered;
 
+    final prepLabel = prepTimeMinutes != null
+        ? 'Prep\n(~${prepTimeMinutes}m)'
+        : 'Preparing';
+
+    final transitLabel = transitMinutes != null
+        ? 'Transit\n(~${transitMinutes}m)'
+        : 'On the Way';
+
     return Row(
       children: [
         _Step(label: 'Confirmed', done: isAccepted),
         _StepBar(done: isPreparing),
-        _Step(label: 'Preparing', done: isPreparing),
+        _Step(label: prepLabel, done: isPreparing),
         _StepBar(done: isOut),
-        _Step(label: 'On the Way', done: isOut),
+        _Step(label: transitLabel, done: isOut),
         _StepBar(done: isDone),
         _Step(label: 'Delivered', done: isDone),
       ],
@@ -652,7 +797,7 @@ class _Step extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          width: 54,
+          width: 62,
           child: Text(
             label,
             textAlign: TextAlign.center,

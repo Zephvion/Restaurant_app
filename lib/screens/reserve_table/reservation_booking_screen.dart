@@ -32,7 +32,66 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
     super.initState();
     // Start from today
     final now = DateTime.now();
-    _weekStart = now.subtract(Duration(days: now.weekday % 7));
+    _weekStart = DateTime(now.year, now.month, now.day);
+    _selectedDayOffset = 0;
+    _selectedGuests = 2;
+    _validateSelectedTime();
+  }
+
+  DateTime get _selectedDate {
+    return _weekStart.add(Duration(days: _selectedDayOffset ?? 0));
+  }
+
+  bool get _isTodaySelected {
+    final now = DateTime.now();
+    final sel = _selectedDate;
+    return sel.year == now.year && sel.month == now.month && sel.day == now.day;
+  }
+
+  static ({int hour, int minute})? _parseTimeSlot(String slot) {
+    final cleaned = slot.replaceAll(' ', '').toUpperCase();
+    final isPm = cleaned.contains('PM');
+    final isAm = cleaned.contains('AM');
+    final numPart = cleaned.replaceAll('AM', '').replaceAll('PM', '');
+    final parts = numPart.split(':');
+    if (parts.isEmpty) return null;
+    int hour = int.tryParse(parts[0]) ?? 12;
+    int min = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    if (isPm && hour < 12) hour += 12;
+    if (isAm && hour == 12) hour = 0;
+    return (hour: hour, minute: min);
+  }
+
+  List<String> get _availableTimeSlots {
+    final allSlots = MockData.reservationTimeSlots;
+    if (!_isTodaySelected) {
+      // Future dates (tomorrow, day after, etc.): All morning/evening slots are available!
+      return allSlots;
+    }
+
+    final now = DateTime.now();
+    // For today, only show slots strictly after current time (with 15-minute buffer)
+    return allSlots.where((slot) {
+      final parsed = _parseTimeSlot(slot);
+      if (parsed == null) return false;
+      final slotDateTime =
+          DateTime(now.year, now.month, now.day, parsed.hour, parsed.minute);
+      return slotDateTime.isAfter(now.add(const Duration(minutes: 15)));
+    }).toList();
+  }
+
+  void _validateSelectedTime() {
+    final slots = _availableTimeSlots;
+    if (_selectedTime == null || !slots.contains(_selectedTime)) {
+      _selectedTime = slots.isNotEmpty ? slots.first : null;
+    }
+  }
+
+  void _onDaySelected(int i) {
+    setState(() {
+      _selectedDayOffset = i;
+      _validateSelectedTime();
+    });
   }
 
   bool get _canProceed =>
@@ -45,7 +104,8 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
 
   void _nextWeek() => setState(() {
         _weekStart = _weekStart.add(const Duration(days: 7));
-        _selectedDayOffset = null;
+        _selectedDayOffset = 0;
+        _validateSelectedTime();
       });
 
   void _proceed() {
@@ -68,7 +128,13 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
-    return '${months[_weekStart.month - 1]} ${_weekStart.day} - ${end.day}';
+    final startMonth = months[_weekStart.month - 1];
+    final endMonth = months[end.month - 1];
+    if (startMonth == endMonth) {
+      return '$startMonth ${_weekStart.day} - ${end.day}, ${_weekStart.year}';
+    } else {
+      return '$startMonth ${_weekStart.day} - $endMonth ${end.day}, ${_weekStart.year}';
+    }
   }
 
   @override
@@ -187,18 +253,41 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
                     _DateStrip(
                       weekStart: _weekStart,
                       selectedOffset: _selectedDayOffset,
-                      onSelect: (i) =>
-                          setState(() => _selectedDayOffset = i),
+                      onSelect: _onDaySelected,
                     ),
                     const SizedBox(height: 28),
                     // ── Time slots ────────────────────────────────────────
-                    const Text(
-                      'Choose a time for reservation',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Choose a time for reservation',
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 13),
+                        ),
+                        if (_isTodaySelected)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.copper.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'LIVE TODAY SLOTS',
+                              style: TextStyle(
+                                color: AppColors.copper,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 14),
                     _TimeSlotRow(
+                      slots: _availableTimeSlots,
+                      isToday: _isTodaySelected,
                       selectedTime: _selectedTime,
                       onSelect: (t) => setState(() => _selectedTime = t),
                     ),
@@ -290,18 +379,22 @@ class _DateStrip extends StatelessWidget {
                       color: selected
                           ? Colors.white
                           : AppColors.textPrimary,
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (selected)
-                    Text(
-                      days[date.weekday % 7],
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    days[date.weekday % 7],
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white.withOpacity(0.9)
+                          : AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
                     ),
+                  ),
                 ],
               ),
             ),
@@ -315,17 +408,52 @@ class _DateStrip extends StatelessWidget {
 // ── Time slot row ─────────────────────────────────────────────────────────────
 
 class _TimeSlotRow extends StatelessWidget {
-  const _TimeSlotRow({required this.selectedTime, required this.onSelect});
+  const _TimeSlotRow({
+    required this.slots,
+    this.isToday = false,
+    required this.selectedTime,
+    required this.onSelect,
+  });
+
+  final List<String> slots;
+  final bool isToday;
   final String? selectedTime;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    // Show 3 slots at a time — scrollable
+    if (slots.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.maroon.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.maroon.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.accentRed, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'All dining slots for today have concluded. Please select tomorrow to reserve a table.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: MockData.reservationTimeSlots.map((slot) {
+        children: slots.map((slot) {
           final selected = slot == selectedTime;
           return GestureDetector(
             onTap: () => onSelect(slot),
@@ -336,6 +464,11 @@ class _TimeSlotRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? AppColors.accentRed : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected
+                      ? AppColors.accentRed
+                      : Colors.white.withValues(alpha: 0.06),
+                ),
               ),
               child: Text(
                 slot,
@@ -365,26 +498,31 @@ class _GuestRow extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: List.generate(7, (i) {
-          final count = i + 2; // 2..8
+        children: List.generate(12, (i) {
+          final count = i + 1; // 1..12 guests (supports odd numbers 1, 3, 5, 7, 9, 11)
           final isSelected = count == selected;
           return GestureDetector(
             onTap: () => onSelect(count),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 10),
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.accentRed : AppColors.surface,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.accentRed
+                      : Colors.white.withValues(alpha: 0.06),
+                ),
               ),
               alignment: Alignment.center,
               child: Text(
                 '$count',
                 style: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   fontSize: 15,
                 ),
               ),

@@ -94,7 +94,11 @@ class TakeawayController extends ChangeNotifier {
 
   // ── Place Order ─────────────────────────────────────────────────────────────
 
-  Future<TakeawayOrder> placeOrder({Restaurant? restaurantOverride}) async {
+  Future<TakeawayOrder> placeOrder({
+    Restaurant? restaurantOverride,
+    String paymentMethod = 'UPI (Google Pay)',
+    String? transactionId,
+  }) async {
     final restaurant = restaurantOverride ??
         _selectedRestaurant ??
         (MockData.restaurants.isNotEmpty
@@ -109,11 +113,43 @@ class TakeawayController extends ChangeNotifier {
     final order = await TakeawayService.instance.placeTakeawayOrder(
       restaurant: restaurant,
       items: _cart.values.toList(),
+      paymentMethod: paymentMethod,
+      transactionId: transactionId,
     );
 
     _orders.insert(0, order);
     _cart.clear();
     notifyListeners();
     return order;
+  }
+
+  Future<TakeawayOrder?> cancelOrder(
+    String orderId, {
+    required String reason,
+  }) async {
+    final updated = await TakeawayService.instance.cancelTakeawayOrder(
+      orderId,
+      reason: reason,
+    );
+    if (updated != null) {
+      final idx = _orders.indexWhere((o) => o.id == orderId);
+      if (idx != -1) {
+        _orders[idx] = updated;
+        notifyListeners();
+      }
+    }
+    return updated;
+  }
+
+  void reorder(TakeawayOrder order) {
+    _selectedRestaurant = order.restaurant;
+    for (final item in order.items) {
+      if (_cart.containsKey(item.dish.id)) {
+        _cart[item.dish.id]!.quantity += item.quantity;
+      } else {
+        _cart[item.dish.id] = CartItem(dish: item.dish, quantity: item.quantity);
+      }
+    }
+    notifyListeners();
   }
 }

@@ -4,6 +4,7 @@ import '../models/reservation.dart';
 import '../models/restaurant.dart';
 import '../services/auth_service.dart';
 import '../services/reservation_service.dart';
+import '../services/table_lock_service.dart';
 
 /// Singleton [ChangeNotifier] that manages the user's table reservations.
 ///
@@ -42,6 +43,7 @@ class ReservationController extends ChangeNotifier {
     required String timeSlot,
     required int seats,
     required int tableNumber,
+    List<int> tableNumbers = const [],
   }) async {
     final res = await ReservationService.instance.createReservation(
       restaurant: restaurant,
@@ -49,10 +51,54 @@ class ReservationController extends ChangeNotifier {
       timeSlot: timeSlot,
       seats: seats,
       tableNumber: tableNumber,
+      tableNumbers: tableNumbers,
     );
     _reservations.insert(0, res);
     notifyListeners();
     return res;
+  }
+
+  /// Customer cancellation: Cancels their own reservation and releases the table(s)
+  Future<void> cancelReservation(Reservation reservation, {required String reason}) async {
+    // 1. Free lock in TableLockService for all tables
+    for (final num in reservation.allTableNumbers) {
+      TableLockService.instance.cancelReservation(num);
+    }
+
+    // 2. Mark reservation cancelled in ReservationService
+    await ReservationService.instance.cancelReservationWithDetails(
+      reservation.id,
+      reason: reason,
+    );
+
+    // 3. Update local state
+    final idx = _reservations.indexWhere((r) => r.id == reservation.id);
+    if (idx != -1) {
+      _reservations[idx] = _reservations[idx].copyWith(
+        status: 'cancelled',
+        cancellationReason: reason,
+        cancelledAt: DateTime.now(),
+      );
+    }
+    notifyListeners();
+  }
+
+  /// Owner/Staff manual release (kept for Owner Dashboard)
+  Future<void> releaseTable(Reservation reservation) async {
+    // 1. Free lock in TableLockService for all tables
+    for (final num in reservation.allTableNumbers) {
+      TableLockService.instance.receptionistReleaseTable(num);
+    }
+
+    // 2. Mark reservation completed in ReservationService
+    await ReservationService.instance.markReservationCompleted(reservation.id);
+
+    // 3. Update local state
+    final idx = _reservations.indexWhere((r) => r.id == reservation.id);
+    if (idx != -1) {
+      _reservations[idx] = _reservations[idx].copyWith(status: 'completed');
+    }
+    notifyListeners();
   }
 
   Future<void> remove(String id) async {

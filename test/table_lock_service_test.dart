@@ -110,6 +110,64 @@ void main() {
       final nextAttempt = lockService.acquireLock(5, userId: 'usr_sarah');
       expect(nextAttempt.type, equals(AcquireLockResultType.tableReserved));
     });
+
+    test('TEST 6: Owner/Staff manually releases table after guests leave', () {
+      // Alex has reserved Table #5
+      lockService.acquireLock(5, userId: 'usr_alex', userName: 'Alex');
+      lockService.commitReservation(5, userId: 'usr_alex');
+      expect(lockService.isTableReserved(5), isTrue);
+
+      // Owner sees guests leave and releases table
+      lockService.receptionistReleaseTable(5);
+
+      final lock = lockService.getLock(5);
+      expect(lock.status, equals(TableLockStatus.available));
+      expect(lock.holderUserId, isNull);
+      expect(lock.holderUserName, isNull);
+      expect(lockService.isTableReserved(5), isFalse);
+
+      // New guest Sarah can now immediately acquire Table #5
+      final resSarah = lockService.acquireLock(5, userId: 'usr_sarah', userName: 'Sarah');
+      expect(resSarah.type, equals(AcquireLockResultType.acquired));
+    });
+
+    test('TEST 7: Customer reservation cancellation frees table lock immediately', () {
+      // Alex reserves Table #5
+      lockService.acquireLock(5, userId: 'usr_alex', userName: 'Alex');
+      lockService.commitReservation(5, userId: 'usr_alex');
+      expect(lockService.isTableReserved(5), isTrue);
+
+      // Alex cancels reservation
+      lockService.cancelReservation(5);
+
+      final lock = lockService.getLock(5);
+      expect(lock.status, equals(TableLockStatus.available));
+      expect(lock.holderUserId, isNull);
+      expect(lockService.isTableReserved(5), isFalse);
+
+      // Table is immediately available for someone else
+      final res = lockService.acquireLock(5, userId: 'usr_sarah', userName: 'Sarah');
+      expect(res.type, equals(AcquireLockResultType.acquired));
+    });
+
+    test('TEST 8: Combined tables for odd guest count released together on cancellation', () {
+      // 3 guests require combining Table #1 and Table #2 (2-seaters)
+      lockService.acquireLock(1, userId: 'usr_alex', userName: 'Alex');
+      lockService.acquireLock(2, userId: 'usr_alex', userName: 'Alex');
+      lockService.commitReservation(1, userId: 'usr_alex');
+      lockService.commitReservation(2, userId: 'usr_alex');
+
+      expect(lockService.isTableReserved(1), isTrue);
+      expect(lockService.isTableReserved(2), isTrue);
+
+      // Cancel reservation for all combined tables
+      for (final tbl in [1, 2]) {
+        lockService.cancelReservation(tbl);
+      }
+
+      expect(lockService.isTableReserved(1), isFalse);
+      expect(lockService.isTableReserved(2), isFalse);
+    });
   });
 }
 

@@ -13,23 +13,26 @@ enum PaymentGatewayStatus {
 
 /// A comprehensive interactive Payment Gateway bottom sheet.
 /// Supports UPI apps (Google Pay, PhonePe, Paytm, BHIM), Cards (with 3D Secure / CVV),
-/// NetBanking, and Cash on Delivery (COD).
+/// NetBanking, and Pay at Counter / Cash on Delivery.
 class PaymentGatewaySheet extends StatefulWidget {
   const PaymentGatewaySheet({
     super.key,
     required this.amount,
-    required this.selectedMethod,
+    this.selectedMethod,
+    this.isTakeaway = false,
     required this.onPaymentSuccess,
   });
 
   final double amount;
-  final PaymentMethod selectedMethod;
+  final PaymentMethod? selectedMethod;
+  final bool isTakeaway;
   final Function(String transactionId, String paymentMode) onPaymentSuccess;
 
   static Future<void> show({
     required BuildContext context,
     required double amount,
-    required PaymentMethod selectedMethod,
+    PaymentMethod? selectedMethod,
+    bool isTakeaway = false,
     required Function(String transactionId, String paymentMode) onPaymentSuccess,
   }) async {
     await showModalBottomSheet(
@@ -39,6 +42,7 @@ class PaymentGatewaySheet extends StatefulWidget {
       builder: (ctx) => PaymentGatewaySheet(
         amount: amount,
         selectedMethod: selectedMethod,
+        isTakeaway: isTakeaway,
         onPaymentSuccess: onPaymentSuccess,
       ),
     );
@@ -50,19 +54,37 @@ class PaymentGatewaySheet extends StatefulWidget {
 
 class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   PaymentGatewayStatus _status = PaymentGatewayStatus.selecting;
+  late PaymentKind _activeKind;
   String _selectedUpiApp = 'Google Pay';
+  String _selectedCard = 'HDFC VISA (*2453)';
+  String _selectedBank = 'HDFC Bank';
   final _cvvCtrl = TextEditingController(text: '789');
+  final _upiIdCtrl = TextEditingController();
+  bool _useCustomUpi = false;
   int _countdown = 3;
   Timer? _timer;
   String? _txnId;
 
+  final List<String> _popularBanks = [
+    'HDFC Bank',
+    'State Bank of India',
+    'ICICI Bank',
+    'Axis Bank',
+    'Kotak Mahindra',
+    'Punjab National Bank',
+  ];
+
   @override
   void initState() {
     super.initState();
-    if (widget.selectedMethod.kind == PaymentKind.upi) {
-      if (widget.selectedMethod.title.toLowerCase().contains('phonepe')) {
+    // Default to UPI or passed method
+    _activeKind = widget.selectedMethod?.kind ?? PaymentKind.upi;
+
+    if (widget.selectedMethod != null &&
+        widget.selectedMethod!.kind == PaymentKind.upi) {
+      if (widget.selectedMethod!.title.toLowerCase().contains('phonepe')) {
         _selectedUpiApp = 'PhonePe';
-      } else if (widget.selectedMethod.title.toLowerCase().contains('paytm')) {
+      } else if (widget.selectedMethod!.title.toLowerCase().contains('paytm')) {
         _selectedUpiApp = 'Paytm';
       } else {
         _selectedUpiApp = 'Google Pay';
@@ -74,10 +96,46 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   void dispose() {
     _timer?.cancel();
     _cvvCtrl.dispose();
+    _upiIdCtrl.dispose();
     super.dispose();
   }
 
+  String get _currentPaymentModeLabel {
+    switch (_activeKind) {
+      case PaymentKind.upi:
+        return _useCustomUpi && _upiIdCtrl.text.trim().isNotEmpty
+            ? 'UPI (${_upiIdCtrl.text.trim()})'
+            : 'UPI - $_selectedUpiApp';
+      case PaymentKind.card:
+        return 'Card ($_selectedCard)';
+      case PaymentKind.netBanking:
+        return 'Net Banking - $_selectedBank';
+      case PaymentKind.cash:
+        return widget.isTakeaway ? 'Pay at Counter' : 'Cash on Delivery';
+      default:
+        return 'Online Payment';
+    }
+  }
+
   void _startPayment() {
+    final modeLabel = _currentPaymentModeLabel;
+
+    // Fast-track Pay at Counter / COD without unnecessary countdown
+    if (_activeKind == PaymentKind.cash) {
+      final txn = 'TXN_CTR_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+      _txnId = txn;
+      setState(() {
+        _status = PaymentGatewayStatus.success;
+      });
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) {
+          Navigator.of(context).pop();
+          widget.onPaymentSuccess(txn, modeLabel);
+        }
+      });
+      return;
+    }
+
     setState(() {
       _status = PaymentGatewayStatus.processing;
       _countdown = 3;
@@ -96,16 +154,10 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           });
         }
 
-        // Brief delay for success animation, then notify parent
         Future.delayed(const Duration(milliseconds: 900), () {
           if (mounted) {
-            Navigator.of(context).pop(); // close sheet
-            widget.onPaymentSuccess(
-              txn,
-              widget.selectedMethod.kind == PaymentKind.upi
-                  ? 'UPI - $_selectedUpiApp'
-                  : widget.selectedMethod.kind.name.toUpperCase(),
-            );
+            Navigator.of(context).pop();
+            widget.onPaymentSuccess(txn, modeLabel);
           }
         });
       }
@@ -180,10 +232,10 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                         color: AppColors.copper, size: 20),
                   ),
                   const SizedBox(width: 10),
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'PARAGON Secure Pay',
                         style: TextStyle(
                           color: AppColors.textPrimary,
@@ -191,9 +243,9 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Row(
-                        children: const [
+                        children: [
                           Icon(Icons.lock, size: 11, color: Color(0xFF34A853)),
                           SizedBox(width: 4),
                           Text(
@@ -201,7 +253,6 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                             style: TextStyle(
                               color: Color(0xFF34A853),
                               fontSize: 11,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -229,174 +280,460 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // ── Payment Category Switcher Tabs ──────────────────────────────────
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildCategoryTab(PaymentKind.upi, 'UPI', Icons.qr_code_2),
+                _buildCategoryTab(PaymentKind.card, 'Cards', Icons.credit_card),
+                _buildCategoryTab(
+                    PaymentKind.netBanking, 'Net Banking', Icons.account_balance),
+                _buildCategoryTab(
+                  PaymentKind.cash,
+                  widget.isTakeaway ? 'Pay at Counter' : 'Cash on Delivery',
+                  widget.isTakeaway ? Icons.storefront : Icons.payments,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 18),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 18),
 
-          // Payment mode details
-          if (widget.selectedMethod.kind == PaymentKind.upi) ...[
-            const Text(
-              'Select UPI App to Pay',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildUpiOption('Google Pay', Icons.account_balance_wallet, const Color(0xFF4285F4)),
-            _buildUpiOption('PhonePe', Icons.payments, const Color(0xFF5F259F)),
-            _buildUpiOption('Paytm', Icons.qr_code, const Color(0xFF00BAF2)),
-            _buildUpiOption('BHIM UPI', Icons.flash_on, const Color(0xFF00796B)),
-          ] else if (widget.selectedMethod.kind == PaymentKind.card) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.credit_card, color: AppColors.copper, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.selectedMethod.title,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (widget.selectedMethod.subtitle != null)
-                              Text(
-                                widget.selectedMethod.subtitle!,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Card Security Code (CVV):',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 70,
-                        child: TextField(
-                          controller: _cvvCtrl,
-                          obscureText: true,
-                          keyboardType: TextInputType.number,
-                          maxLength: 3,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            fillColor: AppColors.backgroundElevated,
-                            filled: true,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: AppColors.border),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          // ── Category Specific Detail View ─────────────────────────────────
+          if (_activeKind == PaymentKind.upi) ...[
+            _buildUpiSection(),
+          ] else if (_activeKind == PaymentKind.card) ...[
+            _buildCardSection(),
+          ] else if (_activeKind == PaymentKind.netBanking) ...[
+            _buildNetBankingSection(),
           ] else ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.money, color: Color(0xFF34A853), size: 28),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Cash on Delivery (COD)',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Pay cash or UPI directly to delivery partner upon arrival',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildCashSection(),
           ],
 
           const SizedBox(height: 24),
-          // Action Button
+
+          // ── Action Button ──────────────────────────────────────────────────
           ElevatedButton(
             onPressed: _startPayment,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.maroon,
+              backgroundColor: _activeKind == PaymentKind.cash
+                  ? const Color(0xFF2E7D32)
+                  : AppColors.maroon,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  widget.selectedMethod.kind == PaymentKind.cash
-                      ? 'CONFIRM ORDER (₹${widget.amount.toStringAsFixed(2)})'
-                      : 'PAY NOW ₹${widget.amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
+                Icon(
+                  _activeKind == PaymentKind.cash
+                      ? Icons.check_circle_outline
+                      : Icons.lock_outline,
+                  size: 18,
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward_rounded, size: 18),
+                Text(
+                  _getActionButtonLabel(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_rounded, size: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getActionButtonLabel() {
+    switch (_activeKind) {
+      case PaymentKind.upi:
+        return 'PAY ₹${widget.amount.toStringAsFixed(2)} VIA ${_useCustomUpi ? "UPI ID" : _selectedUpiApp.toUpperCase()}';
+      case PaymentKind.card:
+        return 'PAY ₹${widget.amount.toStringAsFixed(2)} VIA CARD';
+      case PaymentKind.netBanking:
+        return 'PAY ₹${widget.amount.toStringAsFixed(2)} VIA $_selectedBank';
+      case PaymentKind.cash:
+        return widget.isTakeaway
+            ? 'CONFIRM ORDER & PAY AT COUNTER'
+            : 'CONFIRM CASH ON DELIVERY';
+      default:
+        return 'PAY NOW ₹${widget.amount.toStringAsFixed(2)}';
+    }
+  }
+
+  Widget _buildCategoryTab(PaymentKind kind, String label, IconData icon) {
+    final isSelected = _activeKind == kind;
+    return GestureDetector(
+      onTap: () => setState(() => _activeKind = kind),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentRed.withValues(alpha: 0.15)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.accentRed : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? AppColors.accentRed : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── UPI Section ─────────────────────────────────────────────────────────────
+  Widget _buildUpiSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Instant UPI App',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildUpiOption('Google Pay', Icons.account_balance_wallet,
+            const Color(0xFF4285F4)),
+        _buildUpiOption('PhonePe', Icons.payments, const Color(0xFF5F259F)),
+        _buildUpiOption('Paytm', Icons.qr_code, const Color(0xFF00BAF2)),
+        _buildUpiOption('BHIM UPI', Icons.flash_on, const Color(0xFF00796B)),
+        const SizedBox(height: 8),
+        // Enter UPI ID option
+        GestureDetector(
+          onTap: () => setState(() => _useCustomUpi = !_useCustomUpi),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _useCustomUpi ? AppColors.copper : AppColors.border,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Or enter UPI ID / VPA',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Icon(
+                      _useCustomUpi
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      color:
+                          _useCustomUpi ? AppColors.copper : AppColors.hint,
+                      size: 18,
+                    ),
+                  ],
+                ),
+                if (_useCustomUpi) ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _upiIdCtrl,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. yourname@okhdfcbank',
+                      hintStyle: const TextStyle(
+                          color: AppColors.hint, fontSize: 13),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      fillColor: AppColors.backgroundElevated,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Card Section ────────────────────────────────────────────────────────────
+  Widget _buildCardSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.credit_card, color: AppColors.copper, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedCard,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const Text(
+                      'Saved Card · Primary',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.arrow_drop_down,
+                    color: AppColors.textSecondary),
+                onSelected: (val) => setState(() => _selectedCard = val),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'HDFC VISA (*2453)',
+                    child: Text('HDFC VISA (*2453)'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'SBI MasterCard (*8754)',
+                    child: Text('SBI MasterCard (*8754)'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'ICICI Rupay (*1129)',
+                    child: Text('ICICI Rupay (*1129)'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Card Security Code (CVV):',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ),
+              SizedBox(
+                width: 70,
+                child: TextField(
+                  controller: _cvvCtrl,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 3,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    fillColor: AppColors.backgroundElevated,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.verified_user_outlined,
+                  size: 13, color: Color(0xFF34A853)),
+              SizedBox(width: 6),
+              Text(
+                'Secured with 3D Secure / OTP Verification',
+                style: TextStyle(color: Color(0xFF34A853), fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Net Banking Section ─────────────────────────────────────────────────────
+  Widget _buildNetBankingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Your Bank',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _popularBanks.map((bank) {
+            final isSelected = _selectedBank == bank;
+            return GestureDetector(
+              onTap: () => setState(() => _selectedBank = bank),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.copper.withValues(alpha: 0.15)
+                      : AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? AppColors.copper : AppColors.border,
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.account_balance,
+                      size: 16,
+                      color:
+                          isSelected ? AppColors.copper : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      bank,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // ── Cash / Counter Section ──────────────────────────────────────────────────
+  Widget _buildCashSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              widget.isTakeaway ? Icons.storefront_rounded : Icons.money_rounded,
+              color: const Color(0xFF34A853),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.isTakeaway
+                      ? 'Pay at Restaurant Counter'
+                      : 'Cash on Delivery (COD)',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.isTakeaway
+                      ? 'No upfront online payment required! Simply pay via Cash, Card, or UPI at the restaurant pickup counter when collecting your hot food parcel.'
+                      : 'Pay cash or UPI directly to delivery partner upon arrival.',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
@@ -406,9 +743,12 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   }
 
   Widget _buildUpiOption(String appName, IconData icon, Color color) {
-    final isSelected = _selectedUpiApp == appName;
+    final isSelected = !_useCustomUpi && _selectedUpiApp == appName;
     return GestureDetector(
-      onTap: () => setState(() => _selectedUpiApp = appName),
+      onTap: () => setState(() {
+        _useCustomUpi = false;
+        _selectedUpiApp = appName;
+      }),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -445,7 +785,8 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
             if (isSelected)
               Icon(Icons.check_circle, color: color, size: 20)
             else
-              const Icon(Icons.radio_button_unchecked, color: AppColors.hint, size: 20),
+              const Icon(Icons.radio_button_unchecked,
+                  color: AppColors.hint, size: 20),
           ],
         ),
       ),
@@ -480,9 +821,9 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           ),
           const SizedBox(height: 24),
           Text(
-            widget.selectedMethod.kind == PaymentKind.upi
+            _activeKind == PaymentKind.upi
                 ? 'Opening $_selectedUpiApp...'
-                : 'Processing Payment securely...',
+                : 'Processing $_currentPaymentModeLabel securely...',
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 17,
@@ -541,9 +882,11 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Payment Verified Successfully!',
-            style: TextStyle(
+          Text(
+            _activeKind == PaymentKind.cash && widget.isTakeaway
+                ? 'Takeaway Confirmed (Pay at Counter)!'
+                : 'Payment Verified Successfully!',
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -551,7 +894,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Ref ID: ${_txnId ?? "TXN_OK"}',
+            'Mode: $_currentPaymentModeLabel · Ref: ${_txnId ?? "TXN_OK"}',
             style: const TextStyle(
               color: AppColors.copper,
               fontSize: 13,
@@ -563,4 +906,3 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     );
   }
 }
-

@@ -42,6 +42,7 @@ class TablePickerScreen extends StatefulWidget {
 
 class _TablePickerScreenState extends State<TablePickerScreen> {
   final Set<int> _selectedTables = {};
+  bool _isSubmitting = false;
   StreamSubscription<String>? _lockNotificationSub;
 
   static final List<RestaurantTable> _allTables = [
@@ -209,11 +210,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
 
     // Check if table is permanently reserved
     if (lockService.isTableReserved(table.number) || !table.isAvailable) {
-      AppBanner.showError(
-        context,
-        'Table #${table.number} is already booked for this slot.',
-        title: 'Table Unavailable',
-      );
+      _showReservedTableModal(table);
       return;
     }
 
@@ -237,6 +234,103 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
         }
       }
     });
+  }
+
+  void _showReservedTableModal(RestaurantTable table) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppColors.backgroundElevated,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppColors.border, width: 1.2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.table_restaurant, color: AppColors.accentRed, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Table #${table.number} (${table.title})',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Currently Reserved / Occupied',
+                        style: TextStyle(
+                          color: AppColors.accentRed,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Text(
+                'This table is currently reserved for this dining slot. Please select another available table or combine adjacent tables to accommodate your party.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+              ),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                'OK, Got It',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showLockedConflictModal(RestaurantTable table) {
@@ -398,17 +492,6 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                TableLockService.instance.simulateInstantTimeout(table.number);
-                Navigator.of(ctx).pop();
-              },
-              child: const Text(
-                '⚡ Simulate Person 1 Timeout / Abandon Lock',
-                style: TextStyle(color: AppColors.copper, fontSize: 12),
-              ),
-            ),
           ],
         ),
       ),
@@ -424,11 +507,12 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
     RestaurantTable? combinableCandidate;
     final capacityShortfall = guestCount - table.capacity;
     if (capacityShortfall > 0 && !hasDirectAvailable) {
-      combinableCandidate = _allTables.firstWhere(
+      final availableCandidates = _allTables.where(
         (t) => t.number != table.number && t.isAvailable && !_selectedTables.contains(t.number),
-        orElse: () => table,
       );
-      if (combinableCandidate.number == table.number) combinableCandidate = null;
+      // Prefer candidate that meets or exceeds the shortfall
+      combinableCandidate = availableCandidates.where((t) => t.capacity >= capacityShortfall).firstOrNull ??
+          availableCandidates.firstOrNull;
     }
 
     showModalBottomSheet(
@@ -516,7 +600,7 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   const Icon(Icons.timer, color: Color(0xFF22C55E), size: 16),
                   const SizedBox(width: 8),
@@ -603,8 +687,8 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(Icons.auto_awesome, color: AppColors.copper, size: 18),
                             SizedBox(width: 8),
                             Text(
@@ -689,34 +773,54 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
   }
 
   Future<void> _confirmReservation() async {
-    final args = _args;
-    final tableListStr = _selectedTables.toList()..sort();
-    final tableDisplay = tableListStr.map((t) => '#$t').join(' & ');
+    if (_isSubmitting || _selectedTables.isEmpty) return;
+    setState(() => _isSubmitting = true);
 
-    // 100% Free Table Reservation — No payment required
-    final res = await ReservationController.instance.createReservation(
-      restaurant: args.restaurant,
-      date: args.date,
-      timeSlot: args.timeSlot,
-      seats: args.seats,
-      tableNumber: _selectedTables.first,
-    );
+    try {
+      final args = _args;
+      final tableListStr = _selectedTables.toList()..sort();
+      final tableDisplay = tableListStr.map((t) => '#$t').join(' & ');
 
-    // Commit locks for all selected tables
-    for (final num in _selectedTables) {
-      TableLockService.instance.commitReservation(num);
-    }
-
-    if (mounted) {
-      AppBanner.showSuccess(
-        context,
-        'Table $tableDisplay confirmed for ${args.seats} guests!',
-        title: 'Reservation Confirmed',
+      // 100% Free Table Reservation — No payment required
+      await ReservationController.instance.createReservation(
+        restaurant: args.restaurant,
+        date: args.date,
+        timeSlot: args.timeSlot,
+        seats: args.seats,
+        tableNumber: _selectedTables.first,
+        tableNumbers: tableListStr,
       );
-      Navigator.of(context).pushNamed(
-        AppRoutes.reservationSuccess,
-        arguments: res,
-      );
+
+      // Commit locks for all selected tables
+      for (final num in _selectedTables) {
+        TableLockService.instance.commitReservation(num);
+      }
+
+      if (mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Table $tableDisplay confirmed for ${args.seats} guests!',
+          title: 'Reservation Confirmed',
+        );
+        // Direct clean redirect to Reserve Dashboard where the reservation is displayed
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.reserveDashboard,
+          (route) => route.settings.name == AppRoutes.home || route.isFirst,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error confirming table reservation: $e');
+      if (mounted) {
+        AppBanner.showError(
+          context,
+          'Could not complete reservation. Please try again.',
+          title: 'Reservation Error',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -1039,23 +1143,34 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                         const SizedBox(height: 14),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentRed,
+                            backgroundColor: _isSubmitting
+                                ? AppColors.accentRed.withValues(alpha: 0.6)
+                                : AppColors.accentRed,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             minimumSize: const Size(double.infinity, 50),
                           ),
-                          onPressed: _confirmReservation,
-                          child: Text(
-                            isEnoughCapacity
-                                ? 'CONFIRM TABLE RESERVATION'
-                                : 'CONFIRM TABLE #${_selectedTables.join(' & ')} (${totalCap}/${args.seats} SEATS)',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              letterSpacing: 1.1,
-                            ),
-                          ),
+                          onPressed: _isSubmitting ? null : _confirmReservation,
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  isEnoughCapacity
+                                      ? 'CONFIRM TABLE RESERVATION'
+                                      : 'CONFIRM TABLE #${_selectedTables.join(' & ')} ($totalCap/${args.seats} SEATS)',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
                         ),
                       ],
                     ),

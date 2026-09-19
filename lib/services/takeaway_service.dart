@@ -18,6 +18,8 @@ class TakeawayService {
   Future<TakeawayOrder> placeTakeawayOrder({
     required Restaurant restaurant,
     required List<CartItem> items,
+    String paymentMethod = 'UPI (Google Pay)',
+    String? transactionId,
   }) async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
     final orderId = 'TK${1000 + DateTime.now().millisecondsSinceEpoch % 9000}';
@@ -28,6 +30,8 @@ class TakeawayService {
       restaurant: restaurant,
       items: items,
       status: TakeawayStatus.readyForTakeaway,
+      paymentMethod: paymentMethod,
+      transactionId: transactionId,
     );
 
     _localTakeaways.insert(0, order);
@@ -45,6 +49,39 @@ class TakeawayService {
     }
 
     return order;
+  }
+
+  Future<TakeawayOrder?> cancelTakeawayOrder(
+    String orderId, {
+    required String reason,
+  }) async {
+    final idx = _localTakeaways.indexWhere((o) => o.id == orderId);
+    if (idx == -1) return null;
+
+    final updated = _localTakeaways[idx].copyWith(
+      status: TakeawayStatus.cancelled,
+      cancellationReason: reason,
+      cancelledAt: DateTime.now(),
+    );
+    _localTakeaways[idx] = updated;
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('takeaways')
+            .doc(orderId)
+            .update({
+              'status': TakeawayStatus.cancelled.name,
+              'cancellationReason': reason,
+              'cancelledAt': DateTime.now().toIso8601String(),
+            })
+            .timeout(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint('Error cancelling takeaway in Firestore: $e');
+      }
+    }
+
+    return updated;
   }
 
   Future<List<TakeawayOrder>> getUserTakeaways(String userId) async {
