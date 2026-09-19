@@ -48,10 +48,9 @@ class TakeawayDashboardScreen extends StatelessWidget {
                         Navigator.of(context).pushNamed(AppRoutes.takeawayMenu);
                       },
                     ),
-                    const SizedBox(height: 24),
-
-                    // Active Orders or Takeaway Highlights
+                    // Active Orders
                     if (ctrl.orders.isNotEmpty) ...[
+                      const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -77,13 +76,6 @@ class TakeawayDashboardScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 16),
                             child: TakeawayOrderCard(order: order),
                           )),
-                    ] else ...[
-                      _TakeawayHighlights(
-                        onExploreMenu: () {
-                          ctrl.selectRestaurant(currentRest);
-                          Navigator.of(context).pushNamed(AppRoutes.takeawayMenu);
-                        },
-                      ),
                     ],
                   ],
                 ),
@@ -362,105 +354,6 @@ class _NearbyStoreCard extends StatelessWidget {
           PrimaryButton(
             label: 'Order Takeaway from this Outlet',
             onPressed: onOrderNow,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Takeaway Highlights ──────────────────────────────────────────────────────
-
-class _TakeawayHighlights extends StatelessWidget {
-  const _TakeawayHighlights({required this.onExploreMenu});
-  final VoidCallback onExploreMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Why Order Paragon Takeaway?',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 14),
-        _buildFeatureTile(
-          icon: Icons.flash_on_rounded,
-          iconColor: Colors.amber,
-          title: 'Express Priority Counter',
-          subtitle: 'Skip the dining queue — your order is packed and waiting hot.',
-        ),
-        const SizedBox(height: 10),
-        _buildFeatureTile(
-          icon: Icons.money_off_csred_rounded,
-          iconColor: const Color(0xFF4CAF50),
-          title: 'Zero Delivery Fee',
-          subtitle: 'Enjoy authentic Paragon delicacies at direct restaurant menu prices.',
-        ),
-        const SizedBox(height: 10),
-        _buildFeatureTile(
-          icon: Icons.soup_kitchen_rounded,
-          iconColor: AppColors.copper,
-          title: 'Piping Hot Handover',
-          subtitle: 'Prepared fresh just minutes before your designated pickup time.',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeatureTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 0.7),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
