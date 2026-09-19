@@ -8,6 +8,9 @@ import '../theme/app_colors.dart';
 enum PaymentGatewayStatus {
   selecting,
   processing,
+  upiIntent,
+  card3dSecure,
+  netBankingAuth,
   success,
   failed,
 }
@@ -62,6 +65,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   String _selectedBank = 'HDFC Bank';
   final _cvvCtrl = TextEditingController(text: '789');
   final _upiIdCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController(text: '7492');
   bool _useCustomUpi = false;
   String? _txnId;
 
@@ -96,6 +100,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   void dispose() {
     _cvvCtrl.dispose();
     _upiIdCtrl.dispose();
+    _otpCtrl.dispose();
     super.dispose();
   }
 
@@ -145,43 +150,34 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
       return;
     }
 
-    setState(() {
-      _status = PaymentGatewayStatus.processing;
-    });
-
-    final subMethod = _activeKind == PaymentKind.upi
-        ? _selectedUpiApp
-        : (_activeKind == PaymentKind.card ? _selectedCard : _selectedBank);
-
-    final result = await RazorpayGatewayService.instance.processPayment(
-      amount: widget.amount,
-      kind: _activeKind,
-      subMethod: subMethod,
-      cardCvv: _cvvCtrl.text.trim(),
-      customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
-    );
-
-    if (!mounted) return;
-
-    if (result.success) {
-      final txn = result.paymentId ??
-          'pay_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
-      _txnId = txn;
-      _completePayment(txn, result.paymentMode ?? modeLabel);
-    } else if (result.isDismissed) {
-      setState(() {
-        _status = PaymentGatewayStatus.selecting;
-      });
-    } else {
-      setState(() {
-        _status = PaymentGatewayStatus.selecting;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.error ?? 'Payment was cancelled or failed'),
-          backgroundColor: AppColors.accentRed,
-        ),
+    if (_activeKind == PaymentKind.upi) {
+      // 1. Immediately launch native UPI intent / app redirect
+      final subMethod = _selectedUpiApp;
+      RazorpayGatewayService.instance.launchNativeUpiApp(
+        subMethod: subMethod,
+        amount: widget.amount,
+        customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
       );
+
+      // 2. Switch to interactive UPI Intent & Scan QR view
+      setState(() {
+        _status = PaymentGatewayStatus.upiIntent;
+      });
+      return;
+    }
+
+    if (_activeKind == PaymentKind.card) {
+      setState(() {
+        _status = PaymentGatewayStatus.card3dSecure;
+      });
+      return;
+    }
+
+    if (_activeKind == PaymentKind.netBanking) {
+      setState(() {
+        _status = PaymentGatewayStatus.netBankingAuth;
+      });
+      return;
     }
   }
 
@@ -222,6 +218,9 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
 
               if (_status == PaymentGatewayStatus.selecting) _buildSelectingView(),
               if (_status == PaymentGatewayStatus.processing) _buildProcessingView(),
+              if (_status == PaymentGatewayStatus.upiIntent) _buildUpiIntentView(),
+              if (_status == PaymentGatewayStatus.card3dSecure) _buildCard3dSecureView(),
+              if (_status == PaymentGatewayStatus.netBankingAuth) _buildNetBankingAuthView(),
               if (_status == PaymentGatewayStatus.success) _buildSuccessView(),
             ],
           ),
@@ -878,6 +877,529 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  Widget _buildUpiIntentView() {
+    final upiUrl = RazorpayGatewayService.getUpiUri(
+      amount: widget.amount,
+      subMethod: _selectedUpiApp,
+      customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
+    );
+
+    Color brandColor;
+    IconData brandIcon;
+    final lower = _selectedUpiApp.toLowerCase();
+    if (lower.contains('phonepe')) {
+      brandColor = const Color(0xFF5F259F);
+      brandIcon = Icons.payments_rounded;
+    } else if (lower.contains('google pay') || lower.contains('gpay')) {
+      brandColor = const Color(0xFF4285F4);
+      brandIcon = Icons.account_balance_wallet_rounded;
+    } else if (lower.contains('paytm')) {
+      brandColor = const Color(0xFF00BAF2);
+      brandIcon = Icons.qr_code_rounded;
+    } else {
+      brandColor = AppColors.copper;
+      brandIcon = Icons.flash_on_rounded;
+    }
+
+    final qrApiUrl =
+        'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${Uri.encodeComponent(upiUrl)}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: brandColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(brandIcon, color: brandColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$_selectedUpiApp App',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Triggered $_selectedUpiApp on device',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  '₹${widget.amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Action 1: Launch App Button
+          ElevatedButton.icon(
+            onPressed: () {
+              RazorpayGatewayService.instance.launchNativeUpiApp(
+                subMethod: _selectedUpiApp,
+                amount: widget.amount,
+                customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
+              );
+            },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: Text('Open $_selectedUpiApp App Again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: brandColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Divider
+          Row(
+            children: [
+              const Expanded(child: Divider(color: AppColors.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  'OR SCAN QR CODE ON PHONE',
+                  style: TextStyle(
+                    color: AppColors.textSecondary.withValues(alpha: 0.8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider(color: AppColors.border)),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // QR Code Display
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  qrApiUrl,
+                  width: 140,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 140,
+                    height: 140,
+                    color: Colors.grey.shade200,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(brandIcon, color: brandColor, size: 36),
+                        const SizedBox(height: 6),
+                        Text(
+                          _selectedUpiApp,
+                          style: TextStyle(
+                            color: brandColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              'Open $_selectedUpiApp / any UPI app on phone and scan',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Primary Success Button
+          ElevatedButton(
+            onPressed: () {
+              final txn = 'UPI_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+              _completePayment(txn, 'UPI - $_selectedUpiApp');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF34A853),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle_outline, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'I HAVE COMPLETED PAYMENT — VERIFY',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _status = PaymentGatewayStatus.selecting),
+              child: const Text(
+                'Cancel and choose other method',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard3dSecureView() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.copper.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.security_rounded, color: AppColors.copper, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '3D Secure Verification',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      _selectedCard,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  '₹${widget.amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter One-Time Password (OTP)',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Simulated SMS OTP sent to registered number ending in ••2453',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _otpCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter 4-digit OTP',
+                    hintStyle: const TextStyle(color: AppColors.hint, fontSize: 14, letterSpacing: 1),
+                    fillColor: AppColors.backgroundElevated,
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.copper),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              final txn = 'CARD_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+              _completePayment(txn, 'Card ($_selectedCard)');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.copper,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: Text(
+              'AUTHORIZE PAYMENT OF ₹${widget.amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _status = PaymentGatewayStatus.selecting),
+              child: const Text(
+                'Cancel and choose other method',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNetBankingAuthView() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1565C0).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.account_balance_rounded, color: Color(0xFF1565C0), size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$_selectedBank Gateway',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Text(
+                      'Secure Net Banking Gateway',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  '₹${widget.amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.copper,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Customer ID / Net Banking User ID',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundElevated,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'cust_paragon_8492',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Icon(Icons.verified_user, color: Colors.green.shade400, size: 18),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              final txn = 'NB_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+              _completePayment(txn, 'Net Banking - $_selectedBank');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1565C0),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: Text(
+              'LOGIN & AUTHORIZE DEBIT OF ₹${widget.amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _status = PaymentGatewayStatus.selecting),
+              child: const Text(
+                'Cancel and choose other method',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
             ),
           ),
         ],

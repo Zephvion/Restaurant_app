@@ -59,22 +59,13 @@ class RazorpayGatewayService {
     final amountInPaise = (amount * 100).round();
     final modeLabel = _getModeLabel(kind, subMethod, customUpiId);
 
-    // 1. If on mobile device and UPI selected, attempt direct UPI intent launch
-    if (!kIsWeb && kind == PaymentKind.upi && subMethod != null) {
-      final launched = await _tryLaunchNativeUpiApp(
+    // 1. If UPI selected, attempt direct UPI intent / app launch
+    if (kind == PaymentKind.upi && subMethod != null) {
+      await launchNativeUpiApp(
         subMethod: subMethod,
         amount: amount,
         customUpiId: customUpiId,
       );
-      if (launched) {
-        // Return successful simulated intent completion
-        final txn = 'upi_${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
-        return PaymentGatewayResult(
-          success: true,
-          paymentId: txn,
-          paymentMode: modeLabel,
-        );
-      }
     }
 
     // 2. Prepare Razorpay Standard Checkout options
@@ -145,46 +136,68 @@ class RazorpayGatewayService {
     return _fallbackSimulation(modeLabel);
   }
 
-  /// Attempts to launch native UPI apps on Android/iOS via standard URI schemes
-  Future<bool> _tryLaunchNativeUpiApp({
-    required String subMethod,
+  /// Generates the standard NPCI UPI payment URI string
+  static String getUpiUri({
     required double amount,
+    String? subMethod,
     String? customUpiId,
-  }) async {
+  }) {
     final vpa = (customUpiId != null && customUpiId.trim().isNotEmpty)
         ? customUpiId.trim()
         : merchantUpiId;
 
     final baseQuery =
-        'pa=$vpa&pn=${Uri.encodeComponent(merchantName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=ParagonOrder';
+        'pa=$vpa&pn=${Uri.encodeComponent(merchantName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=OrderPayment';
 
-    Uri? targetUri;
-    final lower = subMethod.toLowerCase();
-
+    final lower = (subMethod ?? '').toLowerCase();
     if (lower.contains('phonepe')) {
-      targetUri = Uri.parse('phonepe://pay?$baseQuery');
+      return 'phonepe://pay?$baseQuery';
     } else if (lower.contains('google pay') || lower.contains('gpay')) {
-      targetUri = Uri.parse('tez://upi/pay?$baseQuery');
+      return 'tez://upi/pay?$baseQuery';
     } else if (lower.contains('paytm')) {
-      targetUri = Uri.parse('paytmmp://pay?$baseQuery');
+      return 'paytmmp://pay?$baseQuery';
     } else {
-      targetUri = Uri.parse('upi://pay?$baseQuery');
+      return 'upi://pay?$baseQuery';
     }
+  }
+
+  /// Attempts to launch native UPI apps on Android/iOS/Web via standard URI schemes
+  Future<bool> launchNativeUpiApp({
+    required String subMethod,
+    required double amount,
+    String? customUpiId,
+  }) async {
+    final uriStr = getUpiUri(
+      subMethod: subMethod,
+      amount: amount,
+      customUpiId: customUpiId,
+    );
+    final targetUri = Uri.parse(uriStr);
 
     try {
-      if (await canLaunchUrl(targetUri)) {
-        await launchUrl(targetUri, mode: LaunchMode.externalApplication);
-        return true;
-      }
-      // Fallback to generic upi://pay
-      final generic = Uri.parse('upi://pay?$baseQuery');
-      if (await canLaunchUrl(generic)) {
-        await launchUrl(generic, mode: LaunchMode.externalApplication);
-        return true;
-      }
+      final launched = await launchUrl(
+        targetUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return true;
     } catch (e) {
-      debugPrint('Could not launch native UPI app: $e');
+      debugPrint('Direct app scheme launch error: $e');
     }
+
+    // Fallback to generic upi://pay scheme
+    final genericUri = Uri.parse(
+      'upi://pay?pa=${customUpiId ?? merchantUpiId}&pn=${Uri.encodeComponent(merchantName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=OrderPayment',
+    );
+    try {
+      final launched = await launchUrl(
+        genericUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return true;
+    } catch (e) {
+      debugPrint('Generic UPI scheme launch error: $e');
+    }
+
     return false;
   }
 
