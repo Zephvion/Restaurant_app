@@ -9,7 +9,6 @@ import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
-import '../../widgets/nutrition_badge.dart';
 import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/veg_indicator.dart';
@@ -197,21 +196,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                       _categoryTabs(),
                       const SizedBox(height: 18),
                       if (_selectedTab == 0) ...[
-                        _featuredRail(),
-                        const SizedBox(height: 26),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _sectionHeader('Combination Breakfast'),
-                        ),
-                        const SizedBox(height: 14),
-                        _combinationList(),
-                        const SizedBox(height: 26),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _sectionHeader('Recommended Breakfast'),
-                        ),
-                        const SizedBox(height: 14),
-                        _recommendedRail(),
+                        _buildTab0(),
                       ] else ...[
                         _categoryFilteredList(),
                       ],
@@ -338,10 +323,10 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
+                    const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Takeaway orders',
                           style: TextStyle(
                             color: AppColors.textPrimary,
@@ -349,8 +334,8 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(
+                        SizedBox(width: 4),
+                        Icon(
                           Icons.keyboard_arrow_down,
                           size: 18,
                           color: AppColors.copper,
@@ -544,20 +529,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
               ),
             )
           else
-            ...results.map((dish) {
-              final qty = _ctrl.quantityOf(dish);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _TakeawayListTile(
-                  dish: dish,
-                  quantity: qty,
-                  onTap: () => _openProduct(dish),
-                  onAdd: () => _ctrl.add(dish),
-                  onIncrement: () => _ctrl.increment(dish),
-                  onDecrement: () => _ctrl.decrement(dish),
-                ),
-              );
-            }),
+            _buildDishGrid(results, padding: EdgeInsets.zero),
         ],
       ),
     );
@@ -720,129 +692,110 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     final category = MockData.categoryTabs[_selectedTab];
     final dishes = _getDishesForCategory(category);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader('$category Dishes (${dishes.length})'),
-          const SizedBox(height: 14),
-          if (dishes.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Column(
-                  children: [
-                    const Icon(Icons.restaurant_menu,
-                        color: AppColors.textSecondary, size: 48),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No dishes available in $category',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 15,
-                      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _sectionHeader('$category Dishes (${dishes.length})'),
+        ),
+        const SizedBox(height: 14),
+        if (dishes.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  const Icon(Icons.restaurant_menu,
+                      color: AppColors.textSecondary, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No dishes available in $category',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 15,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            )
-          else
-            ...dishes.map((dish) {
-              final qty = _ctrl.quantityOf(dish);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _TakeawayListTile(
-                  dish: dish,
-                  quantity: qty,
-                  onTap: () => _openProduct(dish),
-                  onAdd: () => _ctrl.add(dish),
-                  onIncrement: () => _ctrl.increment(dish),
-                  onDecrement: () => _ctrl.decrement(dish),
-                ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-
-  // ── Featured Rail ───────────────────────────────────────────────────────────
-
-  Widget _featuredRail() {
-    final dishes = _applySort(MockData.frequentOrders);
-    return SizedBox(
-      height: 264,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: dishes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (context, i) {
-          final dish = dishes[i];
-          final qty = _ctrl.quantityOf(dish);
-          return _TakeawayDishCard(
-            dish: dish,
-            quantity: qty,
-            onTap: () => _openProduct(dish),
-            onAdd: () => _ctrl.add(dish),
-            onIncrement: () => _ctrl.increment(dish),
-            onDecrement: () => _ctrl.decrement(dish),
-          );
-        },
-      ),
-    );
-  }
-
-  // ── Combination List ────────────────────────────────────────────────────────
-
-  Widget _combinationList() {
-    final dishes = _applySort(MockData.combinationBreakfast);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: dishes.map((dish) {
-          final qty = _ctrl.quantityOf(dish);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _TakeawayListTile(
-              dish: dish,
-              quantity: qty,
-              onTap: () => _openProduct(dish),
-              onAdd: () => _ctrl.add(dish),
-              onIncrement: () => _ctrl.increment(dish),
-              onDecrement: () => _ctrl.decrement(dish),
             ),
-          );
-        }).toList(),
-      ),
+          )
+        else
+          _buildDishGrid(dishes),
+      ],
     );
   }
 
-  // ── Recommended Rail ────────────────────────────────────────────────────────
+  // ── Tab 0: Frequent Orders, Combination & Recommended Sections ───────────────
 
-  Widget _recommendedRail() {
-    final dishes = _applySort(MockData.recommendedBreakfast);
-    return SizedBox(
-      height: 290,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: dishes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (context, i) {
-          final dish = dishes[i];
-          final qty = _ctrl.quantityOf(dish);
-          return _TakeawayRecommendedCard(
-            dish: dish,
-            quantity: qty,
-            onTap: () => _openProduct(dish),
-            onAdd: () => _ctrl.add(dish),
-            onIncrement: () => _ctrl.increment(dish),
-            onDecrement: () => _ctrl.decrement(dish),
-          );
-        },
+  Widget _buildTab0() {
+    final frequentDishes = _applySort(MockData.frequentOrders);
+    final combinationDishes = _applySort(MockData.combinationBreakfast);
+    final recommendedDishes = _applySort(MockData.recommendedBreakfast);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (frequentDishes.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _sectionHeader('Frequent Orders'),
+          ),
+          const SizedBox(height: 14),
+          _buildDishGrid(frequentDishes),
+          const SizedBox(height: 26),
+        ],
+        if (combinationDishes.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _sectionHeader('Combination Breakfast'),
+          ),
+          const SizedBox(height: 14),
+          _buildDishGrid(combinationDishes),
+          const SizedBox(height: 26),
+        ],
+        if (recommendedDishes.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _sectionHeader('Recommended Breakfast'),
+          ),
+          const SizedBox(height: 14),
+          _buildDishGrid(recommendedDishes),
+        ],
+      ],
+    );
+  }
+
+  // ── 2-Column Vertical Dish Grid ─────────────────────────────────────────────
+
+  Widget _buildDishGrid(List<Dish> dishes, {EdgeInsetsGeometry? padding}) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final childAspectRatio = screenWidth < 380 ? 0.60 : 0.65;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: padding ?? const EdgeInsets.symmetric(horizontal: 20),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: childAspectRatio,
       ),
+      itemCount: dishes.length,
+      itemBuilder: (context, i) {
+        final dish = dishes[i];
+        final qty = _ctrl.quantityOf(dish);
+
+        return _TakeawayFoodCard(
+          dish: dish,
+          quantity: qty,
+          onTap: () => _openProduct(dish),
+          onAdd: () => _ctrl.add(dish),
+          onIncrement: () => _ctrl.increment(dish),
+          onDecrement: () => _ctrl.decrement(dish),
+        );
+      },
     );
   }
 
@@ -1269,89 +1222,10 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   }
 }
 
-// ── Takeaway Dish Card (Frequent order rail) ───────────────────────────────────
+// ── Takeaway Food Card (Universal 2-Column Vertical Design) ───────────────────
 
-class _TakeawayDishCard extends StatelessWidget {
-  const _TakeawayDishCard({
-    required this.dish,
-    required this.quantity,
-    required this.onTap,
-    required this.onAdd,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  final Dish dish;
-  final int quantity;
-  final VoidCallback onTap;
-  final VoidCallback onAdd;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 190,
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 130,
-                width: double.infinity,
-                child: NetworkImageWithFallback(url: dish.imageUrl),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dish.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DishBadges(dish: dish),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        PriceText(price: dish.price, size: 16),
-                        _QuantityStepperButton(
-                          quantity: quantity,
-                          onAdd: onAdd,
-                          onIncrement: onIncrement,
-                          onDecrement: onDecrement,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Takeaway List Tile (Category Dishes & Combinations) ────────────────────────
-
-class _TakeawayListTile extends StatelessWidget {
-  const _TakeawayListTile({
+class _TakeawayFoodCard extends StatelessWidget {
+  const _TakeawayFoodCard({
     required this.dish,
     required this.quantity,
     required this.onTap,
@@ -1373,144 +1247,203 @@ class _TakeawayListTile extends StatelessWidget {
         ? dish.name
         : '${dish.name} - ${dish.subtitle}';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Food image with rounded corners
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: NetworkImageWithFallback(
+                    url: dish.imageUrl,
+                    fallbackIcon: Icons.restaurant,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Title & Veg / Non-Veg Indicator
+            Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 74,
-                    height: 74,
-                    child: NetworkImageWithFallback(url: dish.imageUrl),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: dish.isVeg
+                        ? const Color(0xFF22C55E)
+                        : AppColors.accentRed,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      DishBadges(dish: dish),
-                      const SizedBox(height: 8),
-                      PriceText(price: dish.price, size: 15),
-                    ],
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                _QuantityStepperButton(
-                  quantity: quantity,
-                  onAdd: onAdd,
-                  onIncrement: onIncrement,
-                  onDecrement: onDecrement,
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 4),
+
+            // Price & Star Rating
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '₹ ${dish.price.toInt()}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 12),
+                    const SizedBox(width: 2),
+                    Text(
+                      dish.rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 3),
+
+            // Macro details (Calories & Weight)
+            Text(
+              '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            // Stepper / ADD Button
+            _TakeawayQuantityButton(
+              quantity: quantity,
+              onAdd: onAdd,
+              onIncrement: onIncrement,
+              onDecrement: onDecrement,
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ── Takeaway Recommended Card ─────────────────────────────────────────────────
+// ── Full-Width Takeaway Quantity Button (Matches Universal Design) ────────────
 
-class _TakeawayRecommendedCard extends StatelessWidget {
-  const _TakeawayRecommendedCard({
-    required this.dish,
+class _TakeawayQuantityButton extends StatelessWidget {
+  const _TakeawayQuantityButton({
     required this.quantity,
-    required this.onTap,
     required this.onAdd,
     required this.onIncrement,
     required this.onDecrement,
   });
 
-  final Dish dish;
   final int quantity;
-  final VoidCallback onTap;
   final VoidCallback onAdd;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
 
   @override
   Widget build(BuildContext context) {
-    final title = dish.subtitle == null
-        ? dish.name
-        : '${dish.name} - ${dish.subtitle}';
-
-    return SizedBox(
-      width: 175,
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: ClipOval(
-                  child: SizedBox(
-                    width: 100,
-                    height: 100,
-                    child: NetworkImageWithFallback(url: dish.imageUrl),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                child: Column(
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    PriceText(price: dish.price, size: 15),
-                    const SizedBox(height: 8),
-                    DishBadges(dish: dish),
-                    const SizedBox(height: 12),
-                    _QuantityStepperButton(
-                      quantity: quantity,
-                      onAdd: onAdd,
-                      onIncrement: onIncrement,
-                      onDecrement: onDecrement,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    if (quantity == 0) {
+      return SizedBox(
+        width: double.infinity,
+        height: 32,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentRed,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, size: 14, color: Colors.white),
+          label: const Text(
+            'ADD',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.accentRed,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.remove, color: Colors.white, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: onDecrement,
+          ),
+          Text(
+            '$quantity',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: onIncrement,
+          ),
+        ],
       ),
     );
   }
