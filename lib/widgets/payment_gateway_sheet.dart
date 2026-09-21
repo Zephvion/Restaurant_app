@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/payment_method.dart';
-import '../services/razorpay_gateway_service.dart';
+import '../services/cashfree_gateway_service.dart';
 import '../theme/app_colors.dart';
 
 enum PaymentGatewayStatus {
@@ -153,7 +153,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     if (_activeKind == PaymentKind.upi) {
       // 1. Immediately launch native UPI intent / app redirect
       final subMethod = _selectedUpiApp;
-      RazorpayGatewayService.instance.launchNativeUpiApp(
+      CashfreeGatewayService.instance.launchNativeUpiApp(
         subMethod: subMethod,
         amount: widget.amount,
         customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
@@ -885,7 +885,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
   }
 
   Widget _buildUpiIntentView() {
-    final upiUrl = RazorpayGatewayService.getUpiUri(
+    final upiUrl = CashfreeGatewayService.getUpiUri(
       amount: widget.amount,
       subMethod: _selectedUpiApp,
       customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,
@@ -974,7 +974,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           // Action 1: Launch App Button
           ElevatedButton.icon(
             onPressed: () {
-              RazorpayGatewayService.instance.launchNativeUpiApp(
+              CashfreeGatewayService.instance.launchNativeUpiApp(
                 subMethod: _selectedUpiApp,
                 amount: widget.amount,
                 customUpiId: _useCustomUpi ? _upiIdCtrl.text.trim() : null,

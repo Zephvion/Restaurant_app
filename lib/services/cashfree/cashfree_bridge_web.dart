@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:js' as js;
 
-class RazorpayPlatformBridge {
-  static Future<Map<String, dynamic>> openCheckout(
-    Map<String, dynamic> options,
-  ) {
+class CashfreePlatformBridge {
+  static Future<Map<String, dynamic>> openCheckout({
+    required String paymentSessionId,
+    required bool isSandbox,
+  }) {
     final completer = Completer<Map<String, dynamic>>();
-    final callbackName = 'rzp_cb_${DateTime.now().millisecondsSinceEpoch}';
+    final callbackName = 'cf_cb_${DateTime.now().millisecondsSinceEpoch}';
 
     js.context[callbackName] = (String resultJson) {
       try {
@@ -26,8 +27,7 @@ class RazorpayPlatformBridge {
     };
 
     try {
-      final jsonString = jsonEncode(options);
-      js.context.callMethod('openRazorpayCheckout', [jsonString, callbackName]);
+      js.context.callMethod('openCashfreeCheckout', [paymentSessionId, isSandbox, callbackName]);
     } catch (e) {
       js.context.deleteProperty(callbackName);
       if (!completer.isCompleted) {

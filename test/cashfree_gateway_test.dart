@@ -1,18 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restaurant_app/models/payment_method.dart';
-import 'package:restaurant_app/services/razorpay_gateway_service.dart';
+import 'package:restaurant_app/services/cashfree/cashfree_config.dart';
+import 'package:restaurant_app/services/cashfree_gateway_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('RazorpayGatewayService Tests', () {
-    final service = RazorpayGatewayService.instance;
+  group('CashfreeGatewayService Tests', () {
+    final service = CashfreeGatewayService.instance;
 
-    test('Maps bank names to valid Razorpay codes', () {
-      expect(RazorpayGatewayService.bankCodeMap['hdfc bank'], equals('HDFC'));
-      expect(RazorpayGatewayService.bankCodeMap['state bank of india'], equals('SBIN'));
-      expect(RazorpayGatewayService.bankCodeMap['icici bank'], equals('ICIC'));
-      expect(RazorpayGatewayService.bankCodeMap['axis bank'], equals('UTIB'));
+    test('Maps bank names to valid Cashfree codes', () {
+      expect(CashfreeGatewayService.bankCodeMap['hdfc bank'], equals('HDFC'));
+      expect(CashfreeGatewayService.bankCodeMap['state bank of india'], equals('SBIN'));
+      expect(CashfreeGatewayService.bankCodeMap['icici bank'], equals('ICIC'));
+      expect(CashfreeGatewayService.bankCodeMap['axis bank'], equals('UTIB'));
+    });
+
+    test('Validates Cashfree Config endpoints and sandbox mode', () {
+      expect(CashfreeConfig.apiVersion, equals('2023-08-01'));
+      expect(CashfreeConfig.sandboxBaseUrl, contains('sandbox.cashfree.com'));
+      expect(CashfreeConfig.productionBaseUrl, contains('api.cashfree.com'));
+      expect(CashfreeConfig.isSandbox, isTrue);
     });
 
     test('Processes UPI payment and returns valid transaction result', () async {
@@ -26,7 +34,7 @@ void main() {
       expect(result.paymentId, isNotNull);
       expect(result.paymentId!.isNotEmpty, isTrue);
       expect(result.paymentMode, contains('PhonePe'));
-      
+
       final map = result.toMap();
       expect(map['txnId'], equals(result.paymentId));
       expect(map['mode'], equals(result.paymentMode));
@@ -54,7 +62,7 @@ void main() {
 
       expect(result.success, isTrue);
       expect(result.paymentId, isNotNull);
-      expect(result.paymentMode, contains('Net Banking'));
+      expect(result.paymentMode, contains('Netbanking'));
     });
 
     test('Custom UPI ID VPA format handled properly', () async {
