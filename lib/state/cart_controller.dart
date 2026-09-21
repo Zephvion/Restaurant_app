@@ -160,11 +160,25 @@ class CartController extends ChangeNotifier {
     return LocationService.instance.calculateDeliveryFee(selectedAddress);
   }
 
-  /// A small mock discount applied when any coupon is active.
-  double get discount =>
-      appliedCoupon == null ? 0 : (subtotal * 0.10).roundToDouble();
+  /// Calculates dynamic discount based on the applied coupon code.
+  double get discount {
+    if (appliedCoupon == null || isEmpty) return 0.0;
+    final code = appliedCoupon!.trim().toUpperCase();
+    if (code == 'PARAGON50') {
+      return (subtotal >= 300 ? 50.0 : 25.0);
+    } else if (code == 'FREESHIP') {
+      return deliveryFee;
+    } else if (code == 'PARAGONSPECIAL') {
+      return (subtotal * 0.15).roundToDouble();
+    }
+    // Default 10% discount for WELCOMEBACK or custom promo codes
+    return (subtotal * 0.10).roundToDouble();
+  }
 
-  double get grandTotal => subtotal + gst + deliveryFee - discount;
+  double get grandTotal {
+    final total = subtotal + gst + deliveryFee - discount;
+    return total < 0 ? 0.0 : total;
+  }
 
   /// Places order via [OrderService] and clears cart
   Future<OrderModel> checkout() async {

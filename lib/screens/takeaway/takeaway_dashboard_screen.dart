@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/restaurant.dart';
 import '../../routes/app_routes.dart';
+import '../../services/location_service.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
@@ -54,12 +55,14 @@ class TakeawayDashboardScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Your Takeaway Orders',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
+                          const Expanded(
+                            child: Text(
+                              'Your Takeaway Orders',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           Text(
@@ -77,6 +80,59 @@ class TakeawayDashboardScreen extends StatelessWidget {
                             child: TakeawayOrderCard(order: order),
                           )),
                     ],
+
+                    // Nearby Paragon Outlets
+                    const SizedBox(height: 28),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Nearby Paragon Outlets',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _goSelectRestaurant(context),
+                          child: const Text(
+                            'View All',
+                            style: TextStyle(
+                              color: AppColors.copper,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ...(() {
+                      final outlets = List<Restaurant>.from(MockData.restaurants);
+                      outlets.sort((a, b) {
+                        final distA = LocationService.instance.getDistanceToRestaurant(a);
+                        final distB = LocationService.instance.getDistanceToRestaurant(b);
+                        return distA.compareTo(distB);
+                      });
+                      return outlets.take(4).map((outlet) {
+                        final isSelected = outlet.id == currentRest.id;
+                        final dist = LocationService.instance.getDistanceToRestaurant(outlet);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _NearbyOutletTile(
+                            outlet: outlet,
+                            distanceKm: dist,
+                            isSelected: isSelected,
+                            onSelect: () {
+                              ctrl.selectRestaurant(outlet);
+                            },
+                          ),
+                        );
+                      });
+                    })(),
                   ],
                 ),
               ),
@@ -360,3 +416,184 @@ class _NearbyStoreCard extends StatelessWidget {
     );
   }
 }
+
+// ── Nearby Outlet List Tile ──────────────────────────────────────────────────
+
+class _NearbyOutletTile extends StatelessWidget {
+  const _NearbyOutletTile({
+    required this.outlet,
+    required this.distanceKm,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final Restaurant outlet;
+  final double distanceKm;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final distText = distanceKm < 100
+        ? '${distanceKm.toStringAsFixed(1)} km'
+        : 'Nearby';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected
+              ? AppColors.copper
+              : AppColors.border.withValues(alpha: 0.6),
+          width: isSelected ? 1.4 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.copper.withValues(alpha: 0.15)
+                  : AppColors.backgroundElevated,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.storefront_rounded,
+              color: isSelected ? AppColors.copper : AppColors.textSecondary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        outlet.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            color: Color(0xFFFFB300), size: 14),
+                        const SizedBox(width: 2),
+                        Text(
+                          outlet.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${outlet.address}, ${outlet.city}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.near_me_rounded,
+                        color: Color(0xFF81C784), size: 12),
+                    const SizedBox(width: 3),
+                    Text(
+                      distText,
+                      style: const TextStyle(
+                        color: Color(0xFF81C784),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '• Closes ${outlet.closeTime}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (isSelected)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.copper.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.copper,
+                  width: 1,
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded,
+                      color: AppColors.copper, size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'Selected',
+                    style: TextStyle(
+                      color: AppColors.copper,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            OutlinedButton(
+              onPressed: onSelect,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: BorderSide(
+                  color: AppColors.border.withValues(alpha: 0.8),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Switch',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+

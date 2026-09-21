@@ -21,33 +21,68 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   String _code = '';
   bool _isLoading = false;
-  String _activeOtp = '';
+  String _phone = MockData.demoPhoneNumber;
+  String _verificationId = '';
+  String? _displayName;
+  String? _email;
   Timer? _timer;
   int _resendCountdown = 30;
 
-  bool get _isComplete => _code.length == 4;
+  bool get _isComplete => _code.length == 6 || _code.length == 4;
 
   @override
   void initState() {
     super.initState();
     _startResendTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final phone = (ModalRoute.of(context)?.settings.arguments as String?) ??
-          MockData.demoPhoneNumber;
-      _ensureOtpGenerated(phone);
+      _parseArgumentsAndSendOtp();
     });
   }
 
-  void _ensureOtpGenerated(String phone) {
-    var otp = AuthService.instance.currentOtp;
-    if (otp == null || otp.isEmpty) {
-      otp = AuthService.instance.generateAndSendOtp(phone: phone, length: 4);
+  void _parseArgumentsAndSendOtp() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _phone = args['phone'] as String? ?? MockData.demoPhoneNumber;
+      _verificationId = args['verificationId'] as String? ?? '';
+      _displayName = args['name'] as String?;
+      _email = args['email'] as String?;
+    } else if (args is String) {
+      _phone = args;
+      _verificationId = AuthService.instance.verificationId ?? '';
     }
-    setState(() => _activeOtp = otp!);
-    AppBanner.showInfo(
-      context,
-      'SMS Verification from PARAGON: Your OTP code is $otp (Valid for 5 minutes).',
-      title: '📱 SMS Gateway',
+
+    if (_verificationId.isEmpty) {
+      _sendPhoneOtp();
+    }
+  }
+
+  Future<void> _sendPhoneOtp() async {
+    setState(() => _isLoading = true);
+    await AuthService.instance.sendFirebasePhoneOtp(
+      phoneNumber: _phone,
+      onCodeSent: (vid) {
+        if (mounted) {
+          setState(() {
+            _verificationId = vid;
+            _isLoading = false;
+          });
+          AppBanner.showSuccess(
+            context,
+            'SMS code sent to $_phone. Please enter the 6-digit verification code.',
+            title: 'SMS Sent',
+          );
+        }
+      },
+      onError: (err) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          AppBanner.showError(
+            context,
+            err,
+            title: 'SMS Delivery Failed',
+          );
+        }
+      },
     );
   }
 
@@ -74,7 +109,17 @@ class _OtpScreenState extends State<OtpScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await AuthService.instance.verifyOtp(_code);
+      if (_verificationId.isNotEmpty) {
+        await AuthService.instance.verifyFirebasePhoneOtp(
+          verificationId: _verificationId,
+          smsCode: _code,
+          displayName: _displayName,
+          email: _email,
+        );
+      } else {
+        await AuthService.instance.verifyOtp(_code);
+      }
+
       if (mounted) {
         final user = AuthService.instance.currentUser;
         final name = user?.displayName.isNotEmpty == true
@@ -107,36 +152,15 @@ class _OtpScreenState extends State<OtpScreen> {
 
   void _resend() {
     if (_resendCountdown > 0) return;
-
-    final phone = (ModalRoute.of(context)?.settings.arguments as String?) ??
-        MockData.demoPhoneNumber;
-    final newOtp = AuthService.instance.generateAndSendOtp(phone: phone, length: 4);
     setState(() {
-      _activeOtp = newOtp;
       _code = '';
     });
     _startResendTimer();
-
-    AppBanner.showInfo(
-      context,
-      'A new verification code has been dispatched: $newOtp',
-      title: '📱 New SMS Sent',
-    );
-  }
-
-  void _autoFill() {
-    if (_activeOtp.isNotEmpty) {
-      setState(() {
-        _code = _activeOtp;
-      });
-      _verify();
-    }
+    _sendPhoneOtp();
   }
 
   @override
   Widget build(BuildContext context) {
-    final phone = ModalRoute.of(context)?.settings.arguments as String? ??
-        MockData.demoPhoneNumber;
     final h = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
@@ -159,99 +183,23 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     const SizedBox(height: 10),
                     _PhoneRow(
-                      phone: phone,
+                      phone: _phone,
                       onEdit: () => Navigator.of(context).maybePop(),
                     ),
-                    const SizedBox(height: 24),
-
-                    // ── Simulated SMS Incoming Notification Card ──────────────
-                    if (_activeOtp.isNotEmpty)
-                      GestureDetector(
-                        onTap: _autoFill,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.copper.withValues(alpha: 0.4),
-                              width: 1.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                    const SizedBox(height: 14),
+                    Text(
+                      'Please enter the 6-digit verification code sent to your phone number.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.copper.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.mark_email_unread_outlined,
-                                  color: AppColors.copper,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'PARAGON SMS Code',
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Your OTP is $_activeOtp',
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.copper,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'AUTO-FILL',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
+                    ),
                     SizedBox(height: h * 0.06),
 
-                    // ── 4 Single-Digit OTP Blocks ─────────────────────────────
+                    // ── 6 Single-Digit OTP Blocks ─────────────────────────────
                     OtpInput(
-                      length: 4,
+                      length: 6,
                       value: _code,
                       onChanged: (v) => setState(() => _code = v),
                       onCompleted: (v) {

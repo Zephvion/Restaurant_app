@@ -95,15 +95,15 @@ void main() {
       final meals = [
         PlannedMeal(
           id: 'meal_1',
-          name: 'Paragon Special Meals',
-          imageUrl: 'assets/images/foodplanner/extracted/card_meals.webp',
-          category: 'Meals',
-          kcal: 540,
-          grams: 400,
-          price: 240,
-          isVeg: false,
-          date: '2026-09-19',
+          dayOffset: 0,
           mealType: MealType.lunch,
+          timeSlot: '1:00 PM',
+          location: 'HOME',
+          dishName: 'Paragon Special Meals',
+          imageUrl: 'assets/images/foodplanner/extracted/card_meals.webp',
+          calories: 540,
+          weightGm: 400,
+          price: 240,
         ),
       ];
 
@@ -112,16 +112,17 @@ void main() {
       final cached = session.getCachedMealPlans();
       expect(cached, isNotNull);
       expect(cached!.length, 1);
-      expect(cached.first['name'], 'Paragon Special Meals');
-      expect(cached.first['kcal'], 540);
+      expect(cached.first['dishName'], 'Paragon Special Meals');
+      expect(cached.first['calories'], 540);
     });
 
     test('TEST 5: Clear session removes tokens but deleteAccount wipes all data', () async {
       final session = SessionManager.instance;
-      final profile = UserProfile(
+      final profile = const UserProfile(
         uid: 'usr_to_delete',
         displayName: 'Temp User',
         email: 'temp@example.com',
+        phone: '+91 9876543210',
       );
 
       await session.saveSession(

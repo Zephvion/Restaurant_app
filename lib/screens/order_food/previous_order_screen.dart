@@ -8,7 +8,9 @@ import '../../services/menu_service.dart';
 import '../../services/order_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
 import '../../widgets/checkout_widgets.dart';
+import '../../widgets/order_cancellation_sheet.dart';
 import '../../widgets/price_text.dart';
 
 /// Previous Order — a summary of the user's last order loaded from
@@ -39,6 +41,27 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _handleCancelOrder(BuildContext context, OrderModel order) async {
+    await OrderCancellationSheet.show(
+      context: context,
+      orderId: order.id,
+      amount: order.grandTotal,
+      paymentMode: order.paymentMethodLabel,
+      isTakeaway: false,
+      onConfirmCancel: (reason) async {
+        await OrderService.instance.cancelOrder(order.id, reason: reason);
+        if (mounted) {
+          AppToast.showSuccess(
+            context,
+            'Order #${order.id} cancelled. 100% refund initiated to ${order.paymentMethodLabel}!',
+            title: 'Order Cancelled',
+          );
+          _loadOrders();
+        }
+      },
+    );
   }
 
   void _reorderOrder(BuildContext context, OrderModel order) {
@@ -99,21 +122,19 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () =>
-                        Navigator.of(context).pushReplacementNamed(AppRoutes.foodHome),
-                    child: const Text('Browse Menu', style: TextStyle(color: Colors.white)),
+                    onPressed: () => Navigator.of(context).pushNamed(AppRoutes.foodHome),
+                    child: const Text('EXPLORE MENU', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
             )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               itemCount: _orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final order = _orders[index];
-                return _buildOrderCard(context, order);
-              },
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildOrderCard(context, _orders[i]),
+              ),
             ),
     );
   }
@@ -154,12 +175,11 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
+                  color: statusColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: statusColor.withOpacity(0.4)),
                 ),
                 child: Text(
-                  order.status.name.toUpperCase(),
+                  order.statusText.toUpperCase(),
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 11,
@@ -251,6 +271,48 @@ class _PreviousOrderScreenState extends State<PreviousOrderScreen> {
               ),
             ],
           ),
+          if (order.canBeCancelled) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.accentRed,
+                  side: BorderSide(color: AppColors.accentRed.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.cancel_outlined, size: 15),
+                label: const Text('Cancel Order (Instant Refund)',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                onPressed: () => _handleCancelOrder(context, order),
+              ),
+            ),
+          ] else if (order.isCancelled) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.accentRed.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.accentRed.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cancel, color: AppColors.accentRed, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Cancelled: ${order.cancellationReason ?? "Order cancelled"}',
+                      style: const TextStyle(
+                          color: AppColors.accentRed, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

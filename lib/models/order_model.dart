@@ -141,6 +141,8 @@ class OrderModel {
 
   bool get isCancelled => status == OrderStatus.cancelled;
 
+  String get statusText => status.label;
+
   bool get canBeCancelled =>
       status != OrderStatus.delivered && status != OrderStatus.cancelled;
 

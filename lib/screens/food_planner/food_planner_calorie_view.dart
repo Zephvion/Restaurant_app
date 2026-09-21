@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-import '../../data/food_planner_assets.dart';
 import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
 import '../../state/food_planner_controller.dart';
