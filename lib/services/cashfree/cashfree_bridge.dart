@@ -1,5 +1,5 @@
-﻿import 'cashfree_bridge_stub.dart'
-    if (dart.library.html) 'cashfree_bridge_web.dart';
+import 'cashfree_bridge_stub.dart'
+    if (dart.library.js_interop) 'cashfree_bridge_web.dart';
 
 abstract class CashfreeBridge {
   static Future<Map<String, dynamic>> openCheckout({

@@ -1,7 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:js' as js;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
+@JS('openCashfreeCheckout')
+external void _openCashfreeCheckout(
+  JSString paymentSessionId,
+  JSBoolean isSandbox,
+  JSString callbackName,
+);
 
 class CashfreePlatformBridge {
   static Future<Map<String, dynamic>> openCheckout({
@@ -11,9 +18,10 @@ class CashfreePlatformBridge {
     final completer = Completer<Map<String, dynamic>>();
     final callbackName = 'cf_cb_${DateTime.now().millisecondsSinceEpoch}';
 
-    js.context[callbackName] = (String resultJson) {
+    void callback(JSString resultJson) {
       try {
-        final data = jsonDecode(resultJson) as Map<String, dynamic>;
+        final data =
+            jsonDecode(resultJson.toDart) as Map<String, dynamic>;
         if (!completer.isCompleted) {
           completer.complete(data);
         }
@@ -22,19 +30,33 @@ class CashfreePlatformBridge {
           completer.complete({'status': 'error', 'error': e.toString()});
         }
       } finally {
-        js.context.deleteProperty(callbackName);
+        _deleteGlobalProperty(callbackName);
       }
-    };
+    }
+
+    _setGlobalProperty(callbackName, callback.toJS);
 
     try {
-      js.context.callMethod('openCashfreeCheckout', [paymentSessionId, isSandbox, callbackName]);
+      _openCashfreeCheckout(
+        paymentSessionId.toJS,
+        isSandbox.toJS,
+        callbackName.toJS,
+      );
     } catch (e) {
-      js.context.deleteProperty(callbackName);
+      _deleteGlobalProperty(callbackName);
       if (!completer.isCompleted) {
         completer.complete({'status': 'error', 'error': e.toString()});
       }
     }
 
     return completer.future;
+  }
+
+  static void _setGlobalProperty(String name, JSAny value) {
+    globalContext.setProperty(name.toJS, value);
+  }
+
+  static void _deleteGlobalProperty(String name) {
+    globalContext.delete(name.toJS);
   }
 }

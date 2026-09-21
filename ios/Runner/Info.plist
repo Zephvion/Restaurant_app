@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Paragon needs your location to find the nearest restaurant and calculate delivery distance.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Paragon needs your location to track your delivery in real time.</string>
 </dict>
 </plist>
