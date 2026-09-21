@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/checkout_widgets.dart';
+import '../../widgets/coupon_sheet.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/primary_button.dart';
 
@@ -183,7 +184,14 @@ class _CartScreenState extends State<CartScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              // ── Coupons & Offers ─────────────────────────────────
+              _CartCouponRow(
+                appliedCoupon: cart.appliedCoupon,
+                discount: cart.discount,
+                onTap: () => CouponSheet.show(context),
+              ),
+              const SizedBox(height: 16),
               RoundedPanel(
                 child: Column(
                   children: [
@@ -498,3 +506,102 @@ class _EmptyCart extends StatelessWidget {
     );
   }
 }
+
+class _CartCouponRow extends StatelessWidget {
+  const _CartCouponRow({
+    required this.appliedCoupon,
+    required this.discount,
+    required this.onTap,
+  });
+
+  final String? appliedCoupon;
+  final double discount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCoupon = appliedCoupon != null;
+
+    return Material(
+      color: AppColors.backgroundElevated,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasCoupon
+                  ? const Color(0xFF22C55E).withValues(alpha: 0.5)
+                  : AppColors.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: hasCoupon
+                      ? const Color(0xFF22C55E).withValues(alpha: 0.15)
+                      : AppColors.copper.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.discount_outlined,
+                  color: hasCoupon ? const Color(0xFF22C55E) : AppColors.copper,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasCoupon
+                          ? 'Coupon Applied: $appliedCoupon'
+                          : 'Apply Coupon / Promo Code',
+                      style: TextStyle(
+                        color: hasCoupon
+                            ? const Color(0xFF22C55E)
+                            : AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasCoupon
+                          ? 'You are saving ₹${discount.toInt()} on this order!'
+                          : 'View available offers & discounts',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasCoupon ? 'CHANGE' : 'VIEW',
+                style: const TextStyle(
+                  color: AppColors.copper,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.textSecondary, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

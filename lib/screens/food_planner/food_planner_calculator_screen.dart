@@ -15,13 +15,15 @@ class FoodPlannerCalculatorScreen extends StatefulWidget {
 
 class _FoodPlannerCalculatorScreenState
     extends State<FoodPlannerCalculatorScreen> {
-  String? _sex;
-  int? _age;
-  int? _heightFt;
-  int? _heightIn = 0;
-  int? _weightKg;
-  String? _activity;
-  String? _goal;
+  String? _sex = 'Male';
+  late final TextEditingController _ageController;
+  late final TextEditingController _heightFtController;
+  late final TextEditingController _heightInController;
+  late final TextEditingController _heightCmController;
+  late final TextEditingController _weightController;
+  bool _isHeightInCm = false;
+  String? _activity = 'Moderate active';
+  String? _goal = 'Maintain Weight';
 
   final List<String> _activities = [
     'Less active',
@@ -35,23 +37,110 @@ class _FoodPlannerCalculatorScreenState
     'Gain weight',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _ageController = TextEditingController(text: '25');
+    _heightFtController = TextEditingController(text: '5');
+    _heightInController = TextEditingController(text: '8');
+    _heightCmController = TextEditingController(text: '173');
+    _weightController = TextEditingController(text: '70');
+
+    _ageController.addListener(() => setState(() {}));
+    _heightFtController.addListener(() {
+      if (!_isHeightInCm) _syncCmFromFtIn();
+      setState(() {});
+    });
+    _heightInController.addListener(() {
+      if (!_isHeightInCm) _syncCmFromFtIn();
+      setState(() {});
+    });
+    _heightCmController.addListener(() {
+      if (_isHeightInCm) _syncFtInFromCm();
+      setState(() {});
+    });
+    _weightController.addListener(() => setState(() {}));
+  }
+
+  void _syncCmFromFtIn() {
+    final ft = int.tryParse(_heightFtController.text) ?? 5;
+    final inch = int.tryParse(_heightInController.text) ?? 0;
+    final totalIn = ft * 12 + inch;
+    final cm = (totalIn * 2.54).round();
+    _heightCmController.value = TextEditingValue(
+      text: cm.toString(),
+      selection: TextSelection.collapsed(offset: cm.toString().length),
+    );
+  }
+
+  void _syncFtInFromCm() {
+    final cm = double.tryParse(_heightCmController.text) ?? 170.0;
+    final totalIn = cm / 2.54;
+    final ft = (totalIn / 12).floor();
+    final inch = (totalIn % 12).round();
+    _heightFtController.value = TextEditingValue(
+      text: ft.toString(),
+      selection: TextSelection.collapsed(offset: ft.toString().length),
+    );
+    _heightInController.value = TextEditingValue(
+      text: inch.toString(),
+      selection: TextSelection.collapsed(offset: inch.toString().length),
+    );
+  }
+
+  void _updateAge(int age) {
+    _ageController.text = '$age';
+    setState(() {});
+  }
+
+  void _updateWeight(double weight) {
+    _weightController.text = weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _ageController.dispose();
+    _heightFtController.dispose();
+    _heightInController.dispose();
+    _heightCmController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  int? get _parsedAge => int.tryParse(_ageController.text);
+  double? get _parsedWeight => double.tryParse(_weightController.text);
+  double? get _parsedHeightCm {
+    if (_isHeightInCm) {
+      return double.tryParse(_heightCmController.text);
+    } else {
+      final ft = int.tryParse(_heightFtController.text);
+      if (ft == null || ft <= 0) return null;
+      final inch = int.tryParse(_heightInController.text) ?? 0;
+      return (ft * 12 + inch) * 2.54;
+    }
+  }
+
   bool get _isComplete =>
       _sex != null &&
-      _age != null &&
-      _age! > 0 &&
-      _heightFt != null &&
-      _heightFt! > 0 &&
-      _weightKg != null &&
-      _weightKg! > 0 &&
+      _parsedAge != null &&
+      _parsedAge! >= 10 &&
+      _parsedAge! <= 120 &&
+      _parsedHeightCm != null &&
+      _parsedHeightCm! > 50 &&
+      _parsedHeightCm! < 280 &&
+      _parsedWeight != null &&
+      _parsedWeight! > 20 &&
+      _parsedWeight! < 350 &&
       _activity != null &&
       _goal != null;
 
   List<String> _getMissingFields() {
     final missing = <String>[];
     if (_sex == null) missing.add('Sex');
-    if (_age == null || _age! <= 0) missing.add('Age');
-    if (_heightFt == null || _heightFt! <= 0) missing.add('Height');
-    if (_weightKg == null || _weightKg! <= 0) missing.add('Weight');
+    if (_parsedAge == null || _parsedAge! < 10) missing.add('Age (min 10)');
+    if (_parsedHeightCm == null || _parsedHeightCm! <= 50) missing.add('Valid Height');
+    if (_parsedWeight == null || _parsedWeight! <= 20) missing.add('Valid Weight');
     if (_activity == null) missing.add('Activity Level');
     if (_goal == null) missing.add('Goal');
     return missing;
@@ -59,17 +148,19 @@ class _FoodPlannerCalculatorScreenState
 
   Map<String, num> _calculateMetrics() {
     if (!_isComplete) return {};
-    final heightIn = _heightIn ?? 0;
-    final heightCm = (_heightFt! * 12 + heightIn) * 2.54;
+    final age = _parsedAge!;
+    final weightKg = _parsedWeight!;
+    final heightCm = _parsedHeightCm!;
+
     // Exact Mifflin-St Jeor equation:
-    double bmr = (10.0 * _weightKg!) + (6.25 * heightCm) - (5.0 * _age!);
+    double bmr = (10.0 * weightKg) + (6.25 * heightCm) - (5.0 * age);
     if (_sex == 'Male') {
       bmr += 5.0;
     } else {
       bmr -= 161.0;
     }
 
-    double pal = 1.2; // Sedentary
+    double pal = 1.2; // Less active (Sedentary)
     if (_activity == 'Moderate active') pal = 1.55;
     if (_activity == 'Very active') pal = 1.725;
 
@@ -78,10 +169,11 @@ class _FoodPlannerCalculatorScreenState
     if (_goal == 'Lose weight') target -= 500; // safe 0.5kg/week fat loss deficit
     if (_goal == 'Gain weight') target += 400; // clean surplus
 
-    final targetKcal = target.clamp(1200, 4500).round();
-    final proteinG = ((targetKcal * 0.30) / 4).round();
-    final carbsG = ((targetKcal * 0.45) / 4).round();
-    final fatG = ((targetKcal * 0.25) / 9).round();
+    final minSafety = _sex == 'Female' ? 1200 : 1500;
+    final targetKcal = target.clamp(minSafety, 4500).round();
+    final proteinG = ((targetKcal * 0.30) / 4.0).round();
+    final carbsG = ((targetKcal * 0.45) / 4.0).round();
+    final fatG = ((targetKcal * 0.25) / 9.0).round();
 
     return {
       'bmr': bmr.round(),
@@ -205,96 +297,293 @@ class _FoodPlannerCalculatorScreenState
               ),
               const SizedBox(height: 28),
               // ── 2. How old are you? ────────────────────────────────────
-              _sectionLabel('How old are you?'),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(20, (i) {
-                    final ageVal = 18 + i;
-                    final isSelected = _age == ageVal;
-                    return GestureDetector(
-                      onTap: () => setState(() => _age = ageVal),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 10),
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.accentRed
-                              : AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$ageVal',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
-                        ),
+              // ── 2. How old are you? ────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _sectionLabel('How old are you?'),
+                  if (_parsedAge != null)
+                    Text(
+                      '$_parsedAge yrs',
+                      style: const TextStyle(
+                        color: AppColors.accentRed,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
                       ),
-                    );
-                  }),
-                ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 28),
-              // ── 3. How tall are you? ───────────────────────────────────
-              _sectionLabel('How tall are you?'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  _heightBox(
-                    value: _heightFt != null ? '$_heightFt' : '-',
-                    unit: 'ft',
-                    onTap: () => setState(() =>
-                        _heightFt = _heightFt == null ? 5 : (_heightFt! >= 7 ? 4 : _heightFt! + 1)),
+                  _typedNumberBox(
+                    controller: _ageController,
+                    hintText: '25',
+                    suffix: 'yrs',
+                    onChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(width: 20),
-                  _heightBox(
-                    value: _heightIn != null ? '$_heightIn' : '-',
-                    unit: 'in',
-                    onTap: () => setState(() =>
-                        _heightIn = _heightIn == null ? 0 : (_heightIn! >= 11 ? 0 : _heightIn! + 1)),
+                  const SizedBox(width: 12),
+                  _stepButton(
+                    icon: Icons.remove,
+                    onTap: () {
+                      final current = _parsedAge ?? 25;
+                      if (current > 10) _updateAge(current - 1);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _stepButton(
+                    icon: Icons.add,
+                    onTap: () {
+                      final current = _parsedAge ?? 25;
+                      if (current < 120) _updateAge(current + 1);
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [18, 21, 25, 30, 40, 50].map((preset) {
+                          final isSel = _parsedAge == preset;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ActionChip(
+                              label: Text('$preset'),
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.white : AppColors.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              backgroundColor: isSel ? AppColors.accentRed : AppColors.surface,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                              onPressed: () => _updateAge(preset),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-              // ── 4. How much do you weigh in kg? ────────────────────────
-              _sectionLabel('How much do you weigh in kg?'),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(40, (i) {
-                    final wVal = 35 + i * 2;
-                    final isSelected = _weightKg == wVal;
-                    return GestureDetector(
-                      onTap: () => setState(() => _weightKg = wVal),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 10),
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.accentRed
-                              : AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$wVal',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
+              const SizedBox(height: 24),
+
+              // ── 3. How tall are you? ───────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _sectionLabel('How tall are you?'),
+                  _unitToggle(
+                    selected: _isHeightInCm ? 'cm' : 'ft / in',
+                    options: const ['ft / in', 'cm'],
+                    onSelect: (u) => setState(() => _isHeightInCm = u == 'cm'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (!_isHeightInCm)
+                Row(
+                  children: [
+                    _typedNumberBox(
+                      controller: _heightFtController,
+                      hintText: '5',
+                      suffix: 'ft',
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(width: 8),
+                    _stepButton(
+                      icon: Icons.remove,
+                      onTap: () {
+                        final ft = (int.tryParse(_heightFtController.text) ?? 5) - 1;
+                        if (ft >= 2) {
+                          _heightFtController.text = '$ft';
+                          _syncCmFromFtIn();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _stepButton(
+                      icon: Icons.add,
+                      onTap: () {
+                        final ft = (int.tryParse(_heightFtController.text) ?? 5) + 1;
+                        if (ft <= 8) {
+                          _heightFtController.text = '$ft';
+                          _syncCmFromFtIn();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 14),
+                    _typedNumberBox(
+                      controller: _heightInController,
+                      hintText: '8',
+                      suffix: 'in',
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(width: 8),
+                    _stepButton(
+                      icon: Icons.remove,
+                      onTap: () {
+                        final inch = (int.tryParse(_heightInController.text) ?? 8) - 1;
+                        if (inch >= 0) {
+                          _heightInController.text = '$inch';
+                          _syncCmFromFtIn();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _stepButton(
+                      icon: Icons.add,
+                      onTap: () {
+                        final inch = (int.tryParse(_heightInController.text) ?? 8) + 1;
+                        if (inch <= 11) {
+                          _heightInController.text = '$inch';
+                          _syncCmFromFtIn();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    _typedNumberBox(
+                      controller: _heightCmController,
+                      hintText: '172',
+                      suffix: 'cm',
+                      width: 110,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(width: 10),
+                    _stepButton(
+                      icon: Icons.remove,
+                      onTap: () {
+                        final cm = ((double.tryParse(_heightCmController.text) ?? 170) - 1).round();
+                        if (cm >= 60) {
+                          _heightCmController.text = '$cm';
+                          _syncFtInFromCm();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _stepButton(
+                      icon: Icons.add,
+                      onTap: () {
+                        final cm = ((double.tryParse(_heightCmController.text) ?? 170) + 1).round();
+                        if (cm <= 260) {
+                          _heightCmController.text = '$cm';
+                          _syncFtInFromCm();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [155, 165, 170, 175, 180, 185].map((preset) {
+                            final isSel = _parsedHeightCm?.round() == preset;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ActionChip(
+                                label: Text('$preset cm'),
+                                labelStyle: TextStyle(
+                                  color: isSel ? Colors.white : AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                backgroundColor: isSel ? AppColors.accentRed : AppColors.surface,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                onPressed: () {
+                                  _heightCmController.text = '$preset';
+                                  _syncFtInFromCm();
+                                  setState(() {});
+                                },
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
-                    );
-                  }),
+                    ),
+                  ],
                 ),
+              const SizedBox(height: 24),
+
+              // ── 4. How much do you weigh in kg? ────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _sectionLabel('How much do you weigh in kg?'),
+                  if (_parsedWeight != null)
+                    Text(
+                      '${_parsedWeight!.toStringAsFixed(_parsedWeight! % 1 == 0 ? 0 : 1)} kg',
+                      style: const TextStyle(
+                        color: AppColors.accentRed,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _typedNumberBox(
+                    controller: _weightController,
+                    hintText: '65.0',
+                    suffix: 'kg',
+                    width: 110,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(width: 10),
+                  _stepButton(
+                    icon: Icons.remove,
+                    onTap: () {
+                      final cur = _parsedWeight ?? 65.0;
+                      if (cur > 25) _updateWeight(cur - 1);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _stepButton(
+                    icon: Icons.add,
+                    onTap: () {
+                      final cur = _parsedWeight ?? 65.0;
+                      if (cur < 300) _updateWeight(cur + 1);
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [50, 60, 65, 70, 75, 80, 85, 90].map((w) {
+                          final isSel = _parsedWeight?.round() == w;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ActionChip(
+                              label: Text('$w kg'),
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.white : AppColors.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              backgroundColor: isSel ? AppColors.accentRed : AppColors.surface,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                              onPressed: () => _updateWeight(w.toDouble()),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 28),
               // ── 5. How active are you? ─────────────────────────────────
@@ -418,42 +707,115 @@ class _FoodPlannerCalculatorScreenState
     );
   }
 
-  Widget _heightBox({
-    required String value,
-    required String unit,
+  Widget _stepButton({
+    required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 54,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, color: AppColors.textPrimary, size: 18),
+      ),
+    );
+  }
+
+  Widget _unitToggle({
+    required String selected,
+    required List<String> options,
+    required ValueChanged<String> onSelect,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: options.map((opt) {
+          final isSel = selected == opt;
+          return GestureDetector(
+            onTap: () => onSelect(opt),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isSel ? AppColors.accentRed : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                opt,
+                style: TextStyle(
+                  color: isSel ? Colors.white : AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            alignment: Alignment.center,
-            child: Text(
-              value,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _typedNumberBox({
+    required TextEditingController controller,
+    required String hintText,
+    required String suffix,
+    required ValueChanged<String> onChanged,
+    double width = 80,
+  }) {
+    return Container(
+      width: width,
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  color: AppColors.textSecondary.withValues(alpha: 0.5),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: onChanged,
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          unit,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
+          Text(
+            suffix,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -698,17 +698,27 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          shape: BoxShape.circle,
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.add_rounded, size: 22),
+      label: const Text(
+        'Reserve a Table',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
         ),
-        child: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.accentRed,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        elevation: 3,
       ),
     );
   }
 }
+

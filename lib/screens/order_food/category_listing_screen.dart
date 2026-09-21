@@ -306,7 +306,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
                     onPressed: () =>
                         Navigator.of(context).pushNamed(AppRoutes.cart),
                   ),
-                  if (!_cart.isEmpty)
+                  if (_cart.isNotEmpty)
                     Positioned(
                       top: 6,
                       right: 6,

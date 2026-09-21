@@ -65,6 +65,8 @@ class UserProfile {
       'phone': phone,
       'photoUrl': photoUrl,
       'defaultDeliveryArea': defaultDeliveryArea,
+      'savedAddresses': savedAddresses.map((a) => a.toMap()).toList(),
+      'savedPaymentMethods': savedPaymentMethods.map((p) => p.toMap()).toList(),
       'orderHistory': orderHistory,
       'createdAt': createdAt?.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
@@ -72,6 +74,22 @@ class UserProfile {
   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map, {String? uid}) {
+    final rawAddresses = map['savedAddresses'] as List<dynamic>?;
+    final parsedAddresses = rawAddresses != null
+        ? rawAddresses
+            .where((e) => e is Map)
+            .map((e) => Address.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList()
+        : const <Address>[];
+
+    final rawPaymentMethods = map['savedPaymentMethods'] as List<dynamic>?;
+    final parsedPaymentMethods = rawPaymentMethods != null
+        ? rawPaymentMethods
+            .where((e) => e is Map)
+            .map((e) => PaymentMethod.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList()
+        : const <PaymentMethod>[];
+
     return UserProfile(
       uid: uid ?? (map['uid'] as String? ?? ''),
       displayName: map['displayName'] as String? ?? 'User',
@@ -80,6 +98,8 @@ class UserProfile {
       photoUrl: map['photoUrl'] as String? ?? '',
       defaultDeliveryArea:
           map['defaultDeliveryArea'] as String? ?? 'Palazhi , Calicut',
+      savedAddresses: parsedAddresses,
+      savedPaymentMethods: parsedPaymentMethods,
       orderHistory: (map['orderHistory'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??

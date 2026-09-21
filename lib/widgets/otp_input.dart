@@ -85,25 +85,39 @@ class _OtpInputState extends State<OtpInput> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) {
-        return Padding(
-          padding: EdgeInsets.only(right: index == widget.length - 1 ? 0 : 16),
-          child: _OtpBox(
-            controller: _controllers[index],
-            focusNode: _nodes[index],
-            onChanged: (v) => _handleChanged(index, v),
-            onBackspaceOnEmpty: () {
-              if (index > 0) {
-                _nodes[index - 1].requestFocus();
-                _controllers[index - 1].clear();
-                widget.onChanged?.call(_code);
-              }
-            },
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        // Calculate responsive box width and gap based on available width and length
+        final isSixDigit = widget.length >= 6;
+        final gap = isSixDigit ? (totalWidth < 380 ? 6.0 : 8.0) : 12.0;
+        final totalGaps = (widget.length - 1) * gap;
+        final calculatedWidth = ((totalWidth - totalGaps) / widget.length).clamp(38.0, isSixDigit ? 48.0 : 62.0);
+        final calculatedHeight = isSixDigit ? (calculatedWidth * 1.25).clamp(50.0, 64.0) : 74.0;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(widget.length, (index) {
+            return Padding(
+              padding: EdgeInsets.only(right: index == widget.length - 1 ? 0 : gap),
+              child: _OtpBox(
+                width: calculatedWidth,
+                height: calculatedHeight,
+                controller: _controllers[index],
+                focusNode: _nodes[index],
+                onChanged: (v) => _handleChanged(index, v),
+                onBackspaceOnEmpty: () {
+                  if (index > 0) {
+                    _nodes[index - 1].requestFocus();
+                    _controllers[index - 1].clear();
+                    widget.onChanged?.call(_code);
+                  }
+                },
+              ),
+            );
+          }),
         );
-      }),
+      },
     );
   }
 }
@@ -114,12 +128,16 @@ class _OtpBox extends StatefulWidget {
     required this.focusNode,
     required this.onChanged,
     required this.onBackspaceOnEmpty,
+    this.width = 66,
+    this.height = 78,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
   final VoidCallback onBackspaceOnEmpty;
+  final double width;
+  final double height;
 
   @override
   State<_OtpBox> createState() => _OtpBoxState();
@@ -138,8 +156,8 @@ class _OtpBoxState extends State<_OtpBox> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 66,
-      height: 78,
+      width: widget.width,
+      height: widget.height,
       child: KeyboardListener(
         focusNode: _rawKeyNode,
         onKeyEvent: (event) {

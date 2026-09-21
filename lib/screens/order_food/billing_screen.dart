@@ -7,6 +7,7 @@ import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/checkout_widgets.dart';
+import '../../widgets/coupon_sheet.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/primary_button.dart';
 
@@ -14,12 +15,6 @@ import '../../widgets/primary_button.dart';
 /// totals, ending in PLACE ORDER (which opens the payment options).
 class BillingScreen extends StatelessWidget {
   const BillingScreen({super.key});
-
-  static const _coupons = <_Coupon>[
-    _Coupon(code: 'WELCOMEBACK', label: '10% off your order'),
-    _Coupon(code: 'PARAGON50', label: 'Flat ₹50 off above ₹300'),
-    _Coupon(code: 'FREESHIP', label: 'Free delivery on this order'),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +181,7 @@ class BillingScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _CouponsRow(
                 appliedCoupon: cart.appliedCoupon,
-                onTap: () => _showCoupons(context),
+                onTap: () => CouponSheet.show(context),
               ),
               const SizedBox(height: 16),
               RoundedPanel(
@@ -259,89 +254,6 @@ class BillingScreen extends StatelessWidget {
       ),
     );
   }
-
-  void _showCoupons(BuildContext context) {
-    final cart = CartController.instance;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.backgroundElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Apply a coupon',
-                    style: Theme.of(sheetContext).textTheme.titleLarge),
-                const SizedBox(height: 16),
-                for (final coupon in _coupons)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Material(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () {
-                          cart.applyCoupon(coupon.code);
-                          Navigator.of(sheetContext).pop();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.card_giftcard,
-                                  color: AppColors.copper),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(coupon.code,
-                                        style: const TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
-                                        )),
-                                    const SizedBox(height: 3),
-                                    Text(coupon.label,
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 13,
-                                        )),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right,
-                                  color: AppColors.textSecondary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (cart.appliedCoupon != null)
-                  TextButton(
-                    onPressed: () {
-                      cart.applyCoupon(null);
-                      Navigator.of(sheetContext).pop();
-                    },
-                    child: const Text('Remove coupon',
-                        style: TextStyle(color: AppColors.accentRed)),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
 
 class _CouponsRow extends StatelessWidget {
@@ -383,11 +295,4 @@ class _CouponsRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Coupon {
-  const _Coupon({required this.code, required this.label});
-
-  final String code;
-  final String label;
 }

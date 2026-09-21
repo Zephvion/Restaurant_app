@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/google_auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/app_text_field.dart';
-import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/primary_button.dart';
 
@@ -40,8 +40,8 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _password.text,
       );
       if (mounted) {
-        final name = user?.displayName.isNotEmpty == true
-            ? user!.displayName
+        final name = user.displayName.isNotEmpty
+            ? user.displayName
             : 'Welcome back';
         AppBanner.showSuccess(
           context,
@@ -67,21 +67,37 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _loginWithGoogle() {
-    showGoogleAccountPickerSheet(
-      context,
-      onSuccess: () {
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final profile = await GoogleAuthService.instance.signInWithRealGoogle();
+      if (mounted) {
         AppBanner.showSuccess(
           context,
-          'Logged in successfully with Google!',
-          title: 'Welcome Back',
+          'Signed in as ${profile.displayName} (${profile.email})!',
+          title: 'Google Sign-In',
         );
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
         );
-      },
-    );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errText = e.toString().replaceAll('Exception:', '').trim();
+        AppBanner.showError(
+          context,
+          errText.isNotEmpty
+              ? errText
+              : 'Google Sign-In was cancelled or encountered an error.',
+          title: 'Google Sign-In',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override

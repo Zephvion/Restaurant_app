@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../../models/address.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/google_auth_service.dart';
 import '../../services/gps_detection_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/gps_location_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/app_text_field.dart';
-import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/primary_button.dart';
 
@@ -149,22 +149,51 @@ class _SignupScreenState extends State<SignupScreen> {
             : 'Palazhi , Calicut',
       );
 
-      final phone = _phoneController.text.trim().isNotEmpty
+      final rawPhone = _phoneController.text.trim().isNotEmpty
           ? _phoneController.text.trim()
-          : '+91 9874563210';
-      final generatedOtp = AuthService.instance.generateAndSendOtp(phone: phone, length: 4);
+          : '9874563210';
+      final phone = rawPhone.startsWith('+') ? rawPhone : '+91$rawPhone';
 
-      if (mounted) {
-        AppBanner.showSuccess(
-          context,
-          'Account created! SMS sent with OTP: $generatedOtp',
-          title: 'Welcome to PARAGON',
-        );
-        Navigator.of(context).pushNamed(
-          AppRoutes.otp,
-          arguments: phone,
-        );
-      }
+      await AuthService.instance.sendFirebasePhoneOtp(
+        phoneNumber: phone,
+        onCodeSent: (verificationId) {
+          if (mounted) {
+            AppBanner.showSuccess(
+              context,
+              'SMS verification code dispatched to $phone',
+              title: 'Verification Code Sent',
+            );
+            Navigator.of(context).pushNamed(
+              AppRoutes.otp,
+              arguments: {
+                'phone': phone,
+                'verificationId': verificationId,
+                'name': _nameController.text.trim(),
+                'email': _emailController.text.trim(),
+              },
+            );
+          }
+        },
+        onError: (errorMsg) {
+          if (mounted) {
+            AppBanner.showError(
+              context,
+              errorMsg,
+              title: 'SMS Delivery Notice',
+            );
+            // Allow navigation with fallback verification if offline
+            Navigator.of(context).pushNamed(
+              AppRoutes.otp,
+              arguments: {
+                'phone': phone,
+                'verificationId': AuthService.instance.verificationId ?? 'fallback_vid',
+                'name': _nameController.text.trim(),
+                'email': _emailController.text.trim(),
+              },
+            );
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         AppBanner.showError(
@@ -179,21 +208,37 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  void _signInWithGoogle() {
-    showGoogleAccountPickerSheet(
-      context,
-      onSuccess: () {
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final profile = await GoogleAuthService.instance.signInWithRealGoogle();
+      if (mounted) {
         AppBanner.showSuccess(
           context,
-          'Signed in successfully with Google!',
-          title: 'Welcome Back',
+          'Signed in as ${profile.displayName} (${profile.email})!',
+          title: 'Google Sign-In',
         );
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
         );
-      },
-    );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errText = e.toString().replaceAll('Exception:', '').trim();
+        AppBanner.showError(
+          context,
+          errText.isNotEmpty
+              ? errText
+              : 'Google Sign-In was cancelled or encountered an error.',
+          title: 'Google Sign-In',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override

@@ -313,7 +313,7 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
             left: 24,
             right: 24,
             bottom: 24,
-            child: ElevatedButton(
+            child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _canProceed ? AppColors.accentRed : AppColors.surface,
                 foregroundColor: _canProceed ? Colors.white : AppColors.textSecondary,
@@ -322,7 +322,8 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
                 elevation: _canProceed ? 4 : 0,
               ),
               onPressed: _canProceed ? _proceed : null,
-              child: Text(
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
                 _canProceed ? 'PROCEED TO TABLE SELECTION' : 'SELECT DATE, TIME & GUESTS',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
@@ -407,10 +408,10 @@ class _DateStrip extends StatelessWidget {
 
 // ── Time slot row ─────────────────────────────────────────────────────────────
 
-class _TimeSlotRow extends StatelessWidget {
+class _TimeSlotRow extends StatefulWidget {
   const _TimeSlotRow({
     required this.slots,
-    this.isToday = false,
+    required this.isToday,
     required this.selectedTime,
     required this.onSelect,
   });
@@ -421,8 +422,67 @@ class _TimeSlotRow extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  State<_TimeSlotRow> createState() => _TimeSlotRowState();
+}
+
+class _TimeSlotRowState extends State<_TimeSlotRow> {
+  // 0: Lunch, 1: Dinner, 2: Morning
+  int _activeSession = 0;
+
+  static int _slotHour(String slot) {
+    final cleaned = slot.replaceAll(' ', '').toUpperCase();
+    final isPm = cleaned.contains('PM');
+    final numPart = cleaned.replaceAll('AM', '').replaceAll('PM', '');
+    final parts = numPart.split(':');
+    if (parts.isEmpty) return 12;
+    int hour = int.tryParse(parts[0]) ?? 12;
+    if (isPm && hour < 12) hour += 12;
+    if (!isPm && hour == 12) hour = 0;
+    return hour;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _autoSelectInitialSession();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TimeSlotRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedTime != null &&
+        widget.selectedTime != oldWidget.selectedTime) {
+      _syncSessionToSelectedTime(widget.selectedTime!);
+    }
+  }
+
+  void _autoSelectInitialSession() {
+    if (widget.selectedTime != null) {
+      _syncSessionToSelectedTime(widget.selectedTime!);
+      return;
+    }
+    final now = DateTime.now();
+    if (widget.isToday && now.hour >= 16) {
+      _activeSession = 1; // Dinner
+    } else {
+      _activeSession = 0; // Lunch
+    }
+  }
+
+  void _syncSessionToSelectedTime(String slot) {
+    final h = _slotHour(slot);
+    if (h < 12) {
+      _activeSession = 2; // Morning
+    } else if (h < 17) {
+      _activeSession = 0; // Lunch
+    } else {
+      _activeSession = 1; // Dinner
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (slots.isEmpty) {
+    if (widget.slots.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
@@ -450,37 +510,161 @@ class _TimeSlotRow extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: slots.map((slot) {
-          final selected = slot == selectedTime;
-          return GestureDetector(
-            onTap: () => onSelect(slot),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.accentRed : AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: selected
-                      ? AppColors.accentRed
-                      : Colors.white.withValues(alpha: 0.06),
+    final lunchSlots = widget.slots.where((s) {
+      final h = _slotHour(s);
+      return h >= 12 && h < 17;
+    }).toList();
+
+    final dinnerSlots = widget.slots.where((s) {
+      final h = _slotHour(s);
+      return h >= 17;
+    }).toList();
+
+    final morningSlots = widget.slots.where((s) {
+      final h = _slotHour(s);
+      return h < 12;
+    }).toList();
+
+    List<String> currentSlots;
+    if (_activeSession == 0) {
+      currentSlots = lunchSlots.isNotEmpty ? lunchSlots : widget.slots;
+    } else if (_activeSession == 1) {
+      currentSlots = dinnerSlots.isNotEmpty ? dinnerSlots : widget.slots;
+    } else {
+      currentSlots = morningSlots.isNotEmpty ? morningSlots : widget.slots;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Meal Session Toggle Chips (Lunch / Dinner / Morning)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildSessionFilter(
+                index: 0,
+                label: '☀️ Lunch',
+                count: lunchSlots.length,
+              ),
+              const SizedBox(width: 8),
+              _buildSessionFilter(
+                index: 1,
+                label: '🌙 Dinner',
+                count: dinnerSlots.length,
+              ),
+              if (morningSlots.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _buildSessionFilter(
+                  index: 2,
+                  label: '🌅 Morning',
+                  count: morningSlots.length,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Time Slot Chips
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: currentSlots.map((slot) {
+            final selected = slot == widget.selectedTime;
+            return GestureDetector(
+              onTap: () => widget.onSelect(slot),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.accentRed : AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected
+                        ? AppColors.accentRed
+                        : Colors.white.withValues(alpha: 0.08),
+                    width: selected ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Text(
+                  slot,
+                  style: TextStyle(
+                    color: selected ? Colors.white : AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                  ),
                 ),
               ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSessionFilter({
+    required int index,
+    required String label,
+    required int count,
+  }) {
+    final isSelected = _activeSession == index;
+    final isAvailable = count > 0;
+
+    return GestureDetector(
+      onTap: isAvailable ? () => setState(() => _activeSession = index) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.copper.withValues(alpha: 0.18)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.copper
+                : Colors.white.withValues(alpha: 0.06),
+            width: isSelected ? 1.2 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.copper
+                    : (isAvailable
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary.withValues(alpha: 0.5)),
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.copper.withValues(alpha: 0.25)
+                    : Colors.white10,
+                borderRadius: BorderRadius.circular(6),
+              ),
               child: Text(
-                slot,
+                '$count',
                 style: TextStyle(
-                  color: selected ? Colors.white : AppColors.textPrimary,
+                  color:
+                      isSelected ? AppColors.copper : AppColors.textSecondary,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
                 ),
               ),
             ),
-          );
-        }).toList(),
+          ],
+        ),
       ),
     );
   }
