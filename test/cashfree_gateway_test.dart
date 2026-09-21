@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restaurant_app/models/payment_method.dart';
 import 'package:restaurant_app/services/cashfree/cashfree_config.dart';
@@ -21,6 +22,21 @@ void main() {
       expect(CashfreeConfig.sandboxBaseUrl, contains('sandbox.cashfree.com'));
       expect(CashfreeConfig.productionBaseUrl, contains('api.cashfree.com'));
       expect(CashfreeConfig.isSandbox, isTrue);
+    });
+
+    test('Reads environment variables from dotenv when initialized', () {
+      dotenv.testLoad(
+        fileInput: '''
+CASHFREE_APP_ID=TEST_ENV_APP_123
+CASHFREE_SECRET_KEY=TEST_ENV_SECRET_456
+CASHFREE_ENV=sandbox
+''',
+      );
+
+      expect(CashfreeConfig.appId, equals('TEST_ENV_APP_123'));
+      expect(CashfreeConfig.secretKey, equals('TEST_ENV_SECRET_456'));
+      expect(CashfreeConfig.isSandbox, isTrue);
+      expect(CashfreeConfig.hasValidCredentials, isTrue);
     });
 
     test('Processes UPI payment and returns valid transaction result', () async {

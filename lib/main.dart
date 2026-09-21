@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'routes/app_routes.dart';
 import 'screens/auth/forgot_password_screen.dart';
@@ -68,6 +69,12 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('.env load note: $e');
+  }
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);

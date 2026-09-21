@@ -1,4 +1,6 @@
-﻿enum CashfreeEnvironment {
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+enum CashfreeEnvironment {
   sandbox,
   production,
 }
@@ -6,17 +8,29 @@
 class CashfreeConfig {
   CashfreeConfig._();
 
+  static String? _getEnv(String key) {
+    if (dotenv.isInitialized) {
+      return dotenv.env[key];
+    }
+    return null;
+  }
+
   /// Cashfree API Environment (default to sandbox for test payments)
-  static CashfreeEnvironment environment = CashfreeEnvironment.sandbox;
+  static CashfreeEnvironment get environment {
+    final envStr = _getEnv('CASHFREE_ENV')?.toLowerCase().trim();
+    if (envStr == 'production' || envStr == 'prod') {
+      return CashfreeEnvironment.production;
+    }
+    return CashfreeEnvironment.sandbox;
+  }
 
-  /// Cashfree App ID / Client ID.
-  /// Replace 'YOUR_CASHFREE_APP_ID' with your App ID from Cashfree Merchant Dashboard
-  /// (e.g. TEST10087654...).
-  static String appId = 'YOUR_CASHFREE_APP_ID';
+  /// Cashfree App ID / Client ID read from .env file
+  static String get appId =>
+      _getEnv('CASHFREE_APP_ID')?.trim() ?? 'YOUR_CASHFREE_APP_ID';
 
-  /// Cashfree Secret Key.
-  /// Replace 'YOUR_CASHFREE_SECRET_KEY' with your Secret Key from Cashfree Merchant Dashboard.
-  static String secretKey = 'YOUR_CASHFREE_SECRET_KEY';
+  /// Cashfree Secret Key read from .env file
+  static String get secretKey =>
+      _getEnv('CASHFREE_SECRET_KEY')?.trim() ?? 'YOUR_CASHFREE_SECRET_KEY';
 
   /// Cashfree API Version (current stable)
   static const String apiVersion = '2023-08-01';
