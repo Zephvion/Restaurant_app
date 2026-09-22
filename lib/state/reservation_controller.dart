@@ -106,4 +106,23 @@ class ReservationController extends ChangeNotifier {
     _reservations.removeWhere((r) => r.id == id);
     notifyListeners();
   }
+
+  /// Guest "Pay at Table" action: marks reservation as paid/completed and
+  /// immediately frees all reserved table locks so the floor plan shows them as available.
+  Future<void> payAtTable(Reservation reservation) async {
+    // 1. Release all table locks in TableLockService (occupied → available)
+    for (final num in reservation.allTableNumbers) {
+      TableLockService.instance.receptionistReleaseTable(num);
+    }
+
+    // 2. Mark reservation completed/freed in backend
+    await ReservationService.instance.markReservationCompleted(reservation.id);
+
+    // 3. Update local state to 'paid_at_table' (shows as completed)
+    final idx = _reservations.indexWhere((r) => r.id == reservation.id);
+    if (idx != -1) {
+      _reservations[idx] = _reservations[idx].copyWith(status: 'paid_at_table');
+    }
+    notifyListeners();
+  }
 }

@@ -75,7 +75,10 @@ class Reservation {
   bool get isCompleted =>
       status.toLowerCase() == 'completed' ||
       status.toLowerCase() == 'released' ||
-      status.toLowerCase() == 'freed';
+      status.toLowerCase() == 'freed' ||
+      status.toLowerCase() == 'paid_at_table';
+
+  bool get isPaidAtTable => status.toLowerCase() == 'paid_at_table';
 
   bool get isCancelled => status.toLowerCase() == 'cancelled';
 

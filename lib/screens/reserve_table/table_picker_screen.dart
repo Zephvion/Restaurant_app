@@ -220,7 +220,20 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
       return;
     }
 
-    // Toggle table selection directly
+    // ── Seat-cap guard: prevent selecting more tables than needed ────────────
+    // If user is trying to SELECT (not deselect) and capacity is already met, block it.
+    if (!_selectedTables.contains(table.number) &&
+        _totalSelectedCapacity >= _args.seats) {
+      AppBanner.showError(
+        context,
+        'You already have enough seats (${_totalSelectedCapacity}) for ${_args.seats} guests. '
+        'Deselect a table first to swap it.',
+        title: 'Seat Limit Reached',
+      );
+      return;
+    }
+
+    // Toggle table selection
     setState(() {
       if (_selectedTables.contains(table.number)) {
         _selectedTables.remove(table.number);
@@ -750,6 +763,17 @@ class _TablePickerScreenState extends State<TablePickerScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: () {
+                if (!isSelected && _totalSelectedCapacity >= _args.seats) {
+                  // Seat cap reached — block and inform
+                  Navigator.of(ctx).pop();
+                  AppBanner.showError(
+                    context,
+                    'You already have enough seats ($_totalSelectedCapacity) for ${_args.seats} guests. '
+                    'Deselect a table first to swap it.',
+                    title: 'Seat Limit Reached',
+                  );
+                  return;
+                }
                 setState(() {
                   if (isSelected) {
                     _selectedTables.remove(table.number);
