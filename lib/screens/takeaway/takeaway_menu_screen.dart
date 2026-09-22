@@ -5,11 +5,11 @@ import '../../models/dish.dart';
 import '../../models/restaurant.dart';
 import '../../routes/app_routes.dart';
 import '../../services/menu_service.dart';
+import '../../state/app_mode_controller.dart';
+import '../../state/cart_controller.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/app_banner.dart';
 import '../../widgets/network_image_with_fallback.dart';
-import '../../widgets/payment_gateway_sheet.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/veg_indicator.dart';
 import 'takeaway_order_card.dart';
@@ -34,7 +34,34 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
-  bool _isSubmitting = false;
+  final bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppModeController.instance.setMode(AppMode.takeAway);
+    if (_ctrl.cartItems.isNotEmpty) {
+      _syncWithCartController();
+    } else if (CartController.instance.isNotEmpty &&
+        AppModeController.instance.isTakeAway) {
+      _syncFromCartController();
+    }
+  }
+
+  void _syncWithCartController() {
+    final cart = CartController.instance;
+    cart.clear();
+    for (final item in _ctrl.cartItems) {
+      cart.setQuantity(item.dish, item.quantity);
+    }
+  }
+
+  void _syncFromCartController() {
+    _ctrl.clearCart();
+    for (final item in CartController.instance.items) {
+      _ctrl.setQuantity(item.dish, item.quantity);
+    }
+  }
 
   @override
   void dispose() {
@@ -42,8 +69,13 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     super.dispose();
   }
 
-  void _openProduct(Dish dish) {
-    Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
+  Future<void> _openProduct(Dish dish) async {
+    _syncWithCartController();
+    await Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
+    if (mounted) {
+      _syncFromCartController();
+      setState(() {});
+    }
   }
 
   List<Dish> _applySort(List<Dish> source) {
@@ -66,44 +98,16 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   }
 
   Future<void> _onNext() async {
-    if (_ctrl.isCartEmpty || _isSubmitting) return;
+    if (_ctrl.isCartEmpty && CartController.instance.isEmpty) return;
 
-    final result = await PaymentGatewaySheet.show(
-      context: context,
-      amount: _ctrl.grandTotal,
-      isTakeaway: true,
+    _syncWithCartController();
+    await Navigator.of(context).pushNamed(
+      AppRoutes.cart,
+      arguments: const {'isTakeaway': true},
     );
-
-    // User dismissed without paying
-    if (result == null || !mounted) return;
-
-    final transactionId = result['txnId'] ?? '';
-    final paymentMode = result['mode'] ?? '';
-
-    setState(() => _isSubmitting = true);
-    try {
-      await _ctrl.placeOrder(
-        paymentMethod: paymentMode,
-        transactionId: transactionId,
-      );
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        AppBanner.showSuccess(
-          context,
-          'Payment successful via $paymentMode! Takeaway order placed.',
-          title: 'Order Confirmed',
-        );
-        Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        AppBanner.showError(
-          context,
-          'Failed to place order: $e',
-          title: 'Order Error',
-        );
-      }
+    if (mounted) {
+      _syncFromCartController();
+      setState(() {});
     }
   }
 
@@ -174,7 +178,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
       body: SafeArea(
         bottom: false,
         child: AnimatedBuilder(
-          animation: _ctrl,
+          animation: Listenable.merge([_ctrl, CartController.instance]),
           builder: (context, _) {
             return Stack(
               children: [
@@ -361,6 +365,11 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
             icon: const Icon(Icons.search, color: AppColors.textPrimary),
             onPressed: () => setState(() => _isSearching = true),
           ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined, color: AppColors.textPrimary),
+            tooltip: 'Orders & Basket',
+            onPressed: () => _openTakeawayCartModal(context),
+          ),
           _cartIconWithBadge(),
         ],
       ),
@@ -368,15 +377,19 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
   }
 
   Widget _cartIconWithBadge() {
+    final totalQty = _ctrl.totalQuantity > 0
+        ? _ctrl.totalQuantity
+        : CartController.instance.totalQuantity;
+
     return Stack(
       alignment: Alignment.center,
       children: [
         IconButton(
           icon: const Icon(Icons.shopping_cart_outlined,
               color: AppColors.textPrimary),
-          onPressed: () => _openTakeawayCartModal(context),
+          onPressed: _onNext,
         ),
-        if (_ctrl.totalQuantity > 0)
+        if (totalQty > 0)
           Positioned(
             top: 6,
             right: 6,
@@ -392,7 +405,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
               ),
               alignment: Alignment.center,
               child: Text(
-                '${_ctrl.totalQuantity}',
+                '$totalQty',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
@@ -791,9 +804,18 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
           dish: dish,
           quantity: qty,
           onTap: () => _openProduct(dish),
-          onAdd: () => _ctrl.add(dish),
-          onIncrement: () => _ctrl.increment(dish),
-          onDecrement: () => _ctrl.decrement(dish),
+          onAdd: () {
+            _ctrl.add(dish);
+            CartController.instance.add(dish);
+          },
+          onIncrement: () {
+            _ctrl.increment(dish);
+            CartController.instance.increment(dish);
+          },
+          onDecrement: () {
+            _ctrl.decrement(dish);
+            CartController.instance.decrement(dish);
+          },
         );
       },
     );
@@ -934,7 +956,10 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () => _ctrl.clearCart(),
+                                onTap: () {
+                                  _ctrl.clearCart();
+                                  CartController.instance.clear();
+                                },
                                 child: const Text(
                                   'Clear Basket',
                                   style: TextStyle(
@@ -1041,11 +1066,18 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                                   ),
                                   _QuantityStepperButton(
                                     quantity: item.quantity,
-                                    onAdd: () => _ctrl.add(item.dish),
-                                    onIncrement: () =>
-                                        _ctrl.increment(item.dish),
-                                    onDecrement: () =>
-                                        _ctrl.decrement(item.dish),
+                                    onAdd: () {
+                                      _ctrl.add(item.dish);
+                                      CartController.instance.add(item.dish);
+                                    },
+                                    onIncrement: () {
+                                      _ctrl.increment(item.dish);
+                                      CartController.instance.increment(item.dish);
+                                    },
+                                    onDecrement: () {
+                                      _ctrl.decrement(item.dish);
+                                      CartController.instance.decrement(item.dish);
+                                    },
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
@@ -1173,7 +1205,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                                       ),
                                     )
                                   : const Text(
-                                      'CONFIRM & PLACE ORDER',
+                                      'PROCEED TO CART',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,

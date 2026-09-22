@@ -121,6 +121,17 @@ class TakeawayController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setQuantity(Dish dish, int quantity) {
+    if (quantity <= 0) {
+      _cart.remove(dish.id);
+    } else if (_cart.containsKey(dish.id)) {
+      _cart[dish.id]!.quantity = quantity;
+    } else {
+      _cart[dish.id] = CartItem(dish: dish, quantity: quantity);
+    }
+    notifyListeners();
+  }
+
   // ── Place Order ─────────────────────────────────────────────────────────────
 
   Future<TakeawayOrder> placeOrder({

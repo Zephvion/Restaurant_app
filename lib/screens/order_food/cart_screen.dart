@@ -35,14 +35,21 @@ class _CartScreenState extends State<CartScreen> {
     return (args is Map && args['isGlobal'] == true);
   }
 
+  bool _checkIsTakeaway(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return (args is Map && args['isTakeaway'] == true);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_modeInitialized) {
       _modeInitialized = true;
       final isGlobal = _checkIsGlobal(context);
-      // If opened from inside food section, ensure it is in Delivery mode.
-      if (!isGlobal && AppModeController.instance.isTakeAway) {
+      final isTakeaway = _checkIsTakeaway(context);
+      if (isTakeaway) {
+        AppModeController.instance.setMode(AppMode.takeAway);
+      } else if (!isGlobal && AppModeController.instance.isTakeAway) {
         AppModeController.instance.setMode(AppMode.orderFood);
       }
     }
@@ -106,7 +113,7 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(isGlobal ? 'My Cart' : 'Cart'),
+        title: Text(isGlobal ? 'My Cart' : (modeCtrl.isTakeAway ? 'Takeaway Cart' : 'Cart')),
       ),
       body: AnimatedBuilder(
         animation: Listenable.merge([cart, modeCtrl, TakeawayController.instance]),

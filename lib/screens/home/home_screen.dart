@@ -70,16 +70,44 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final PageController _pageController;
+  bool _isManualSwitch = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _pageController = PageController(initialPage: 0);
+    _tabController.addListener(_onTabControllerChanged);
+  }
+
+  void _onTabControllerChanged() {
+    if (_tabController.indexIsChanging && !_isManualSwitch) {
+      _goToPage(_tabController.index);
+    }
+  }
+
+  void _goToPage(int index) {
+    if (!_pageController.hasClients) return;
+    _isManualSwitch = true;
+    _pageController
+        .animateToPage(
+      index,
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeInOutCubic,
+    )
+        .then((_) {
+      if (mounted) {
+        _isManualSwitch = false;
+      }
+    });
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabControllerChanged);
     _tabController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -222,17 +250,41 @@ class _HomeScreenState extends State<HomeScreen>
               controller: _tabController,
               backgroundColor: AppColors.background,
               canvasColor: AppColors.background,
+              onModeChanged: (mode) {
+                final idx = kAppModes.indexWhere((m) => m.mode == mode);
+                if (idx >= 0 && idx != (_pageController.page?.round() ?? -1)) {
+                  _goToPage(idx);
+                }
+              },
             ),
-            // ── Tab body ────────────────────────────────────────────────────
+            // ── Tab body with smooth, somewhat slow page transitions ────────
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: _tabs.map((tab) {
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _tabs.length,
+                physics: const BouncingScrollPhysics(),
+                onPageChanged: (index) {
+                  if (_tabController.index != index) {
+                    _isManualSwitch = true;
+                    _tabController.animateTo(
+                      index,
+                      duration: const Duration(milliseconds: 550),
+                      curve: Curves.easeInOutCubic,
+                    );
+                    Future.delayed(const Duration(milliseconds: 580), () {
+                      if (mounted) {
+                        _isManualSwitch = false;
+                      }
+                    });
+                  }
+                },
+                itemBuilder: (context, index) {
+                  final tab = _tabs[index];
                   return _ServicePage(
                     tab: tab,
                     onEnter: () => _navigate(tab.route),
                   );
-                }).toList(),
+                },
               ),
             ),
             // ── Red accent bar ──────────────────────────────────────────────

@@ -179,15 +179,19 @@ class _TopModeSelectorState extends State<TopModeSelector> {
     final targetX = _sidePad + idx * (_tabWidth + _tabGap) - 40;
     _scrollController.animateTo(
       targetX.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeInOutCubic,
     );
   }
 
   void _handleTabTap(int index) {
     final modeConfig = kAppModes[index];
     if (widget.controller != null) {
-      widget.controller!.animateTo(index);
+      widget.controller!.animateTo(
+        index,
+        duration: const Duration(milliseconds: 550),
+        curve: Curves.easeInOutCubic,
+      );
     }
     AppModeController.instance.setMode(modeConfig.mode);
     widget.onModeChanged?.call(modeConfig.mode);
@@ -216,8 +220,8 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                 begin: currentIndex.toDouble(),
                 end: currentIndex.toDouble(),
               ),
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 550),
+              curve: Curves.easeInOutCubic,
               builder: (context, animIndex, child) {
                 final left = _sidePad + animIndex * (_tabWidth + _tabGap);
                 final right = left + _tabWidth;
@@ -289,11 +293,11 @@ class _ModeTabContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.symmetric(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
+      padding: const EdgeInsets.symmetric(
         horizontal: 2,
-        vertical: isSelected ? 4 : 8,
+        vertical: 6,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -301,7 +305,8 @@ class _ModeTabContent extends StatelessWidget {
         children: [
           // Mode Icon
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutCubic,
             width: isSelected ? 28 : 22,
             height: isSelected ? 28 : 22,
             decoration: isSelected
@@ -319,13 +324,11 @@ class _ModeTabContent extends StatelessWidget {
                   : Colors.white.withValues(alpha: 0.60),
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           // Mode Label
-          Text(
-            mode.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutCubic,
             style: TextStyle(
               fontSize: isSelected ? 10.5 : 9.5,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
@@ -335,28 +338,13 @@ class _ModeTabContent extends StatelessWidget {
               letterSpacing: 0.1,
               height: 1.1,
             ),
-          ),
-          if (isSelected) ...[
-            const SizedBox(height: 2),
-            // Micro Service Tag (e.g. DELIVERY, PICKUP, BOOKING, EVENTS, WEEKLY)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: mode.accentColor.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Text(
-                mode.microTag,
-                style: TextStyle(
-                  fontSize: 6.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.4,
-                  color: mode.accentColor,
-                  height: 1.0,
-                ),
-              ),
+            child: Text(
+              mode.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
-          ],
+          ),
         ],
       ),
     );

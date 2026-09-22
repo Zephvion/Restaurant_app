@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
-import '../../models/meal_plan.dart';
 import '../../models/menu_category.dart';
 import '../../models/promo_banner.dart';
 import '../../routes/app_routes.dart';
@@ -11,7 +10,6 @@ import '../../services/location_service.dart';
 import '../../services/menu_service.dart';
 import '../../services/session_manager.dart';
 import '../../state/cart_controller.dart';
-import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/basket_bar.dart';
@@ -152,8 +150,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
             ),
             const SizedBox(height: 14),
             _categoryCircles(),
-            const SizedBox(height: 30),
-            _foodPlannerSection(),
             const SizedBox(height: 26),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -514,198 +510,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _foodPlannerSection() {
-    final planner = FoodPlannerController.instance;
-    return AnimatedBuilder(
-      animation: planner,
-      builder: (context, _) {
-        final hasMeals = planner.plannedMeals.isNotEmpty;
-        final currentMeal = hasMeals ? planner.plannedMeals.first : null;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF2C1810),
-                  AppColors.backgroundElevated,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.copper.withOpacity(0.4)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.copper.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.calendar_month_rounded,
-                          color: AppColors.copper, size: 20),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'FOOD PLANNER & MACROS',
-                            style: TextStyle(
-                              color: AppColors.copper,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Scheduled Meals & Calorie Tracking',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.maroon.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.maroon),
-                      ),
-                      child: const Text(
-                        '15% OFF',
-                        style: TextStyle(
-                          color: AppColors.accentRed,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                if (currentMeal != null) ...[
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          width: 50,
-                          height: 50,
-                          child: NetworkImageWithFallback(
-                            url: currentMeal.imageUrl,
-                            fallbackIcon: Icons.restaurant,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Next Planned: ${currentMeal.dishName}',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${currentMeal.mealType.label.toUpperCase()} · ${currentMeal.timeSlot} · ${currentMeal.calories} kcal',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ] else ...[
-                  const Text(
-                    'Plan your weekly breakfast, lunch & dinner with zero hassle.',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.local_fire_department_rounded,
-                            size: 16, color: AppColors.copper),
-                        SizedBox(width: 4),
-                        Text(
-                          '2,000 kcal Target',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.maroon,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.foodPlanner),
-                      icon: const Icon(Icons.arrow_forward, size: 14),
-                      label: Text(
-                        hasMeals ? 'OPEN PLANNER' : 'START PLANNING',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
