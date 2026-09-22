@@ -355,11 +355,9 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: SafeArea(
-            top: !hasSelectedDay,
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
+          body: ListView(
+            padding: EdgeInsets.zero,
+            children: [
                 // ── Top Header / Banner ──────────────────────────────────
                 if (!hasSelectedDay)
                   const _BannerHeader()
@@ -380,7 +378,7 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                 // ── Swiggy-style Section Switcher ───────────────────────────
                 const DashboardTabBar(
                   activeId: 'food_planner',
-                  padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  padding: EdgeInsets.symmetric(vertical: 4),
                 ),
 
                 // ── Header Text & Date Strip ────────────────────────────────
@@ -554,7 +552,6 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                 const SizedBox(height: 40),
               ],
             ),
-          ),
         );
       },
     );
@@ -1070,18 +1067,21 @@ class _PlainHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 20),
-            onPressed: onBack,
-          ),
-          const Spacer(),
-          _NotificationBellButton(onTap: onNotify),
-        ],
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: Colors.white, size: 20),
+              onPressed: onBack,
+            ),
+            const Spacer(),
+            _NotificationBellButton(onTap: onNotify),
+          ],
+        ),
       ),
     );
   }

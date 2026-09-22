@@ -107,16 +107,12 @@ class TopModeSelector extends StatefulWidget {
 class _TopModeSelectorState extends State<TopModeSelector> {
   final ScrollController _scrollController = ScrollController();
 
-  static const double _tabWidth = 68.0;
-  static const double _tabGap = 8.0;
-  static const double _sidePad = 12.0;
   static const double _barHeight = 74.0;
   static const double _tabTop = 4.0;
-  static const double _rTop = 14.0;
-  static const double _rBottom = 8.0;
 
-  double get _totalWidth =>
-      _sidePad * 2 + (kAppModes.length * _tabWidth) + ((kAppModes.length - 1) * _tabGap);
+  double _lastTabWidth = 68.0;
+  double _lastTabGap = 6.0;
+  double _lastSidePad = 8.0;
 
   int get _currentIndex {
     if (widget.controller != null) {
@@ -139,6 +135,9 @@ class _TopModeSelectorState extends State<TopModeSelector> {
     super.initState();
     widget.controller?.addListener(_onControllerChange);
     AppModeController.instance.addListener(_onModeControllerChange);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _autoScrollToActive(animated: false);
+    });
   }
 
   @override
@@ -148,7 +147,12 @@ class _TopModeSelectorState extends State<TopModeSelector> {
       oldWidget.controller?.removeListener(_onControllerChange);
       widget.controller?.addListener(_onControllerChange);
     }
-    _autoScrollToActive();
+    if (oldWidget.activeId != widget.activeId ||
+        oldWidget.selectedIndex != widget.selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _autoScrollToActive(animated: true);
+      });
+    }
   }
 
   @override
@@ -162,26 +166,41 @@ class _TopModeSelectorState extends State<TopModeSelector> {
   void _onControllerChange() {
     if (mounted) {
       setState(() {});
-      _autoScrollToActive();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _autoScrollToActive(animated: true);
+      });
     }
   }
 
   void _onModeControllerChange() {
     if (mounted) {
       setState(() {});
-      _autoScrollToActive();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _autoScrollToActive(animated: true);
+      });
     }
   }
 
-  void _autoScrollToActive() {
+  void _autoScrollToActive({bool animated = true}) {
     if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+
     final idx = _currentIndex;
-    final targetX = _sidePad + idx * (_tabWidth + _tabGap) - 40;
-    _scrollController.animateTo(
-      targetX.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 550),
-      curve: Curves.easeInOutCubic,
-    );
+    final tabLeft = _lastSidePad + idx * (_lastTabWidth + _lastTabGap);
+    final tabCenter = tabLeft + _lastTabWidth / 2;
+    final viewportWidth = _scrollController.position.viewportDimension;
+    final targetX = (tabCenter - viewportWidth / 2).clamp(0.0, maxScroll);
+
+    if (animated) {
+      _scrollController.animateTo(
+        targetX,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(targetX);
+    }
   }
 
   void _handleTabTap(int index) {
@@ -196,6 +215,9 @@ class _TopModeSelectorState extends State<TopModeSelector> {
     AppModeController.instance.setMode(modeConfig.mode);
     widget.onModeChanged?.call(modeConfig.mode);
     setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _autoScrollToActive(animated: true);
+    });
   }
 
   @override
@@ -204,77 +226,126 @@ class _TopModeSelectorState extends State<TopModeSelector> {
 
     return Padding(
       padding: widget.padding,
-      child: Container(
-        width: double.infinity,
-        height: _barHeight,
-        color: widget.backgroundColor,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: SizedBox(
-            width: _totalWidth,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = constraints.maxWidth;
+          final n = kAppModes.length;
+
+          double sidePad;
+          double tabGap;
+          double tabWidth;
+          double totalWidth;
+          double rBottom;
+          const double rTop = 12.0;
+
+          if (maxW.isFinite && maxW > 0) {
+            if (maxW < 330) {
+              sidePad = 6.0;
+              tabGap = 4.0;
+              tabWidth = 62.0;
+              totalWidth = sidePad * 2 + n * tabWidth + (n - 1) * tabGap;
+              rBottom = 6.0;
+            } else if (maxW <= 460) {
+              sidePad = (maxW < 370) ? 6.0 : 8.0;
+              tabGap = (maxW < 370) ? 4.0 : 6.0;
+              tabWidth = (maxW - (sidePad * 2) - ((n - 1) * tabGap)) / n;
+              totalWidth = maxW;
+              rBottom = sidePad;
+            } else {
+              tabWidth = 78.0;
+              tabGap = 8.0;
+              final contentW = n * tabWidth + (n - 1) * tabGap;
+              sidePad = ((maxW - contentW) / 2).clamp(8.0, double.infinity);
+              totalWidth = maxW;
+              rBottom = 8.0;
+            }
+          } else {
+            sidePad = 8.0;
+            tabGap = 6.0;
+            tabWidth = 68.0;
+            totalWidth = sidePad * 2 + n * tabWidth + (n - 1) * tabGap;
+            rBottom = 8.0;
+          }
+
+          _lastTabWidth = tabWidth;
+          _lastTabGap = tabGap;
+          _lastSidePad = sidePad;
+
+          return Container(
+            width: double.infinity,
             height: _barHeight,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: currentIndex.toDouble(),
-                end: currentIndex.toDouble(),
-              ),
-              duration: const Duration(milliseconds: 550),
-              curve: Curves.easeInOutCubic,
-              builder: (context, animIndex, child) {
-                final left = _sidePad + animIndex * (_tabWidth + _tabGap);
-                final right = left + _tabWidth;
-
-                final lowerIdx = animIndex.floor().clamp(0, kAppModes.length - 1);
-                final upperIdx = animIndex.ceil().clamp(0, kAppModes.length - 1);
-                final t = (animIndex - lowerIdx).clamp(0.0, 1.0);
-                final currentColor = Color.lerp(
-                  kAppModes[lowerIdx].accentColor,
-                  kAppModes[upperIdx].accentColor,
-                  t,
-                )!;
-
-                return CustomPaint(
-                  painter: _SwiggyFlaredTabPainter(
-                    left: left,
-                    right: right,
-                    top: _tabTop,
-                    bottom: _barHeight,
-                    rTop: _rTop,
-                    rBottom: _rBottom,
-                    fillColor: widget.canvasColor,
-                    accentColor: currentColor,
-                    totalWidth: _totalWidth,
+            color: widget.backgroundColor,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: SizedBox(
+                width: totalWidth,
+                height: _barHeight,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: currentIndex.toDouble(),
+                    end: currentIndex.toDouble(),
                   ),
-                  child: child,
-                );
-              },
-              child: Stack(
-                children: List.generate(kAppModes.length, (i) {
-                  final mode = kAppModes[i];
-                  final isSelected = i == currentIndex;
-                  final tabLeft = _sidePad + i * (_tabWidth + _tabGap);
+                  duration: const Duration(milliseconds: 550),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, animIndex, child) {
+                    final left = sidePad + animIndex * (tabWidth + tabGap);
+                    final right = left + tabWidth;
 
-                  return Positioned(
-                    left: tabLeft,
-                    top: _tabTop,
-                    width: _tabWidth,
-                    height: _barHeight - _tabTop,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _handleTabTap(i),
-                      child: _ModeTabContent(
-                        mode: mode,
-                        isSelected: isSelected,
+                    final lowerIdx =
+                        animIndex.floor().clamp(0, kAppModes.length - 1);
+                    final upperIdx =
+                        animIndex.ceil().clamp(0, kAppModes.length - 1);
+                    final t = (animIndex - lowerIdx).clamp(0.0, 1.0);
+                    final currentColor = Color.lerp(
+                      kAppModes[lowerIdx].accentColor,
+                      kAppModes[upperIdx].accentColor,
+                      t,
+                    )!;
+
+                    return CustomPaint(
+                      painter: _SwiggyFlaredTabPainter(
+                        left: left,
+                        right: right,
+                        top: _tabTop,
+                        bottom: _barHeight,
+                        rTop: rTop,
+                        rBottom: rBottom,
+                        fillColor: widget.canvasColor,
+                        accentColor: currentColor,
+                        totalWidth: totalWidth,
                       ),
-                    ),
-                  );
-                }),
+                      child: child,
+                    );
+                  },
+                  child: Stack(
+                    children: List.generate(kAppModes.length, (i) {
+                      final mode = kAppModes[i];
+                      final isSelected = i == currentIndex;
+                      final tabLeft = sidePad + i * (tabWidth + tabGap);
+
+                      return Positioned(
+                        left: tabLeft,
+                        top: _tabTop,
+                        width: tabWidth,
+                        height: _barHeight - _tabTop,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _handleTabTap(i),
+                          child: _ModeTabContent(
+                            mode: mode,
+                            isSelected: isSelected,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -338,11 +409,13 @@ class _ModeTabContent extends StatelessWidget {
               letterSpacing: 0.1,
               height: 1.1,
             ),
-            child: Text(
-              mode.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                mode.label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ],
@@ -354,8 +427,8 @@ class _ModeTabContent extends StatelessWidget {
 /// Custom painter that draws the Swiggy arched bell/folder tab with concave flaring shoulders.
 ///
 /// Follows smooth C1-continuous curvature:
-/// - Convex rounded corners on top ($R_{top} = 14$).
-/// - Concave fillet flaring arcs at the bottom ($R_{bottom} = 8$) that sweep outward
+/// - Convex rounded corners on top ($R_{top} = 12$).
+/// - Concave fillet flaring arcs at the bottom ($R_{bottom} = 6..8$) that sweep outward
 ///   onto the baseline.
 /// - Glowing ambient shadow.
 /// - Top and side highlight stroke (no stroke at bottom baseline).
@@ -385,51 +458,49 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final startX = (left - rBottom).clamp(0.0, totalWidth);
+    final endX = (right + rBottom).clamp(0.0, totalWidth);
+    final effectiveRTop = rTop.clamp(2.0, (right - left) / 2.5);
+
     // 1. Construct the closed organic flared tab path for fill and shadow
     final fillPath = Path();
+    fillPath.moveTo(startX, bottom);
 
-    // Start on baseline at the outer tip of the left concave flare
-    fillPath.moveTo(left - rBottom, bottom);
+    if (left > startX) {
+      fillPath.arcToPoint(
+        Offset(left, bottom - rBottom),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      fillPath.lineTo(left, bottom - rBottom);
+    }
 
-    // Concave arc curving upward and inward to the left vertical edge
+    fillPath.lineTo(left, top + effectiveRTop);
     fillPath.arcToPoint(
-      Offset(left, bottom - rBottom),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
-
-    // Left vertical line
-    fillPath.lineTo(left, top + rTop);
-
-    // Convex rounded top-left corner
-    fillPath.arcToPoint(
-      Offset(left + rTop, top),
-      radius: Radius.circular(rTop),
+      Offset(left + effectiveRTop, top),
+      radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-
-    // Top horizontal line
-    fillPath.lineTo(right - rTop, top);
-
-    // Convex rounded top-right corner
+    fillPath.lineTo(right - effectiveRTop, top);
     fillPath.arcToPoint(
-      Offset(right, top + rTop),
-      radius: Radius.circular(rTop),
+      Offset(right, top + effectiveRTop),
+      radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-
-    // Right vertical line
     fillPath.lineTo(right, bottom - rBottom);
 
-    // Concave arc curving downward and outward to baseline
-    fillPath.arcToPoint(
-      Offset(right + rBottom, bottom),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
+    if (endX > right) {
+      fillPath.arcToPoint(
+        Offset(endX, bottom),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      fillPath.lineTo(right, bottom);
+    }
 
-    // Close along baseline
-    fillPath.lineTo(left - rBottom, bottom);
+    fillPath.lineTo(startX, bottom);
     fillPath.close();
 
     // 2. Ambient top glow shadow
@@ -446,30 +517,38 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
 
     // 4. Highlight stroke on top and flared sides (excluding bottom baseline)
     final strokePath = Path();
-    strokePath.moveTo(left - rBottom, bottom);
+    strokePath.moveTo(startX, bottom);
+    if (left > startX) {
+      strokePath.arcToPoint(
+        Offset(left, bottom - rBottom),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      strokePath.lineTo(left, bottom - rBottom);
+    }
+    strokePath.lineTo(left, top + effectiveRTop);
     strokePath.arcToPoint(
-      Offset(left, bottom - rBottom),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
-    strokePath.lineTo(left, top + rTop);
-    strokePath.arcToPoint(
-      Offset(left + rTop, top),
-      radius: Radius.circular(rTop),
+      Offset(left + effectiveRTop, top),
+      radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-    strokePath.lineTo(right - rTop, top);
+    strokePath.lineTo(right - effectiveRTop, top);
     strokePath.arcToPoint(
-      Offset(right, top + rTop),
-      radius: Radius.circular(rTop),
+      Offset(right, top + effectiveRTop),
+      radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
     strokePath.lineTo(right, bottom - rBottom);
-    strokePath.arcToPoint(
-      Offset(right + rBottom, bottom),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
+    if (endX > right) {
+      strokePath.arcToPoint(
+        Offset(endX, bottom),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      strokePath.lineTo(right, bottom);
+    }
 
     final strokePaint = Paint()
       ..color = accentColor.withValues(alpha: 0.90)
@@ -484,14 +563,11 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    final flareLeft = left - rBottom;
-    final flareRight = right + rBottom;
-
-    if (flareLeft > 0) {
-      canvas.drawLine(Offset(0, bottom), Offset(flareLeft, bottom), baselinePaint);
+    if (startX > 0.5) {
+      canvas.drawLine(Offset(0, bottom), Offset(startX, bottom), baselinePaint);
     }
-    if (flareRight < totalWidth) {
-      canvas.drawLine(Offset(flareRight, bottom), Offset(totalWidth, bottom), baselinePaint);
+    if (endX < totalWidth - 0.5) {
+      canvas.drawLine(Offset(endX, bottom), Offset(totalWidth, bottom), baselinePaint);
     }
   }
 
@@ -500,6 +576,7 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
     return oldDelegate.left != left ||
         oldDelegate.right != right ||
         oldDelegate.accentColor != accentColor ||
-        oldDelegate.fillColor != fillColor;
+        oldDelegate.fillColor != fillColor ||
+        oldDelegate.totalWidth != totalWidth;
   }
 }

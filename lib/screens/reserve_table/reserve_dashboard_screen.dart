@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
@@ -111,15 +112,21 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final displayName = user?.displayName;
+    final userName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : 'Valued Guest';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 28),
-          const Text(
-            'Hello, Arti!',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          Text(
+            'Hello, $userName!',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -130,8 +137,28 @@ class _EmptyState extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 12),
+          const Text(
+            'Planning a special dinner, family gathering, or business lunch? Reserve your preferred table in seconds.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
+          ),
           const Spacer(),
-          Center(child: _AddButton(onTap: onAdd)),
+          Center(
+            child: Column(
+              children: [
+                _AddButton(onTap: onAdd),
+                const SizedBox(height: 12),
+                const Text(
+                  'Reserve Table',
+                  style: TextStyle(
+                    color: AppColors.copper,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const Spacer(),
         ],
       ),
@@ -148,29 +175,51 @@ class _ReservationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.instance.currentUser;
+    final displayName = user?.displayName;
+    final userName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : 'Valued Guest';
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        const Text(
-          'Hello, Arti!',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, $userName!',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Your Reservations',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle, color: AppColors.copper, size: 32),
+              onPressed: onAdd,
+              tooltip: 'New Reservation',
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'Your reservations',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
         ...reservations.map((r) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: _ReservationCard(reservation: r),
             )),
-        const SizedBox(height: 16),
-        Center(child: _AddButton(onTap: onAdd)),
       ],
     );
   }
@@ -698,25 +747,16 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.add_rounded, size: 22),
-      label: const Text(
-        'Reserve a Table',
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
         ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.accentRed,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        elevation: 3,
+        child: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
       ),
     );
   }
