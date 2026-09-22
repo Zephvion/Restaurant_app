@@ -5,6 +5,7 @@ import '../../models/address.dart';
 import '../../models/user_profile.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../state/catering_controller.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
@@ -18,6 +19,7 @@ class AccountScreen extends StatelessWidget {
 
   Future<void> _logout(BuildContext context) async {
     await AuthService.instance.signOut();
+    await CateringController.instance.reload();
     if (context.mounted) {
       AppBanner.showInfo(
         context,

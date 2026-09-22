@@ -8,7 +8,6 @@ import '../services/catering_service.dart';
 /// Singleton [ChangeNotifier] for managing Catering requests & orders.
 class CateringController extends ChangeNotifier {
   CateringController._() {
-    _orders.addAll(CateringService.instance.orders);
     _init();
   }
   static final CateringController instance = CateringController._();
@@ -18,14 +17,19 @@ class CateringController extends ChangeNotifier {
   List<CateringOrder> get orders => List.unmodifiable(_orders);
   bool get hasNoOrders => _orders.isEmpty;
 
+  Future<void> reload() => _init();
+
   Future<void> _init() async {
-    final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
-    final items = await CateringService.instance.getUserCateringOrders(uid);
-    for (final item in items) {
-      if (!_orders.any((o) => o.id == item.id)) {
-        _orders.add(item);
-      }
+    final uid = AuthService.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      _orders.clear();
+      notifyListeners();
+      return;
     }
+    final items = await CateringService.instance.getUserCateringOrders(uid);
+    _orders
+      ..clear()
+      ..addAll(items);
     notifyListeners();
   }
 

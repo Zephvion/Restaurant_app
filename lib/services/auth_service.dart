@@ -71,6 +71,8 @@ class AuthService {
               msg = 'App not authorized. Ensure SHA-1 and SHA-256 fingerprints are added in Firebase Console.';
             } else if (e.code == 'too-many-requests') {
               msg = 'Too many requests from this device. Please wait a few minutes before trying again.';
+            } else if (e.code == 'billing-not-enabled') {
+              msg = 'Firebase phone authentication requires a Blaze (pay-as-you-go) plan or testing numbers in Firebase Console.';
             }
             onError(msg);
           },

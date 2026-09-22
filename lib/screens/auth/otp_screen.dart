@@ -270,7 +270,7 @@ class _PhoneRow extends StatelessWidget {
             text: TextSpan(
               style: Theme.of(context).textTheme.bodyMedium,
               children: [
-                const TextSpan(text: 'Enter the 4-digit code sent to '),
+                const TextSpan(text: 'Enter the 6-digit code sent to '),
                 TextSpan(
                   text: phone,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(

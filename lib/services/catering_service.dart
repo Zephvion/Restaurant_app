@@ -10,30 +10,7 @@ class CateringService {
   CateringService._();
   static final CateringService instance = CateringService._();
 
-  final List<CateringOrder> _localOrders = [
-    CateringOrder(
-      id: 'CAT-4578',
-      userId: 'usr_demo',
-      restaurantId: 'rest_calicut',
-      restaurantName: 'Paragon Restaurant - Calicut',
-      branchLocation: 'Mavoor Road, Kozhikode',
-      pickupLocation: 'Paragon Central Catering Hub, Mavoor Road, Kozhikode',
-      ownerName: 'Chef Rajesh Kumar (Catering Operations Head)',
-      ownerPhone: '+91 98470 12345',
-      date: DateTime.now().add(const Duration(days: 4)),
-      timeSlot: 'Lunch (12:00 PM – 3:30 PM)',
-      guestRange: '100 - 250 Guests',
-      eventType: 'Corporate Buffet Gala',
-      menuPackage: 'Royal Malabar Feast',
-      pricePerPlate: 550.0,
-      totalAmount: 82500.0,
-      venueAddress: 'Grand Palace Convention Centre, Mavoor Road, Kozhikode',
-      specialInstructions: 'Live appam counter requested; Jain options for 10 guests.',
-      contactPhone: '+91 98765 43210',
-      status: CateringStatus.notifiedParagon,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-  ];
+  final List<CateringOrder> _localOrders = [];
 
   List<CateringOrder> get orders => List.unmodifiable(_localOrders);
 
@@ -150,20 +127,18 @@ class CateringService {
             .where('userId', isEqualTo: userId)
             .get()
             .timeout(const Duration(seconds: 2));
-        if (query.docs.isNotEmpty) {
-          final items = query.docs
-              .map((doc) => CateringOrder.fromMap(doc.data(), id: doc.id))
-              .toList();
-          _localOrders
-            ..clear()
-            ..addAll(items);
-          return items;
-        }
+        final items = query.docs
+            .map((doc) => CateringOrder.fromMap(doc.data(), id: doc.id))
+            .toList();
+        _localOrders
+          ..clear()
+          ..addAll(items);
+        return items;
       } catch (e) {
         debugPrint('Error fetching catering orders from Firestore: $e');
       }
     }
-    return _localOrders;
+    return _localOrders.where((o) => o.userId == userId).toList();
   }
 
   Future<void> cancelOrder(String id) async {

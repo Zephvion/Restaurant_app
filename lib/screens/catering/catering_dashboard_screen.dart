@@ -15,8 +15,21 @@ import '../../widgets/payment_gateway_sheet.dart';
 /// Dashboard screen for Catering:
 /// Shows empty state ("No catering orders yet") or active order cards with progress stepper,
 /// coordinator call modal, pickup/kitchen details, and mock payment gateway integration.
-class CateringDashboardScreen extends StatelessWidget {
+class CateringDashboardScreen extends StatefulWidget {
   const CateringDashboardScreen({super.key});
+
+  @override
+  State<CateringDashboardScreen> createState() => _CateringDashboardScreenState();
+}
+
+class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      CateringController.instance.reload();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
