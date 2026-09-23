@@ -239,10 +239,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         actions: [
           TextButton(
             onPressed: _skipForNow,
-            child: Text(
+            child: const Text(
               'Skip',
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -263,19 +263,19 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.15),
+                    color: AppColors.copper.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppColors.copper.withValues(alpha: 0.3)),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.stars_rounded, size: 14, color: AppColors.gold),
-                      const SizedBox(width: 6),
+                      Icon(Icons.stars_rounded, size: 14, color: AppColors.copper),
+                      SizedBox(width: 6),
                       Text(
                         'NEW ACCOUNT SETUP',
                         style: TextStyle(
-                          color: AppColors.gold,
+                          color: AppColors.copper,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.0,
@@ -293,7 +293,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   'Add your details to enjoy seamless doorstep delivery and order tracking.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -355,10 +355,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 const SizedBox(height: 22),
 
                 // Personal Info Section
-                Text(
+                const Text(
                   'PERSONAL DETAILS',
                   style: TextStyle(
-                    color: AppColors.gold,
+                    color: AppColors.copper,
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.0,
@@ -366,9 +366,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 AppTextField(
-                  label: 'Full Name *',
-                  hint: 'Enter your full name',
-                  prefixIcon: Icons.person_outline_rounded,
+                  hint: 'Full Name *',
                   controller: _nameController,
                   validator: (v) {
                     if (v == null || v.trim().length < 2) {
@@ -379,9 +377,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  label: 'Email Address *',
-                  hint: 'you@example.com (for receipts & updates)',
-                  prefixIcon: Icons.mail_outline_rounded,
+                  hint: 'Email Address *',
                   keyboardType: TextInputType.emailAddress,
                   controller: _emailController,
                   validator: (v) {
@@ -400,10 +396,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    const Text(
                       'DELIVERY DOORSTEP',
                       style: TextStyle(
-                        color: AppColors.gold,
+                        color: AppColors.copper,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.0,
@@ -417,9 +413,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.gold.withValues(alpha: 0.12),
+                              color: AppColors.copper.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                              border: Border.all(color: AppColors.copper.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               children: [
@@ -429,16 +425,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                                     height: 10,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: AppColors.gold,
+                                      color: AppColors.copper,
                                     ),
                                   )
                                 else
-                                  const Icon(Icons.my_location_rounded, size: 12, color: AppColors.gold),
+                                  const Icon(Icons.my_location_rounded, size: 12, color: AppColors.copper),
                                 const SizedBox(width: 4),
-                                Text(
+                                const Text(
                                   'GPS',
                                   style: TextStyle(
-                                    color: AppColors.gold,
+                                    color: AppColors.copper,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -480,16 +476,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 AppTextField(
-                  label: 'House / Flat / Street Details',
-                  hint: 'e.g. Flat 302, Palm Heights, Link Road',
-                  prefixIcon: Icons.home_outlined,
+                  hint: 'House / Flat / Street Details',
                   controller: _addressController,
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  label: 'Locality / Area / Landmark',
-                  hint: 'e.g. Palazhi, Near Cyberpark',
-                  prefixIcon: Icons.location_on_outlined,
+                  hint: 'Locality / Area / Landmark',
                   controller: _landmarkController,
                 ),
                 const SizedBox(height: 24),
@@ -498,17 +490,17 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white10),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          Icon(Icons.shield_outlined, size: 18, color: AppColors.gold),
-                          const SizedBox(width: 8),
+                          Icon(Icons.shield_outlined, size: 18, color: AppColors.copper),
+                          SizedBox(width: 8),
                           Text(
                             'Set Account Password (Optional)',
                             style: TextStyle(
@@ -520,7 +512,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      const Text(
                         'Allows you to sign in anytime with your Mobile & Password without waiting for SMS verification.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -530,36 +522,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                       const SizedBox(height: 14),
                       AppTextField(
-                        label: 'Password',
-                        hint: 'Create a password (min 6 chars)',
-                        prefixIcon: Icons.lock_outline_rounded,
-                        obscureText: _obscurePassword,
+                        hint: 'Password (min 6 chars)',
+                        isPassword: true,
                         controller: _passwordController,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.white38,
-                            size: 18,
-                          ),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        ),
                       ),
                       const SizedBox(height: 12),
                       AppTextField(
-                        label: 'Confirm Password',
-                        hint: 'Re-enter your password',
-                        prefixIcon: Icons.lock_clock_outlined,
-                        obscureText: _obscureConfirmPassword,
+                        hint: 'Confirm Password',
+                        isPassword: true,
                         controller: _confirmPasswordController,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.white38,
-                            size: 18,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                        ),
                       ),
                     ],
                   ),
@@ -568,7 +539,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
                 // Submit Button
                 PrimaryButton(
-                  text: 'Save & Continue to Menu',
+                  label: 'Save & Continue to Menu',
                   isLoading: _isLoading,
                   onPressed: _saveAndContinue,
                 ),
@@ -576,10 +547,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 Center(
                   child: TextButton(
                     onPressed: _skipForNow,
-                    child: Text(
+                    child: const Text(
                       'I will complete this later',
                       style: TextStyle(
-                        color: AppColors.textMuted,
+                        color: AppColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),

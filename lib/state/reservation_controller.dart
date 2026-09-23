@@ -142,7 +142,7 @@ class ReservationController extends ChangeNotifier {
 
     NotificationService.instance.notifyTableBillPaid(
       tableNumber: reservation.allTableNumbers.join(', '),
-      amount: reservation.foodBillAmount,
+      amount: reservation.foodBillAmount ?? 0.0,
     );
     notifyListeners();
   }

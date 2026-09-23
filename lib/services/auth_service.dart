@@ -807,8 +807,8 @@ class AuthService {
           id: 'addr_comp_${DateTime.now().millisecondsSinceEpoch}',
           label: 'Home Doorstep',
           details: fullDetails,
-          lat: lat,
-          lng: lng,
+          lat: lat ?? 11.2588,
+          lng: lng ?? 75.7804,
           isDefault: true,
         ),
       );
