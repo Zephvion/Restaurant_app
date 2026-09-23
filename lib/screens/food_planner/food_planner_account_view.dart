@@ -5,6 +5,7 @@ import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/edit_profile_sheet.dart';
 
 /// Tab 3: Account & settings screen in Food Planner matching Planner Account.png through Planner Account 5.png.
 class FoodPlannerAccountView extends StatefulWidget {
@@ -66,41 +67,68 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
 
                     return Column(
                       children: [
-                        Text(
-                          displayName,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              displayName,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => EditProfileSheet.show(context, profile: user),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.copper.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: AppColors.copper,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              phone,
-                              style: const TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.edit_outlined,
-                                size: 13, color: AppColors.textSecondary),
-                          ],
+                        InkWell(
+                          onTap: () => EditProfileSheet.show(context, profile: user),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                phone,
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary, fontSize: 13),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.edit_outlined,
+                                  size: 13, color: AppColors.textSecondary),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              email,
-                              style: const TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.edit_outlined,
-                                size: 13, color: AppColors.textSecondary),
-                          ],
+                        InkWell(
+                          onTap: () => EditProfileSheet.show(context, profile: user),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                email,
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary, fontSize: 13),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.edit_outlined,
+                                  size: 13, color: AppColors.textSecondary),
+                            ],
+                          ),
                         ),
                       ],
                     );

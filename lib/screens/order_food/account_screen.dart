@@ -10,6 +10,7 @@ import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/app_banner.dart';
+import '../../widgets/edit_profile_sheet.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
@@ -89,6 +90,7 @@ class AccountScreen extends StatelessWidget {
                 const SizedBox(height: 22),
                 _profile(
                   context,
+                  profile: profile,
                   name: displayName,
                   phone: phone,
                   email: email,
@@ -253,42 +255,107 @@ class AccountScreen extends StatelessWidget {
 
   Widget _profile(
     BuildContext context, {
+    required UserProfile? profile,
     required String name,
     required String phone,
     required String email,
     required String photoUrl,
   }) {
-    return Row(
-      children: [
-        ClipOval(
-          child: SizedBox(
-            width: 76,
-            height: 76,
-            child: NetworkImageWithFallback(
-              url: photoUrl,
-              fallbackIcon: Icons.person,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Stack(
             children: [
-              Text(
-                name,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+              ClipOval(
+                child: SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: NetworkImageWithFallback(
+                    url: photoUrl,
+                    fallbackIcon: Icons.person,
+                  ),
+                ),
               ),
-              const SizedBox(height: 6),
-              _displayLine(phone, Icons.phone_android),
-              const SizedBox(height: 4),
-              _displayLine(email, Icons.email_outlined),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () => EditProfileSheet.show(context, profile: profile),
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppColors.copper,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.background, width: 2),
+                    ),
+                    child: const Icon(Icons.edit, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => EditProfileSheet.show(context, profile: profile),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.copper.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.copper.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_outlined, size: 12, color: AppColors.copper),
+                            SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: TextStyle(
+                                color: AppColors.copper,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _displayLine(phone, Icons.phone_android),
+                const SizedBox(height: 4),
+                _displayLine(email, Icons.email_outlined),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

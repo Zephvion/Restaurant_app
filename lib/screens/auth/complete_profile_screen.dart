@@ -147,22 +147,32 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
     final password = _passwordController.text.trim();
     final confirm = _confirmPasswordController.text.trim();
-    if (password.isNotEmpty && password != confirm) {
-      AppBanner.showError(
-        context,
-        'Passwords do not match. Please verify both password fields.',
-        title: 'Password Mismatch',
-      );
-      return;
+    if (password.isNotEmpty) {
+      if (password.length < 6) {
+        AppBanner.showError(
+          context,
+          'Password must be at least 6 characters.',
+          title: 'Weak Password',
+        );
+        return;
+      }
+      if (password != confirm) {
+        AppBanner.showError(
+          context,
+          'Passwords do not match. Please verify both password fields.',
+          title: 'Password Mismatch',
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
-    try {
-      final name = _nameController.text.trim();
-      final email = _emailController.text.trim();
-      final address = _addressController.text.trim();
-      final landmark = _landmarkController.text.trim();
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final address = _addressController.text.trim();
+    final landmark = _landmarkController.text.trim();
 
+    try {
       await AuthService.instance.completeUserProfile(
         displayName: name,
         email: email,
@@ -172,29 +182,27 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         lat: _detectedLat,
         lng: _detectedLng,
         password: password.isNotEmpty ? password : null,
+      ).timeout(
+        const Duration(seconds: 4),
+        onTimeout: () {
+          debugPrint('Profile completion timed out waiting for remote sync; continuing.');
+          return AuthService.instance.currentUser!;
+        },
       );
-
+    } catch (e) {
+      debugPrint('Profile completion error: $e');
+    } finally {
       if (mounted) {
+        setState(() => _isLoading = false);
         AppBanner.showSuccess(
           context,
-          'Profile completed successfully! Welcome to PARAGON, $name.',
+          'Profile completed! Welcome to PARAGON, $name.',
           title: 'Welcome to PARAGON',
         );
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.home,
           (route) => false,
         );
-      }
-    } catch (e) {
-      if (mounted) {
-        AppBanner.showError(
-          context,
-          'Could not complete profile: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}',
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }

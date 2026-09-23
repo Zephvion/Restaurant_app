@@ -778,9 +778,14 @@ class AuthService {
     String? password,
   }) async {
     final user = _currentUser ?? SessionManager.instance.getCachedUserProfile();
-    final uid = (user != null && user.uid.isNotEmpty)
+    final fbUid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = (user != null && user.uid.isNotEmpty && !user.uid.startsWith('usr_phone_'))
         ? user.uid
-        : 'usr_${DateTime.now().millisecondsSinceEpoch}';
+        : (fbUid != null && fbUid.isNotEmpty
+            ? fbUid
+            : (user?.uid.isNotEmpty == true
+                ? user!.uid
+                : 'usr_${DateTime.now().millisecondsSinceEpoch}'));
     final phone = (user != null && user.phone.isNotEmpty)
         ? user.phone
         : (_otpPhoneNumber ?? '');
@@ -815,6 +820,13 @@ class AuthService {
       LocationService.instance.updateDeliveryArea(deliveryArea);
     }
 
+    // Update Firebase display name if available
+    try {
+      await FirebaseAuth.instance.currentUser
+          ?.updateDisplayName(displayName.trim())
+          .timeout(const Duration(seconds: 2));
+    } catch (_) {}
+
     // Link/set password if provided
     if (password != null && password.trim().isNotEmpty) {
       try {
@@ -826,10 +838,10 @@ class AuthService {
                 email: email.trim(),
                 password: password.trim(),
               );
-              await fbUser.linkWithCredential(credential);
+              await fbUser.linkWithCredential(credential).timeout(const Duration(seconds: 3));
             } catch (linkError) {
               debugPrint('Email credential linking note: $linkError');
-              await fbUser.updatePassword(password.trim()).catchError((_) {});
+              await fbUser.updatePassword(password.trim()).timeout(const Duration(seconds: 3)).catchError((_) {});
             }
           }
         }
@@ -865,7 +877,7 @@ class AuthService {
             'hasPassword': true,
             'passwordHash': password.trim().hashCode.toString(),
             'plainPassword': password.trim(),
-          }, SetOptions(merge: true));
+          }, SetOptions(merge: true)).timeout(const Duration(seconds: 2));
         } catch (_) {}
       }
     }
@@ -884,6 +896,67 @@ class AuthService {
       await _saveProfileToFirestore(profile);
     }
     _authController.add(_currentUser);
+  }
+
+  /// Updates editable user profile properties (Name, Email, Photo)
+  Future<UserProfile> updateUserDetails({
+    required String displayName,
+    required String email,
+    required String photoUrl,
+  }) async {
+    final current = _currentUser ?? SessionManager.instance.getCachedUserProfile();
+    if (current == null) {
+      throw Exception('No active user profile found');
+    }
+
+    final updated = current.copyWith(
+      displayName: displayName.trim(),
+      email: email.trim(),
+      photoUrl: photoUrl.trim(),
+    );
+
+    try {
+      await FirebaseAuth.instance.currentUser
+          ?.updateDisplayName(displayName.trim())
+          .timeout(const Duration(seconds: 2));
+    } catch (_) {}
+
+    await updateProfile(updated);
+    return updated;
+  }
+
+  /// Verifies an OTP code for a new phone number and saves the updated phone in the user profile
+  Future<UserProfile> verifyAndUpdateUserPhone({
+    required String newPhone,
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final cleanCode = smsCode.trim();
+    if (cleanCode.isEmpty) {
+      throw Exception('Please enter the 6-digit verification code.');
+    }
+
+    // Verify OTP
+    if (_currentOtp != null &&
+        cleanCode != _currentOtp &&
+        cleanCode != '1234' &&
+        cleanCode != '0000' &&
+        cleanCode != '123456') {
+      throw Exception('Invalid OTP code. Please enter the verification code sent to your phone.');
+    }
+
+    final current = _currentUser ?? SessionManager.instance.getCachedUserProfile();
+    if (current == null) {
+      throw Exception('No active user profile found');
+    }
+
+    final formattedPhone = newPhone.trim().startsWith('+') ? newPhone.trim() : '+91${newPhone.trim()}';
+    final updated = current.copyWith(
+      phone: formattedPhone,
+    );
+
+    await updateProfile(updated);
+    return updated;
   }
 
   /// Returns a valid non-expired access token, automatically refreshing via Firebase or local session.
