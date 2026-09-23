@@ -25,6 +25,7 @@ dependencies:
   web: ^1.1.0
   geolocator: ^13.0.2
   google_sign_in: ^6.2.2
+  firebase_messaging: ^15.2.10
 
 dev_dependencies:
   flutter_test:

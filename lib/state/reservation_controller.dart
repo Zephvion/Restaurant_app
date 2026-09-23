@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/reservation.dart';
 import '../models/restaurant.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../services/reservation_service.dart';
 import '../services/table_lock_service.dart';
 
@@ -54,6 +55,11 @@ class ReservationController extends ChangeNotifier {
       tableNumbers: tableNumbers,
     );
     _reservations.insert(0, res);
+    NotificationService.instance.notifyTableReserved(
+      tableNumber: res.allTableNumbers.join(', '),
+      guests: seats,
+      time: timeSlot,
+    );
     notifyListeners();
     return res;
   }
@@ -98,6 +104,9 @@ class ReservationController extends ChangeNotifier {
     if (idx != -1) {
       _reservations[idx] = _reservations[idx].copyWith(status: 'completed');
     }
+    NotificationService.instance.notifyTableReleased(
+      tableNumber: reservation.allTableNumbers.join(', '),
+    );
     notifyListeners();
   }
 
@@ -130,6 +139,11 @@ class ReservationController extends ChangeNotifier {
         isFoodBillPaid: true,
       );
     }
+
+    NotificationService.instance.notifyTableBillPaid(
+      tableNumber: reservation.allTableNumbers.join(', '),
+      amount: reservation.foodBillAmount,
+    );
     notifyListeners();
   }
 

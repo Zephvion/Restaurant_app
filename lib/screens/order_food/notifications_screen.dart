@@ -191,6 +191,16 @@ class _FoodPlannerNotificationCard extends StatelessWidget {
         return Icons.water_drop_rounded;
       case 'analytics':
         return Icons.insights_rounded;
+      case 'order':
+        return Icons.receipt_long_rounded;
+      case 'chef':
+        return Icons.soup_kitchen_rounded;
+      case 'delivery':
+        return Icons.two_wheeler_rounded;
+      case 'table':
+        return Icons.table_restaurant_rounded;
+      case 'bill':
+        return Icons.payments_rounded;
       case 'meal':
       default:
         return Icons.restaurant_rounded;
@@ -207,6 +217,14 @@ class _FoodPlannerNotificationCard extends StatelessWidget {
         return const Color(0xFF38BDF8);
       case 'WEEKLY SUMMARY':
         return const Color(0xFFA78BFA);
+      case 'ORDER STATUS':
+        return const Color(0xFFFFB020);
+      case 'DELIVERY':
+        return const Color(0xFF00E676);
+      case 'TABLE RESERVATION':
+        return const Color(0xFF38BDF8);
+      case 'TABLE BILL':
+        return const Color(0xFFE040FB);
       case 'MEAL REMINDER':
       default:
         return const Color(0xFF4ADE80);

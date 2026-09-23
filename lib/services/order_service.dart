@@ -10,6 +10,7 @@ import '../models/payment_method.dart';
 import 'auth_service.dart';
 import 'firebase_initializer.dart';
 import 'gps_detection_service.dart';
+import 'notification_service.dart';
 import 'session_manager.dart';
 
 class OrderService {
@@ -151,6 +152,7 @@ class OrderService {
       }
     }
 
+    NotificationService.instance.notifyOrderPlaced(orderId, grandTotal);
     _simulateOrderProgression(orderId);
     return order;
   }
@@ -276,6 +278,15 @@ class OrderService {
       _localOrders[orderId] = updated;
       _orderStreams[orderId]?.add(updated);
 
+      // Dispatch contextual notification updates
+      if (status == OrderStatus.taken) {
+        NotificationService.instance.notifyOrderPreparing(orderId);
+      } else if (status == OrderStatus.outForDelivery) {
+        NotificationService.instance.notifyOrderOutForDelivery(orderId, current.deliveryPartnerName);
+      } else if (status == OrderStatus.delivered) {
+        NotificationService.instance.notifyOrderDelivered(orderId);
+      }
+
       if (FirebaseInitializer.isFirebaseReady) {
         FirebaseFirestore.instance.collection('orders').doc(orderId).update({
           'status': status.name,
@@ -303,6 +314,8 @@ class OrderService {
 
     _localOrders[orderId] = updated;
     _orderStreams[orderId]?.add(updated);
+
+    NotificationService.instance.notifyOrderCancelled(orderId, reason);
 
     if (FirebaseInitializer.isFirebaseReady) {
       try {

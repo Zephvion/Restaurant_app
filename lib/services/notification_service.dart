@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/mock_data.dart';
@@ -10,6 +12,12 @@ import '../state/food_planner_controller.dart';
 import 'auth_service.dart';
 import 'firebase_initializer.dart';
 
+/// Top-level background message handler for FCM push notifications
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint('📱 [FCM Background] Title: ${message.notification?.title}, Body: ${message.notification?.body}');
+}
+
 class NotificationService extends ChangeNotifier {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -17,6 +25,9 @@ class NotificationService extends ChangeNotifier {
   List<AppNotification> _cachedNotifications = [];
   final StreamController<List<AppNotification>> _streamController =
       StreamController<List<AppNotification>>.broadcast();
+
+  String? _fcmToken;
+  String? get fcmToken => _fcmToken;
 
   List<AppNotification> get notifications =>
       _cachedNotifications.isNotEmpty ? _cachedNotifications : MockData.notifications;
@@ -26,6 +37,72 @@ class NotificationService extends ChangeNotifier {
   Future<void> init() async {
     _cachedNotifications = List.from(MockData.notifications);
     _streamController.add(notifications);
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        final messaging = FirebaseMessaging.instance;
+        final settings = await messaging.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
+        debugPrint('FCM Notification permission status: ${settings.authorizationStatus}');
+
+        // Register background handler
+        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+        _fcmToken = await messaging.getToken();
+        if (_fcmToken != null) {
+          debugPrint('📱 [FCM] Device Token: ${_fcmToken!.substring(0, math.min(15, _fcmToken!.length))}...');
+          await _saveFcmToken(_fcmToken!);
+        }
+
+        messaging.onTokenRefresh.listen((newToken) {
+          _fcmToken = newToken;
+          _saveFcmToken(newToken);
+        });
+
+        // Listen for foreground push notifications
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          debugPrint('📱 [FCM Foreground] Push received: ${message.notification?.title}');
+          final notif = message.notification;
+          if (notif != null) {
+            addNotification(
+              AppNotification(
+                id: 'fcm_${DateTime.now().millisecondsSinceEpoch}',
+                title: notif.title ?? 'PARAGON Notification',
+                message: notif.body ?? '',
+                category: message.data['category'] ?? 'ORDER STATUS',
+                iconName: message.data['iconName'] ?? 'order',
+                actionRoute: message.data['actionRoute'],
+                actionLabel: message.data['actionLabel'],
+                timestamp: DateTime.now(),
+              ),
+            );
+          }
+        });
+      } catch (e) {
+        debugPrint('FCM initialization note: $e');
+      }
+    }
+  }
+
+  Future<void> _saveFcmToken(String token) async {
+    final uid = AuthService.instance.currentUser?.uid;
+    if (uid != null && FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'fcmToken': token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('Error saving FCM token: $e');
+      }
+    }
   }
 
   Stream<List<AppNotification>> streamNotifications() {
@@ -214,5 +291,132 @@ class NotificationService extends ChangeNotifier {
         ),
       );
     }
+  }
+
+  /// Dispatches notification when order is confirmed
+  void notifyOrderPlaced(String orderId, double grandTotal) {
+    addNotification(
+      AppNotification(
+        id: 'notif_order_placed_$orderId',
+        title: 'Order Confirmed! 🛍️',
+        message: 'Your order #$orderId (\$${grandTotal.toStringAsFixed(2)}) has been accepted by PARAGON Kitchen.',
+        category: 'ORDER STATUS',
+        iconName: 'order',
+        orderId: orderId,
+        actionLabel: 'Track Order',
+        actionRoute: AppRoutes.trackOrder,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when chef starts cooking
+  void notifyOrderPreparing(String orderId) {
+    addNotification(
+      AppNotification(
+        id: 'notif_order_prep_$orderId',
+        title: 'Chef is Preparing Your Feast 👨‍🍳',
+        message: 'Order #$orderId is now in the kitchen. Authentic spices and fresh ingredients at work!',
+        category: 'ORDER STATUS',
+        iconName: 'chef',
+        orderId: orderId,
+        actionLabel: 'Live Track',
+        actionRoute: AppRoutes.trackOrder,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when delivery partner is on the way
+  void notifyOrderOutForDelivery(String orderId, String partnerName) {
+    addNotification(
+      AppNotification(
+        id: 'notif_order_transit_$orderId',
+        title: 'Order Out for Delivery! 🛵',
+        message: 'Delivery partner ($partnerName) is on the way to your doorstep.',
+        category: 'DELIVERY',
+        iconName: 'delivery',
+        orderId: orderId,
+        actionLabel: 'Live Track',
+        actionRoute: AppRoutes.trackOrder,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when order is delivered
+  void notifyOrderDelivered(String orderId) {
+    addNotification(
+      AppNotification(
+        id: 'notif_order_delivered_$orderId',
+        title: 'Order Delivered! 🎉',
+        message: 'Your meal from PARAGON has arrived. Enjoy your dining experience!',
+        category: 'ORDER STATUS',
+        iconName: 'order',
+        orderId: orderId,
+        actionLabel: 'Order Again',
+        actionRoute: AppRoutes.foodHome,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when order is cancelled
+  void notifyOrderCancelled(String orderId, String reason) {
+    addNotification(
+      AppNotification(
+        id: 'notif_order_cancelled_$orderId',
+        title: 'Order #$orderId Cancelled',
+        message: 'Cancellation confirmed ($reason). Any pre-authorized payment has been refunded.',
+        category: 'ORDER STATUS',
+        iconName: 'order',
+        orderId: orderId,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when table reservation is confirmed
+  void notifyTableReserved({required String tableNumber, required int guests, required String time}) {
+    addNotification(
+      AppNotification(
+        id: 'notif_table_res_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Table #$tableNumber Confirmed! 🍽️',
+        message: 'Your table reservation for $guests guests at $time is booked. We look forward to hosting you!',
+        category: 'TABLE RESERVATION',
+        iconName: 'table',
+        actionLabel: 'View Booking',
+        actionRoute: AppRoutes.reserveDashboard,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when food bill is paid at table
+  void notifyTableBillPaid({required String tableNumber, required double amount}) {
+    addNotification(
+      AppNotification(
+        id: 'notif_table_paid_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Food Bill Paid (\$${amount.toStringAsFixed(2)}) 💳',
+        message: 'Payment received at Table #$tableNumber. Table lock released. Thank you for dining with PARAGON!',
+        category: 'TABLE BILL',
+        iconName: 'bill',
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Dispatches notification when table is freed
+  void notifyTableReleased({required String tableNumber}) {
+    addNotification(
+      AppNotification(
+        id: 'notif_table_rel_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Table #$tableNumber Released ✨',
+        message: 'Table is now available. We hope you enjoyed your time with us.',
+        category: 'TABLE RESERVATION',
+        iconName: 'table',
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 }
