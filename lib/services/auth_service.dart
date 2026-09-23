@@ -35,37 +35,6 @@ class AuthService {
   int? _resendToken;
   int? get resendToken => _resendToken;
 
-  static const String _firebaseApiKey = 'AIzaSyAqO_CvNkfEp-pqsRQKoDDa-pZbdOVPb80';
-
-  /// Directly sends real SMS OTP via Google Identity Toolkit REST API
-  /// Bypasses Android device SafetyNet / Play Integrity / reCAPTCHA Enterprise errors.
-  Future<String?> sendDirectIdentityToolkitOtp(String phoneNumber) async {
-    try {
-      final url = Uri.parse(
-        'https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=$_firebaseApiKey',
-      );
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phoneNumber': phoneNumber}),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final sessionInfo = data['sessionInfo'] as String?;
-        if (sessionInfo != null && sessionInfo.isNotEmpty) {
-          debugPrint('📱 [IdentityToolkit REST API] SMS Dispatched! Session: ${sessionInfo.substring(0, 15)}...');
-          _verificationId = sessionInfo;
-          return sessionInfo;
-        }
-      } else {
-        debugPrint('IdentityToolkit sendVerificationCode note (${response.statusCode}): ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('Direct Identity Toolkit OTP note: $e');
-    }
-    return null;
-  }
 
   /// Dispatches real SMS OTP via Firebase Phone Auth to [phoneNumber].
   Future<void> sendFirebasePhoneOtp({
@@ -94,22 +63,26 @@ class AuthService {
               await _signInWithPhoneCredential(credential);
             }
           },
-          verificationFailed: (FirebaseAuthException e) async {
+          verificationFailed: (FirebaseAuthException e) {
             debugPrint('❌ [FirebaseAuth] verifyPhoneNumber failed: ${e.code} - ${e.message}');
-            // Try direct Identity Toolkit REST API (bypasses Android device Play Integrity / reCAPTCHA failures)
-            final sessionInfo = await sendDirectIdentityToolkitOtp(_otpPhoneNumber!);
-            if (sessionInfo != null) {
-              debugPrint('📱 [AuthService] Real cellular SMS dispatched via Google Identity Toolkit REST API!');
-              _verificationId = sessionInfo;
-              onCodeSent(sessionInfo);
-              return;
+            String msg = e.message ?? 'Phone verification failed.';
+            if (e.code == 'invalid-phone-number') {
+              msg = 'The provided phone number is invalid. Please check the digits.';
+            } else if (e.code == 'quota-exceeded') {
+              msg = 'SMS quota for this project has been exceeded. Please try again later.';
+            } else if (e.code == 'app-not-authorized') {
+              msg = 'App not authorized. Ensure SHA-1 and SHA-256 fingerprints are added in Firebase Console.';
+            } else if (e.code == 'too-many-requests') {
+              msg = 'Too many requests from this device. Please wait a few minutes before trying again.';
+            } else if (e.code == 'billing-not-enabled') {
+              msg = 'Firebase SMS requires Blaze plan. Auto-generating test OTP.';
             }
 
-            // Fallback test OTP if cellular SMS fails
+            // Fallback test OTP so verification is never blocked
             generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
             _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
             onCodeSent(_verificationId!);
-            onError(e.message ?? 'Phone verification failed.');
+            onError(msg);
           },
           codeSent: (String verificationId, int? resendToken) {
             debugPrint('📱 [FirebaseAuth] SMS Code sent! Verification ID: $verificationId');
@@ -123,14 +96,7 @@ class AuthService {
         );
       } catch (e) {
         debugPrint('verifyPhoneNumber error: $e');
-        final sessionInfo = await sendDirectIdentityToolkitOtp(_otpPhoneNumber!);
-        if (sessionInfo != null) {
-          _verificationId = sessionInfo;
-          onCodeSent(sessionInfo);
-          return;
-        }
-
-        final fallbackOtp = generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
+        generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
         _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
         onCodeSent(_verificationId!);
         onError(e.toString());
