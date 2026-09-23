@@ -91,20 +91,53 @@ class ReservationService {
   }
 
   Future<void> markReservationCompleted(String id) async {
+    await updateReservationStatus(id, 'completed');
+  }
+
+  /// Endpoint for Owner Dashboard to attach/update food items and bill to a table reservation
+  Future<void> updateReservationFoodBill(
+    String id, {
+    required double amount,
+    required List<Map<String, dynamic>> items,
+  }) async {
     final idx = _localReservations.indexWhere((r) => r.id == id);
     if (idx != -1) {
-      _localReservations[idx] =
-          _localReservations[idx].copyWith(status: 'completed');
+      _localReservations[idx] = _localReservations[idx].copyWith(
+        foodBillAmount: amount,
+        foodItems: items,
+      );
     }
     if (FirebaseInitializer.isFirebaseReady) {
       try {
         await FirebaseFirestore.instance
             .collection('reservations')
             .doc(id)
-            .update({'status': 'completed'}).timeout(
+            .update({
+          'foodBillAmount': amount,
+          'foodItems': items,
+        }).timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('Error updating food bill in Firestore: $e');
+      }
+    }
+  }
+
+  /// Endpoint for Owner Dashboard to update reservation status (e.g. 'completed', 'paid_at_table')
+  Future<void> updateReservationStatus(String id, String status) async {
+    final idx = _localReservations.indexWhere((r) => r.id == id);
+    if (idx != -1) {
+      _localReservations[idx] =
+          _localReservations[idx].copyWith(status: status);
+    }
+    if (FirebaseInitializer.isFirebaseReady) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('reservations')
+            .doc(id)
+            .update({'status': status}).timeout(
           const Duration(seconds: 3),
           onTimeout: () => debugPrint(
-              'Firestore mark reservation completed timed out; updated locally.'),
+              'Firestore update reservation status timed out; updated locally.'),
         );
       } catch (e) {
         debugPrint('Error updating reservation in Firestore: $e');

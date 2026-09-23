@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/payment_gateway_sheet.dart';
 
 /// Shows the user's existing reservations (empty state or a list of cards)
 /// with a ＋ button to start a new reservation.
@@ -357,21 +358,89 @@ class _ReservationCard extends StatelessWidget {
             ],
           ),
 
+          // Food bill preview if added by restaurant owner
+          if (reservation.foodBillAmount != null && reservation.foodBillAmount! > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B2A1E),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.restaurant_menu, size: 14, color: Color(0xFF4CAF50)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Food Bill (Billed by Restaurant)',
+                            style: TextStyle(
+                              color: Color(0xFF81C784),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '₹${reservation.foodBillAmount!.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (reservation.foodItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...reservation.foodItems.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${item['name']} x${item['quantity'] ?? 1}',
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                            ),
+                            Text(
+                              '₹${item['price'] ?? 0}',
+                              style: const TextStyle(color: AppColors.textPrimary, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 14),
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 12),
 
-          // ── Customer Actions ───────────────────────────────────────────────
+          // ── Customer Actions & Owner Manual Test Endpoints ─────────────────
           if (!isCancelled && !isCompleted) ...[
-            // Pay at Table CTA
+            // Pay at Table CTA (Directly opens full Payment Gateway Modal)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => _handlePayAtTable(context),
                 icon: const Icon(Icons.payments_outlined, size: 16),
-                label: const Text(
-                  'Pay Bill at Table',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                label: Text(
+                  reservation.foodBillAmount != null && reservation.foodBillAmount! > 0
+                      ? 'Pay Food Bill at Table (₹${reservation.foodBillAmount!.toStringAsFixed(0)})'
+                      : 'Pay Food Bill at Table',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF22C55E),
@@ -383,6 +452,46 @@ class _ReservationCard extends StatelessWidget {
                   elevation: 0,
                 ),
               ),
+            ),
+            const SizedBox(height: 8),
+
+            // Testing quick actions for Owner Dashboard simulation
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _simulateOwnerAddFoodBill(context),
+                    icon: const Icon(Icons.receipt_long, size: 13),
+                    label: const Text(
+                      'Owner: Add Food',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.copper,
+                      side: BorderSide(color: AppColors.copper.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _simulateOwnerManualUnlock(context),
+                    icon: const Icon(Icons.lock_open, size: 13),
+                    label: const Text(
+                      'Owner: Free Table',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orangeAccent,
+                      side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
           ],
@@ -455,16 +564,18 @@ class _ReservationCard extends StatelessWidget {
               ),
             )
           else
-            const Row(
+            Row(
               children: [
-                Icon(Icons.check_circle, size: 15, color: AppColors.textSecondary),
-                SizedBox(width: 6),
+                const Icon(Icons.check_circle, size: 15, color: Color(0xFF4CAF50)),
+                const SizedBox(width: 6),
                 Text(
-                  'Reservation completed',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
+                  reservation.status == 'paid_at_table'
+                      ? 'Bill Paid at Table · Table Freed'
+                      : 'Reservation completed · Table Freed',
+                  style: const TextStyle(
+                    color: Color(0xFF81C784),
                     fontSize: 12,
-                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -474,158 +585,74 @@ class _ReservationCard extends StatelessWidget {
     );
   }
 
+  /// Interactive Pay at Table flow: Launches the payment gateway directly for the food bill
   Future<void> _handlePayAtTable(BuildContext context) async {
-    final confirmed = await showModalBottomSheet<bool>(
+    // 1. Determine payable amount (food bill if set by owner, or minimum bill)
+    final billAmount = (reservation.foodBillAmount != null && reservation.foodBillAmount! > 0)
+        ? reservation.foodBillAmount!
+        : 650.0; // Default dining bill if owner has not entered specific food items yet
+
+    // 2. Open PaymentGatewaySheet
+    final paymentResult = await PaymentGatewaySheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20,
-          24,
-          MediaQuery.of(context).viewInsets.bottom + 28,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: Colors.white12)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.payments_outlined, color: Color(0xFF22C55E), size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pay Bill at Table',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Settle your bill directly at the restaurant table.',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF22C55E).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.25)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.table_restaurant, size: 15, color: AppColors.copper),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Table ${reservation.tableDisplay} · ${reservation.seats} Guests',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${reservation.restaurant.name} · ${reservation.formattedDate} · ${reservation.arrivalTime}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'After confirming, your table reservation will be marked as completed and the table will be freed for the next guests.',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Not Yet'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text(
-                      'Confirm & Pay',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      amount: billAmount,
+      isTakeaway: false,
     );
 
-    if (confirmed == true && context.mounted) {
-      await ReservationController.instance.payAtTable(reservation);
+    // 3. If payment successful, unlock the table and mark reservation paid
+    if (paymentResult != null && context.mounted) {
+      final txnId = paymentResult['txnId'] ?? 'TXN_${DateTime.now().millisecondsSinceEpoch}';
+      final mode = paymentResult['mode'] ?? 'UPI';
+
+      await ReservationController.instance.payAtTable(
+        reservation,
+        paymentMethod: mode,
+        transactionId: txnId,
+      );
+
       if (context.mounted) {
         AppBanner.showSuccess(
           context,
-          'Payment confirmed! Table ${reservation.tableDisplay} is now free. Enjoy your meal! 🎉',
-          title: 'Bill Paid at Table',
+          'Bill payment of ₹${billAmount.toStringAsFixed(0)} via $mode successful! Table ${reservation.tableDisplay} is now unlocked and available. Thank you!',
+          title: 'Payment Confirmed & Table Freed',
         );
       }
+    }
+  }
+
+  /// Endpoint: Owner simulates adding food ordered at the table
+  Future<void> _simulateOwnerAddFoodBill(BuildContext context) async {
+    final sampleItems = [
+      {'name': 'Paragon Chicken Biryani', 'price': 340, 'quantity': 2},
+      {'name': 'Malabar Parotta', 'price': 35, 'quantity': 4},
+      {'name': 'Fresh Lime Soda', 'price': 70, 'quantity': 2},
+    ];
+    const total = 960.0;
+
+    await ReservationController.instance.updateFoodBillFromOwner(
+      reservation.id,
+      amount: total,
+      items: sampleItems,
+    );
+
+    if (context.mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Owner updated Food Bill (₹960) with Biryani, Parotta & Drinks for Table ${reservation.tableDisplay}. User can now pay!',
+        title: 'Owner: Food Bill Attached',
+      );
+    }
+  }
+
+  /// Endpoint: Owner manually unlocks table from owner dashboard
+  Future<void> _simulateOwnerManualUnlock(BuildContext context) async {
+    await ReservationController.instance.manualOwnerTableUnlock(reservation);
+    if (context.mounted) {
+      AppBanner.showSuccess(
+        context,
+        'Owner manually unlocked Table ${reservation.tableDisplay}. Status updated to Unoccupied/Available!',
+        title: 'Owner: Table Unlocked Manually',
+      );
     }
   }
 

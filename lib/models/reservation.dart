@@ -14,6 +14,9 @@ class Reservation {
     this.status = 'confirmed',
     this.cancellationReason,
     this.cancelledAt,
+    this.foodBillAmount,
+    this.foodItems = const [],
+    this.isFoodBillPaid = false,
   });
 
   final String id;
@@ -27,6 +30,9 @@ class Reservation {
   final String status;
   final String? cancellationReason;
   final DateTime? cancelledAt;
+  final double? foodBillAmount;
+  final List<Map<String, dynamic>> foodItems;
+  final bool isFoodBillPaid;
 
   /// All table numbers (including combined tables)
   List<int> get allTableNumbers =>
@@ -117,6 +123,9 @@ class Reservation {
     String? status,
     String? cancellationReason,
     DateTime? cancelledAt,
+    double? foodBillAmount,
+    List<Map<String, dynamic>>? foodItems,
+    bool? isFoodBillPaid,
   }) {
     return Reservation(
       id: id ?? this.id,
@@ -130,6 +139,9 @@ class Reservation {
       status: status ?? this.status,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      foodBillAmount: foodBillAmount ?? this.foodBillAmount,
+      foodItems: foodItems ?? this.foodItems,
+      isFoodBillPaid: isFoodBillPaid ?? this.isFoodBillPaid,
     );
   }
 
@@ -143,6 +155,9 @@ class Reservation {
         'tableNumber': tableNumber,
         'tableNumbers': tableNumbers,
         'status': status,
+        'foodBillAmount': foodBillAmount,
+        'foodItems': foodItems,
+        'isFoodBillPaid': isFoodBillPaid,
         if (cancellationReason != null)
           'cancellationReason': cancellationReason,
         if (cancelledAt != null) 'cancelledAt': cancelledAt!.toIso8601String(),
@@ -155,6 +170,11 @@ class Reservation {
         : <int>[];
     final tableNumber = (map['tableNumber'] as num?)?.toInt() ??
         (tableNumbers.isNotEmpty ? tableNumbers.first : 1);
+
+    final rawFoodItems = map['foodItems'] as List?;
+    final foodItems = rawFoodItems != null
+        ? rawFoodItems.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+        : <Map<String, dynamic>>[];
 
     return Reservation(
       id: id ?? (map['id'] as String? ?? ''),
@@ -179,6 +199,9 @@ class Reservation {
       cancelledAt: map['cancelledAt'] != null
           ? DateTime.tryParse(map['cancelledAt'].toString())
           : null,
+      foodBillAmount: (map['foodBillAmount'] as num?)?.toDouble(),
+      foodItems: foodItems,
+      isFoodBillPaid: map['isFoodBillPaid'] as bool? ?? false,
     );
   }
 }

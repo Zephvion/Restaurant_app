@@ -109,20 +109,53 @@ class ReservationController extends ChangeNotifier {
 
   /// Guest "Pay at Table" action: marks reservation as paid/completed and
   /// immediately frees all reserved table locks so the floor plan shows them as available.
-  Future<void> payAtTable(Reservation reservation) async {
+  Future<void> payAtTable(
+    Reservation reservation, {
+    String paymentMethod = 'UPI',
+    String? transactionId,
+  }) async {
     // 1. Release all table locks in TableLockService (occupied → available)
     for (final num in reservation.allTableNumbers) {
       TableLockService.instance.receptionistReleaseTable(num);
     }
 
     // 2. Mark reservation completed/freed in backend
-    await ReservationService.instance.markReservationCompleted(reservation.id);
+    await ReservationService.instance.updateReservationStatus(reservation.id, 'paid_at_table');
 
     // 3. Update local state to 'paid_at_table' (shows as completed)
     final idx = _reservations.indexWhere((r) => r.id == reservation.id);
     if (idx != -1) {
-      _reservations[idx] = _reservations[idx].copyWith(status: 'paid_at_table');
+      _reservations[idx] = _reservations[idx].copyWith(
+        status: 'paid_at_table',
+        isFoodBillPaid: true,
+      );
     }
     notifyListeners();
+  }
+
+  /// Endpoint for Owner to update / add food bill to a user's table
+  Future<void> updateFoodBillFromOwner(
+    String reservationId, {
+    required double amount,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    await ReservationService.instance.updateReservationFoodBill(
+      reservationId,
+      amount: amount,
+      items: items,
+    );
+    final idx = _reservations.indexWhere((r) => r.id == reservationId);
+    if (idx != -1) {
+      _reservations[idx] = _reservations[idx].copyWith(
+        foodBillAmount: amount,
+        foodItems: items,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Endpoint for Owner to manually free / unlock a table when guests leave
+  Future<void> manualOwnerTableUnlock(Reservation reservation) async {
+    await releaseTable(reservation);
   }
 }
