@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
+import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_banner.dart';
+import '../../widgets/payment_gateway_sheet.dart';
 
 /// Success overlay displayed after confirming a table reservation.
 /// Matches Figma design: Animated green checkmark burst with confetti,
@@ -52,6 +55,38 @@ class _ReservationSuccessScreenState extends State<ReservationSuccessScreen>
       AppRoutes.reserveDashboard,
       (route) => route.settings.name == AppRoutes.home || route.isFirst,
     );
+  }
+
+  Future<void> _handlePayAtTable(BuildContext context, Reservation res) async {
+    final billAmount = (res.foodBillAmount != null && res.foodBillAmount! > 0)
+        ? res.foodBillAmount!
+        : 650.0;
+
+    final paymentResult = await PaymentGatewaySheet.show(
+      context: context,
+      amount: billAmount,
+      isTakeaway: false,
+    );
+
+    if (paymentResult != null && context.mounted) {
+      final txnId = paymentResult['txnId'] ?? 'TXN_${DateTime.now().millisecondsSinceEpoch}';
+      final mode = paymentResult['mode'] ?? 'UPI';
+
+      await ReservationController.instance.payAtTable(
+        res,
+        paymentMethod: mode,
+        transactionId: txnId,
+      );
+
+      if (context.mounted) {
+        AppBanner.showSuccess(
+          context,
+          'Bill payment of ₹${billAmount.toStringAsFixed(0)} via $mode successful! Table ${res.tableDisplay} is now unlocked and available.',
+          title: 'Payment Confirmed & Table Freed',
+        );
+        _viewReservations();
+      }
+    }
   }
 
   @override
@@ -155,7 +190,37 @@ class _ReservationSuccessScreenState extends State<ReservationSuccessScreen>
                     ),
                     const Spacer(flex: 3),
 
-                    // ── Dual Redirection Buttons ───────────────────────────────
+                    // ── Action Buttons ─────────────────────────────────────────
+                    if (res != null) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF22C55E),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.payments_outlined, size: 20),
+                          label: Text(
+                            res.foodBillAmount != null && res.foodBillAmount! > 0
+                                ? 'PAY FOOD BILL AT TABLE (₹${res.foodBillAmount!.toStringAsFixed(0)})'
+                                : 'PAY FOOD BILL AT TABLE',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          onPressed: () => _handlePayAtTable(context, res),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // 1. View Reservations
                     SizedBox(
                       width: double.infinity,
