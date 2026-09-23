@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifier = TextEditingController();
   final _password = TextEditingController();
   bool _isLoading = false;
+  bool _useOtpMode = false;
 
   @override
   void dispose() {
@@ -33,10 +34,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (_useOtpMode) {
+      await _sendOtp();
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final user = await AuthService.instance.signInWithEmail(
-        email: _identifier.text.trim(),
+      final user = await AuthService.instance.signInWithIdentifier(
+        identifier: _identifier.text.trim(),
         password: _password.text,
       );
       if (mounted) {
@@ -57,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         AppBanner.showError(
           context,
-          'Login failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}',
+          'Login failed: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').replaceAll('Exception: ', '').trim()}',
         );
       }
     } finally {
@@ -65,6 +71,63 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _sendOtp() async {
+    final raw = _identifier.text.trim();
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      AppBanner.showError(
+        context,
+        'Please enter a valid 10-digit mobile number.',
+        title: 'Invalid Mobile Number',
+      );
+      return;
+    }
+
+    final formatted = digits.length == 10
+        ? '+91$digits'
+        : (raw.startsWith('+') ? raw : '+$raw');
+
+    setState(() => _isLoading = true);
+    await AuthService.instance.sendFirebasePhoneOtp(
+      phoneNumber: formatted,
+      onCodeSent: (vid) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          AppBanner.showSuccess(
+            context,
+            'Verification code sent to $formatted',
+            title: 'OTP Dispatched',
+          );
+          Navigator.of(context).pushNamed(
+            AppRoutes.otp,
+            arguments: {
+              'phone': formatted,
+              'verificationId': vid,
+            },
+          );
+        }
+      },
+      onError: (err) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          AppBanner.showError(
+            context,
+            err,
+            title: 'SMS Delivery Notice',
+          );
+          // Navigate to OTP screen with fallback test verification ID
+          Navigator.of(context).pushNamed(
+            AppRoutes.otp,
+            arguments: {
+              'phone': formatted,
+              'verificationId': AuthService.instance.verificationId ?? 'fallback_vid',
+            },
+          );
+        }
+      },
+    );
   }
 
   Future<void> _loginWithGoogle() async {
@@ -114,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: h * 0.10),
+                SizedBox(height: h * 0.08),
                 Text(
                   'Welcome Back!',
                   textAlign: TextAlign.center,
@@ -122,59 +185,122 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Please login to your account',
+                  _useOtpMode
+                      ? 'Sign in using your mobile number and OTP'
+                      : 'Sign in with your Email / Mobile and password',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                SizedBox(height: h * 0.09),
+                SizedBox(height: h * 0.06),
+
+                // ── Identifier Field (Email or Mobile) ─────────────────────────
                 AppTextField(
-                  hint: 'Email/Ph number',
+                  hint: _useOtpMode ? 'Mobile Number (e.g. 9874563210)' : 'Email / Mobile number',
                   controller: _identifier,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.username],
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  keyboardType: _useOtpMode
+                      ? TextInputType.phone
+                      : TextInputType.emailAddress,
+                  textInputAction: _useOtpMode ? TextInputAction.done : TextInputAction.next,
+                  autofillHints: _useOtpMode
+                      ? const [AutofillHints.telephoneNumber]
+                      : const [AutofillHints.username],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (_useOtpMode) {
+                      final digits = v.replaceAll(RegExp(r'\D'), '');
+                      if (digits.length < 10) return 'Enter 10-digit mobile number';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
-                AppTextField(
-                  hint: 'Password',
-                  controller: _password,
-                  isPassword: true,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _login(),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        'Forgot Password?',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+
+                // ── Password Field (Hidden in OTP Mode) ────────────────────────
+                if (!_useOtpMode) ...[
+                  AppTextField(
+                    hint: 'Password',
+                    controller: _password,
+                    isPassword: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _login(),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Toggle to OTP mode
+                      GestureDetector(
+                        onTap: () => setState(() => _useOtpMode = true),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            'Login via Phone OTP',
+                            style: TextStyle(
                               color: AppColors.copper,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
+                          ),
+                        ),
+                      ),
+                      // Forgot password
+                      GestureDetector(
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            'Forgot Password?',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.copper,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  // In OTP Mode: Option to switch back to Password mode
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _useOtpMode = false),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          '← Sign in with Password instead',
+                          style: TextStyle(
+                            color: AppColors.copper,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: h * 0.16),
+                ],
+
+                SizedBox(height: h * 0.10),
+
+                // ── Primary Action Button ─────────────────────────────────────
                 PrimaryButton(
-                  label: _isLoading ? 'Logging in...' : 'Login',
+                  label: _isLoading
+                      ? (_useOtpMode ? 'Sending OTP...' : 'Logging in...')
+                      : (_useOtpMode ? 'Send OTP to Mobile' : 'Login'),
                   onPressed: _isLoading ? null : _login,
                 ),
                 const SizedBox(height: 20),
+
+                // ── Google Sign-In ────────────────────────────────────────────
                 GoogleSignInButton(
                   label: 'Login with google',
                   onPressed: _isLoading ? null : _loginWithGoogle,
                 ),
                 SizedBox(height: h * 0.05),
+
                 _SignUpPrompt(
                   onTap: () =>
                       Navigator.of(context).pushNamed(AppRoutes.signup),

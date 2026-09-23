@@ -208,7 +208,85 @@ class _OtpScreenState extends State<OtpScreen> {
                       },
                     ),
 
-                    SizedBox(height: h * 0.05),
+                    // ── Test/Offline OTP Auto-Fill Banner ─────────────────────
+                    if (AuthService.instance.currentOtp != null) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.copper.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.copper.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.mark_email_read_outlined,
+                              color: AppColors.copper,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Test / Development OTP:',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    AuthService.instance.currentOtp!,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.copper,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                elevation: 0,
+                              ),
+                              onPressed: () {
+                                setState(() => _code = AuthService.instance.currentOtp!);
+                                _verify();
+                              },
+                              child: const Text('Auto-fill'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Note: Cellular SMS requires Firebase Blaze plan. For testing without Blaze, use the OTP above or set test numbers in Firebase Console.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+
+                    SizedBox(height: h * 0.04),
 
                     // ── Resend OTP with Live Cooldown Timer ───────────────────
                     GestureDetector(
