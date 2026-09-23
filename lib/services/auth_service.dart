@@ -35,6 +35,7 @@ class AuthService {
   int? _resendToken;
   int? get resendToken => _resendToken;
 
+  static const String _firebaseApiKey = 'AIzaSyAqO_CvNkfEp-pqsRQKoDDa-pZbdOVPb80';
 
   /// Dispatches real SMS OTP via Firebase Phone Auth to [phoneNumber].
   Future<void> sendFirebasePhoneOtp({
@@ -103,7 +104,7 @@ class AuthService {
       }
     } else {
       // Graceful fallback for offline testing / development
-      final fallbackOtp = generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
+      generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
       _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
       onCodeSent(_verificationId!);
     }
