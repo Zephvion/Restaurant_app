@@ -527,25 +527,36 @@ class AuthService {
 
         if (idToken != null && localId != null) {
           debugPrint('📱 [IdentityToolkit REST API] SMS Code Verified successfully! User: $localId');
-          // Look up user profile in Firestore
-          final remoteProfile = await fetchUserProfile(localId);
-          final existing = _currentUser ?? SessionManager.instance.getCachedUserProfile();
-          final profile = remoteProfile ??
-              existing?.copyWith(
-                phone: _otpPhoneNumber ?? existing.phone,
-                uid: localId,
-                lastLoginAt: DateTime.now(),
-              ) ??
-              UserProfile(
-                uid: localId,
-                displayName: displayName ?? MockData.userName,
-                email: email ?? 'user.${localId.substring(0, math.min(6, localId.length))}@paragon.com',
-                phone: _otpPhoneNumber ?? '+91 9874563210',
-                lastLoginAt: DateTime.now(),
-              );
+          final effectivePhone = _otpPhoneNumber ?? '';
+          // Look up user profile in Firestore by UID or mapped phone
+          UserProfile? profile = await fetchUserProfile(localId);
+          if (profile == null && effectivePhone.isNotEmpty) {
+            profile = await findUserProfileByPhone(effectivePhone);
+          }
 
-          await _saveProfileToFirestore(profile);
-          _currentUser = profile;
+          if (profile != null) {
+            final updated = profile.copyWith(
+              uid: localId,
+              phone: effectivePhone.isNotEmpty ? effectivePhone : profile.phone,
+              lastLoginAt: DateTime.now(),
+              isNewUser: false,
+            );
+            await _saveProfileToFirestore(updated);
+            _currentUser = updated;
+            profile = updated;
+          } else {
+            profile = UserProfile(
+              uid: localId,
+              displayName: displayName ?? '',
+              email: email ?? '',
+              phone: effectivePhone,
+              lastLoginAt: DateTime.now(),
+              createdAt: DateTime.now(),
+              isNewUser: true,
+            );
+            _currentUser = profile;
+          }
+
           await SessionManager.instance.saveSession(
             token: idToken,
             refreshToken: refreshToken,
@@ -630,32 +641,41 @@ class AuthService {
     final userCredential =
         await FirebaseAuth.instance.signInWithCredential(credential);
     final user = userCredential.user!;
+    final effectivePhone = user.phoneNumber ?? _otpPhoneNumber ?? '';
 
-    final remoteProfile = await fetchUserProfile(user.uid);
-    final existing =
-        _currentUser ?? SessionManager.instance.getCachedUserProfile();
-    final profile = remoteProfile ??
-        existing?.copyWith(
-          phone: user.phoneNumber ?? _otpPhoneNumber ?? existing.phone,
-          uid: user.uid,
-          lastLoginAt: DateTime.now(),
-        ) ??
-        UserProfile(
-          uid: user.uid,
-          displayName: (displayName != null && displayName.isNotEmpty)
-              ? displayName
-              : (user.displayName ?? MockData.userName),
-          email: (email != null && email.isNotEmpty)
-              ? email
-              : (user.email ??
-                  'user.${user.uid.substring(0, math.min(6, user.uid.length))}@paragon.com'),
-          phone: user.phoneNumber ?? _otpPhoneNumber ?? '+91 9874563210',
-          photoUrl: user.photoURL ?? '',
-          lastLoginAt: DateTime.now(),
-        );
+    // 1. Check if user already exists by UID
+    UserProfile? profile = await fetchUserProfile(user.uid);
 
-    await _saveProfileToFirestore(profile);
-    _currentUser = profile;
+    // 2. If not found by UID, check if this phone number is mapped to an existing user
+    if (profile == null && effectivePhone.isNotEmpty) {
+      profile = await findUserProfileByPhone(effectivePhone);
+    }
+
+    if (profile != null) {
+      // Existing mapped user found!
+      final updated = profile.copyWith(
+        uid: user.uid,
+        phone: effectivePhone.isNotEmpty ? effectivePhone : profile.phone,
+        lastLoginAt: DateTime.now(),
+        isNewUser: false,
+      );
+      await _saveProfileToFirestore(updated);
+      _currentUser = updated;
+      profile = updated;
+    } else {
+      // New phone user
+      profile = UserProfile(
+        uid: user.uid,
+        displayName: displayName ?? '',
+        email: email ?? '',
+        phone: effectivePhone,
+        photoUrl: user.photoURL ?? '',
+        lastLoginAt: DateTime.now(),
+        createdAt: DateTime.now(),
+        isNewUser: true,
+      );
+      _currentUser = profile;
+    }
 
     String? token;
     DateTime? expiresAt;
@@ -707,61 +727,33 @@ class AuthService {
 
     // Check if an account already exists in Firestore with this phone number
     if (FirebaseInitializer.isFirebaseReady && _otpPhoneNumber != null) {
-      try {
-        final phoneQuery = _otpPhoneNumber!.trim();
-        final raw10 = phoneQuery.replaceAll(RegExp(r'\D'), '');
-        final suffix = raw10.length >= 10 ? raw10.substring(raw10.length - 10) : raw10;
-
-        final q1 = await FirebaseFirestore.instance
-            .collection('users')
-            .where('phone', isEqualTo: phoneQuery)
-            .limit(1)
-            .get()
-            .timeout(const Duration(seconds: 3));
-
-        QueryDocumentSnapshot<Map<String, dynamic>>? matchedDoc;
-        if (q1.docs.isNotEmpty) {
-          matchedDoc = q1.docs.first;
-        } else {
-          final q2 = await FirebaseFirestore.instance
-              .collection('users')
-              .where('phone', isEqualTo: suffix)
-              .limit(1)
-              .get()
-              .timeout(const Duration(seconds: 3));
-          if (q2.docs.isNotEmpty) {
-            matchedDoc = q2.docs.first;
-          }
-        }
-
-        if (matchedDoc != null) {
-          final existing = UserProfile.fromMap(matchedDoc.data(), uid: matchedDoc.id);
-          _currentUser = existing;
-          await SessionManager.instance.saveSession(
-            token: 'otp_token_${existing.uid}',
-            userId: existing.uid,
-            profile: existing,
-          );
-          _authController.add(_currentUser);
-          return existing;
-        }
-      } catch (e) {
-        debugPrint('Note restoring user profile by phone in verifyOtp: $e');
+      final existing = await findUserProfileByPhone(_otpPhoneNumber!);
+      if (existing != null) {
+        final updated = existing.copyWith(
+          lastLoginAt: DateTime.now(),
+          isNewUser: false,
+        );
+        _currentUser = updated;
+        await SessionManager.instance.saveSession(
+          token: 'otp_token_${updated.uid}',
+          userId: updated.uid,
+          profile: updated,
+        );
+        _authController.add(_currentUser);
+        return updated;
       }
     }
 
     final mockUid = 'usr_phone_${DateTime.now().millisecondsSinceEpoch}';
     final profile = UserProfile(
       uid: mockUid,
-      displayName: 'Valued Guest',
-      email: 'user.${DateTime.now().millisecondsSinceEpoch}@paragon.com',
+      displayName: '',
+      email: '',
       phone: _otpPhoneNumber ?? '+91 9874563210',
       lastLoginAt: DateTime.now(),
+      createdAt: DateTime.now(),
+      isNewUser: true,
     );
-
-    if (FirebaseInitializer.isFirebaseReady) {
-      await _saveProfileToFirestore(profile);
-    }
 
     _currentUser = profile;
     await SessionManager.instance.saveSession(
@@ -771,6 +763,117 @@ class AuthService {
     );
     _authController.add(_currentUser);
     return profile;
+  }
+
+  /// Completes profile registration for newly verified phone users.
+  /// Saves real Name, Email, Doorstep Address (with GPS), and optional Password.
+  Future<UserProfile> completeUserProfile({
+    required String displayName,
+    required String email,
+    String? addressDetails,
+    String? landmark,
+    String? cityArea,
+    double? lat,
+    double? lng,
+    String? password,
+  }) async {
+    final user = _currentUser ?? SessionManager.instance.getCachedUserProfile();
+    final uid = (user != null && user.uid.isNotEmpty)
+        ? user.uid
+        : 'usr_${DateTime.now().millisecondsSinceEpoch}';
+    final phone = (user != null && user.phone.isNotEmpty)
+        ? user.phone
+        : (_otpPhoneNumber ?? '');
+
+    final List<Address> addresses = List.from(user?.savedAddresses ?? []);
+    String deliveryArea = user?.defaultDeliveryArea ?? 'Palazhi , Calicut';
+    if (cityArea != null && cityArea.trim().isNotEmpty) {
+      deliveryArea = cityArea.trim();
+    }
+
+    if ((addressDetails != null && addressDetails.trim().isNotEmpty) ||
+        (landmark != null && landmark.trim().isNotEmpty)) {
+      final fullDetails = [
+        if (addressDetails != null && addressDetails.trim().isNotEmpty)
+          addressDetails.trim(),
+        if (landmark != null && landmark.trim().isNotEmpty)
+          'Near ${landmark.trim()}',
+        deliveryArea,
+      ].join(', ');
+
+      addresses.insert(
+        0,
+        Address(
+          id: 'addr_comp_${DateTime.now().millisecondsSinceEpoch}',
+          label: 'Home Doorstep',
+          details: fullDetails,
+          lat: lat,
+          lng: lng,
+          isDefault: true,
+        ),
+      );
+      LocationService.instance.updateDeliveryArea(deliveryArea);
+    }
+
+    // Link/set password if provided
+    if (password != null && password.trim().isNotEmpty) {
+      try {
+        final fbUser = FirebaseAuth.instance.currentUser;
+        if (fbUser != null) {
+          if (email.trim().isNotEmpty) {
+            try {
+              final credential = EmailAuthProvider.credential(
+                email: email.trim(),
+                password: password.trim(),
+              );
+              await fbUser.linkWithCredential(credential);
+            } catch (linkError) {
+              debugPrint('Email credential linking note: $linkError');
+              await fbUser.updatePassword(password.trim()).catchError((_) {});
+            }
+          }
+        }
+      } catch (pwErr) {
+        debugPrint('Password set note: $pwErr');
+      }
+    }
+
+    final updatedProfile = (user ??
+            const UserProfile(
+              uid: '',
+              displayName: '',
+              email: '',
+              phone: '',
+            ))
+        .copyWith(
+      uid: uid,
+      displayName: displayName.trim(),
+      email: email.trim(),
+      phone: phone,
+      defaultDeliveryArea: deliveryArea,
+      savedAddresses: addresses,
+      lastLoginAt: DateTime.now(),
+      createdAt: user?.createdAt ?? DateTime.now(),
+      isNewUser: false,
+    );
+
+    if (FirebaseInitializer.isFirebaseReady) {
+      await _saveProfileToFirestore(updatedProfile);
+      if (password != null && password.trim().isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'hasPassword': true,
+            'passwordHash': password.trim().hashCode.toString(),
+            'plainPassword': password.trim(),
+          }, SetOptions(merge: true));
+        } catch (_) {}
+      }
+    }
+
+    _currentUser = updatedProfile;
+    await SessionManager.instance.saveUserProfile(updatedProfile);
+    _authController.add(_currentUser);
+    return updatedProfile;
   }
 
   /// Update User Profile
@@ -866,6 +969,37 @@ class AuthService {
     } catch (e) {
       // In offline situations, log friendly note and gracefully rely on local persistent cache
       debugPrint('Firestore fetch profile note: $e (Falling back to persistent local storage)');
+    }
+    return null;
+  }
+
+  /// Searches Firestore users collection for any account matching [rawPhone].
+  /// Matches exact number, 10-digit suffix, '+91' prefixed, or formatted variants.
+  Future<UserProfile?> findUserProfileByPhone(String rawPhone) async {
+    if (!FirebaseInitializer.isFirebaseReady) return null;
+    try {
+      final clean = rawPhone.trim();
+      final digits = clean.replaceAll(RegExp(r'\D'), '');
+      final suffix10 = digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
+      final withPlus91 = '+91$suffix10';
+      final formatted = '+91 $suffix10';
+
+      final candidates = {clean, suffix10, withPlus91, formatted};
+
+      for (final candidate in candidates) {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where('phone', isEqualTo: candidate)
+            .limit(1)
+            .get()
+            .timeout(const Duration(seconds: 4));
+        if (snap.docs.isNotEmpty) {
+          final doc = snap.docs.first;
+          return UserProfile.fromMap(doc.data(), uid: doc.id);
+        }
+      }
+    } catch (e) {
+      debugPrint('findUserProfileByPhone note: $e');
     }
     return null;
   }

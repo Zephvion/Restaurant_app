@@ -12,6 +12,7 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String forgotPassword = '/forgot-password';
   static const String otp = '/otp';
+  static const String completeProfile = '/complete-profile';
   static const String home = '/home';
 
   // Order Food flow.

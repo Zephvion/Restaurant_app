@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'routes/app_routes.dart';
+import 'screens/auth/complete_profile_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_screen.dart';
@@ -138,6 +139,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
         AppRoutes.signup: (_) => const SignupScreen(),
         AppRoutes.otp: (_) => const OtpScreen(),
+        AppRoutes.completeProfile: (_) => const CompleteProfileScreen(),
 
         // ── Home ──────────────────────────────────────────────────────────
         AppRoutes.home: (_) => const HomeScreen(),

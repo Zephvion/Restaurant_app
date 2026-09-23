@@ -109,31 +109,45 @@ class _OtpScreenState extends State<OtpScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final UserProfile user;
       if (_verificationId.isNotEmpty) {
-        await AuthService.instance.verifyFirebasePhoneOtp(
+        user = await AuthService.instance.verifyFirebasePhoneOtp(
           verificationId: _verificationId,
           smsCode: _code,
           displayName: _displayName,
           email: _email,
         );
       } else {
-        await AuthService.instance.verifyOtp(_code);
+        user = await AuthService.instance.verifyOtp(_code);
       }
 
       if (mounted) {
-        final user = AuthService.instance.currentUser;
-        final name = user?.displayName.isNotEmpty == true
-            ? user!.displayName
-            : 'Valued Guest';
-        AppBanner.showSuccess(
-          context,
-          'Phone verified & logged in successfully! Welcome, $name.',
-          title: 'Welcome to PARAGON',
-        );
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
+        if (user.isNewUser || !user.isProfileComplete) {
+          // Newly verified phone number or incomplete profile -> complete registration
+          AppBanner.showSuccess(
+            context,
+            'Phone verified! Let\'s complete your profile in 30 seconds.',
+            title: 'Phone Verified',
+          );
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.completeProfile,
+            (route) => false,
+          );
+        } else {
+          // Existing mapped user restored
+          final name = user.displayName.isNotEmpty
+              ? user.displayName
+              : 'Valued Guest';
+          AppBanner.showSuccess(
+            context,
+            'Welcome back to PARAGON, $name!',
+            title: 'Welcome Back',
+          );
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.home,
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

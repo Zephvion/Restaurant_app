@@ -14,6 +14,7 @@ class UserProfile {
   final List<String> orderHistory;
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
+  final bool isNewUser;
 
   const UserProfile({
     required this.uid,
@@ -27,7 +28,22 @@ class UserProfile {
     this.orderHistory = const [],
     this.createdAt,
     this.lastLoginAt,
+    this.isNewUser = false,
   });
+
+  /// Evaluates whether this profile has real personal information (name, real email)
+  /// or requires completion by the newly verified phone user.
+  bool get isProfileComplete {
+    final name = displayName.trim();
+    if (name.isEmpty || name == 'User' || name == 'Valued Guest') {
+      return false;
+    }
+    final em = email.trim();
+    if (em.isEmpty || (em.endsWith('@paragon.com') && em.contains('user.'))) {
+      return false;
+    }
+    return true;
+  }
 
   UserProfile copyWith({
     String? uid,
@@ -41,6 +57,7 @@ class UserProfile {
     List<String>? orderHistory,
     DateTime? createdAt,
     DateTime? lastLoginAt,
+    bool? isNewUser,
   }) {
     return UserProfile(
       uid: uid ?? this.uid,
@@ -54,6 +71,7 @@ class UserProfile {
       orderHistory: orderHistory ?? this.orderHistory,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      isNewUser: isNewUser ?? this.isNewUser,
     );
   }
 
@@ -70,6 +88,7 @@ class UserProfile {
       'orderHistory': orderHistory,
       'createdAt': createdAt?.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'isNewUser': isNewUser,
     };
   }
 
@@ -110,6 +129,7 @@ class UserProfile {
       lastLoginAt: map['lastLoginAt'] != null
           ? DateTime.tryParse(map['lastLoginAt'].toString())
           : null,
+      isNewUser: map['isNewUser'] == true,
     );
   }
 }
