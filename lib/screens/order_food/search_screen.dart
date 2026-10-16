@@ -250,10 +250,13 @@ class _SearchScreenState extends State<SearchScreen> {
           final dish = results[i];
           return MenuListTile(
             dish: dish,
+            quantity: _cart.quantityOf(dish),
             inCart: _cart.contains(dish),
             onTap: () => Navigator.of(context)
                 .pushNamed(AppRoutes.productDetail, arguments: dish),
             onAdd: () => _cart.add(dish),
+            onIncrement: () => _cart.increment(dish),
+            onDecrement: () => _cart.decrement(dish),
           );
         },
       ),

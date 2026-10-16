@@ -51,39 +51,51 @@ class ProductDetailScreen extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImageWithFallback(url: dish.imageUrl),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.35),
-                          Colors.transparent,
-                          AppColors.background.withOpacity(0.6),
-                        ],
-                        stops: const [0, 0.4, 1],
-                      ),
+              background: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.elliptical(200, 45),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppColors.border.withValues(alpha: 0.8),
+                      width: 1.5,
                     ),
                   ),
-                ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.elliptical(200, 45),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      NetworkImageWithFallback(url: dish.imageUrl),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.35),
+                              Colors.transparent,
+                              AppColors.background.withValues(alpha: 0.45),
+                            ],
+                            stops: const [0, 0.4, 1],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
           SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -22),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 40),
-                child: _Details(dish: dish),
-              ),
+            child: Container(
+              color: AppColors.background,
+              padding: const EdgeInsets.fromLTRB(22, 16, 22, 40),
+              child: _Details(dish: dish),
             ),
           ),
         ],
@@ -139,28 +151,7 @@ class _Details extends StatelessWidget {
           'quality once the item has left the kitchen beyond these guidelines.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const SizedBox(height: 26),
-        _heading(context, 'Reviews'),
-        const SizedBox(height: 14),
-        const _ReviewCard(
-          name: 'Asif Muhammad',
-          rating: 5,
-          avatar:
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=70',
-          text:
-              'Absolutely delicious and piping hot on arrival. The chutney was '
-              'fresh and the dosa perfectly crisp. Will order again!',
-        ),
-        const SizedBox(height: 12),
-        const _ReviewCard(
-          name: 'Meera Nair',
-          rating: 4,
-          avatar:
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=70',
-          text:
-              'Great taste and generous portion. Delivery was a touch late but '
-              'the food more than made up for it.',
-        ),
+
       ],
     );
   }
@@ -298,72 +289,6 @@ class _RatingPill extends StatelessWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({
-    required this.name,
-    required this.rating,
-    required this.avatar,
-    required this.text,
-  });
-
-  final String name;
-  final int rating;
-  final String avatar;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClipOval(
-                child: SizedBox(
-                  width: 38,
-                  height: 38,
-                  child: NetworkImageWithFallback(
-                    url: avatar,
-                    fallbackIcon: Icons.person,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < rating ? Icons.star : Icons.star_border,
-                    color: const Color(0xFFF5B942),
-                    size: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(text, style: Theme.of(context).textTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
-}
 
 class _CircleIcon extends StatelessWidget {
   const _CircleIcon({required this.icon, required this.onTap, this.badge = 0});
@@ -377,7 +302,7 @@ class _CircleIcon extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Material(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

@@ -15,18 +15,26 @@ class MenuListTile extends StatelessWidget {
     required this.dish,
     required this.onTap,
     required this.onAdd,
+    this.onIncrement,
+    this.onDecrement,
+    this.quantity = 0,
     this.inCart = false,
   });
 
   final Dish dish;
   final VoidCallback onTap;
   final VoidCallback onAdd;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
+  final int quantity;
   final bool inCart;
 
   @override
   Widget build(BuildContext context) {
     final title =
         dish.subtitle == null ? dish.name : '${dish.name} - ${dish.subtitle}';
+    final effectiveQuantity = quantity > 0 ? quantity : (inCart ? 1 : 0);
+
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
@@ -69,7 +77,16 @@ class MenuListTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              AddCircleButton(onTap: onAdd, inCart: inCart, size: 36),
+              SizedBox(
+                width: 82,
+                child: FoodQuantityButton(
+                  quantity: effectiveQuantity,
+                  onAdd: onAdd,
+                  onIncrement: onIncrement ?? onAdd,
+                  onDecrement: onDecrement ?? () {},
+                  height: 32,
+                ),
+              ),
             ],
           ),
         ),

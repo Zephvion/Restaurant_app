@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/mock_data.dart';
@@ -13,6 +14,7 @@ import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/basket_bar.dart';
+import '../../widgets/coupon_sheet.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/dish_card.dart';
 import '../../widgets/menu_list_tile.dart';
@@ -30,15 +32,57 @@ class FoodHomeScreen extends StatefulWidget {
 
 class _FoodHomeScreenState extends State<FoodHomeScreen> {
   final PageController _promoController = PageController(viewportFraction: 0.9);
+  Timer? _promoTimer;
   int _selectedTab = 0;
   int _promoPage = 0;
+  bool _promoForward = true;
   String _activeCategoryFilter = 'All';
 
   final CartController _cart = CartController.instance;
   List<Dish> get _dishes => MenuService.instance.dishes;
 
   @override
+  void initState() {
+    super.initState();
+    _startPromoTimer();
+  }
+
+  void _startPromoTimer() {
+    _promoTimer?.cancel();
+    _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_promoController.hasClients) return;
+      final total = MockData.promos.length;
+      if (total <= 1) return;
+
+      int nextPage;
+      if (_promoForward) {
+        if (_promoPage >= total - 1) {
+          _promoForward = false;
+          nextPage = _promoPage - 1;
+        } else {
+          nextPage = _promoPage + 1;
+        }
+      } else {
+        if (_promoPage <= 0) {
+          _promoForward = true;
+          nextPage = _promoPage + 1;
+        } else {
+          nextPage = _promoPage - 1;
+        }
+      }
+
+      nextPage = nextPage.clamp(0, total - 1);
+      _promoController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 650),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
   void dispose() {
+    _promoTimer?.cancel();
     _promoController.dispose();
     super.dispose();
   }
@@ -343,40 +387,27 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 
   Widget _promoCarousel() {
-    return Column(
-      children: [
-        SizedBox(
-          height: 180,
-          child: PageView.builder(
-            controller: _promoController,
-            itemCount: MockData.promos.length,
-            onPageChanged: (i) => setState(() => _promoPage = i),
-            itemBuilder: (context, i) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: _PromoCard(promo: MockData.promos[i]),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(MockData.promos.length, (i) {
-            final active = i == _promoPage;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: active ? 18 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: active ? AppColors.accentRed : AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
-      ],
+    return SizedBox(
+      height: 154,
+      child: PageView.builder(
+        controller: _promoController,
+        itemCount: MockData.promos.length,
+        onPageChanged: (i) {
+          if (i >= MockData.promos.length - 1) {
+            _promoForward = false;
+          } else if (i <= 0) {
+            _promoForward = true;
+          }
+          _promoPage = i;
+          _startPromoTimer();
+        },
+        itemBuilder: (context, i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: _PromoCard(promo: MockData.promos[i]),
+          );
+        },
+      ),
     );
   }
 
@@ -468,7 +499,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           );
         }
         return SizedBox(
-          height: 256,
+          height: 260,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -478,9 +509,12 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
               final dish = dishes[i];
               return FeaturedDishCard(
                 dish: dish,
+                quantity: _cart.quantityOf(dish),
                 inCart: _cart.contains(dish),
                 onTap: () => _openProduct(dish),
                 onAdd: () => _add(dish),
+                onIncrement: () => _cart.increment(dish),
+                onDecrement: () => _cart.decrement(dish),
               );
             },
           ),
@@ -526,9 +560,12 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: MenuListTile(
                     dish: dish,
+                    quantity: _cart.quantityOf(dish),
                     inCart: _cart.contains(dish),
                     onTap: () => _openProduct(dish),
                     onAdd: () => _add(dish),
+                    onIncrement: () => _cart.increment(dish),
+                    onDecrement: () => _cart.decrement(dish),
                   ),
                 ),
             ],
@@ -553,9 +590,12 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
               final dish = MockData.recommendedBreakfast[i];
               return RecommendedDishCard(
                 dish: dish,
+                quantity: _cart.quantityOf(dish),
                 inCart: _cart.contains(dish),
                 onTap: () => _openProduct(dish),
                 onAdd: () => _add(dish),
+                onIncrement: () => _cart.increment(dish),
+                onDecrement: () => _cart.decrement(dish),
               );
             },
           ),
@@ -574,7 +614,8 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 }
 
-/// A single promo card in the carousel.
+/// A single promo card in the carousel matching the highlighted Swiggy offer cards,
+/// blending seamlessly into the dark page background while showcasing authentic restaurant offers.
 class _PromoCard extends StatelessWidget {
   const _PromoCard({required this.promo});
 
@@ -582,79 +623,337 @@ class _PromoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          NetworkImageWithFallback(url: promo.imageUrl),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Colors.black.withValues(alpha: 0.15),
-                  Colors.black.withValues(alpha: 0.72),
-                ],
-              ),
+    final gradient = promo.gradientColors ??
+        [
+          const Color(0xFF0C241E),
+          const Color(0xFF091814),
+          AppColors.background,
+        ];
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => CouponSheet.show(context),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: gradient,
+              stops: const [0.0, 0.55, 1.0],
             ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.08),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  promo.headline,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Use code',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 11,
-                  ),
-                ),
-                Text(
-                  promo.code,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 7),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Subtle background spotlight glow behind food plate
+              Positioned(
+                right: 15,
+                top: 10,
+                bottom: 10,
+                width: 145,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'ORDER NOW',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (promo.accentColor ?? AppColors.copper)
+                            .withValues(alpha: 0.22),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // The food dish on the right with a soft shader mask blending into the dark card
+              Positioned(
+                right: -8,
+                top: -6,
+                bottom: -6,
+                width: 165,
+                child: ShaderMask(
+                  shaderCallback: (bounds) {
+                    return const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black,
+                      ],
+                      stops: [0.0, 0.3],
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.dstIn,
+                  child: Image.asset(
+                    promo.imageUrl,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerRight,
+                    errorBuilder: (_, __, ___) =>
+                        NetworkImageWithFallback(url: promo.imageUrl),
+                  ),
+                ),
+              ),
+
+              // Brand badge for Nandhana/Palace style in top right corner
+              if (promo.style == PromoBannerStyle.palace)
+                Positioned(
+                  right: 14,
+                  top: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Text(
+                      'PARAGON',
+                      style: TextStyle(
+                        color: Color(0xFFF25A50),
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Left side offer content
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxTextWidth =
+                        (constraints.maxWidth - 120).clamp(140.0, 240.0);
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: maxTextWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 1. Top brand header
+                            _buildTopHeader(promo),
+                            const SizedBox(height: 5),
+
+                            // 2. Bold headline offer
+                            Text(
+                              promo.headline,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _getHeadlineColor(promo),
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.4,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // 3. Subtitle with code / details
+                            Text(
+                              promo.displaySubtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.72),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // 4. "ORDER NOW" Pill button
+                            _buildButton(promo),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildTopHeader(PromoBanner promo) {
+    switch (promo.style) {
+      case PromoBannerStyle.gourmet:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text(
+              'gourmet',
+              style: TextStyle(
+                fontFamily: 'serif',
+                fontStyle: FontStyle.italic,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFE5C580),
+              ),
+            ),
+            SizedBox(width: 5),
+            Text(
+              'FOOD FESTIVAL',
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: Color(0xFFE5C580),
+              ),
+            ),
+          ],
+        );
+      case PromoBannerStyle.healthy:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF145432),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.eco_rounded, size: 10, color: Color(0xFF7DE8AC)),
+              SizedBox(width: 4),
+              Text(
+                'HIGH FIBRE',
+                style: TextStyle(
+                  color: Color(0xFF7DE8AC),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        );
+      case PromoBannerStyle.palace:
+        return Text(
+          promo.tag,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        );
+    }
+  }
+
+  Color _getHeadlineColor(PromoBanner promo) {
+    switch (promo.style) {
+      case PromoBannerStyle.gourmet:
+        return const Color(0xFFE5C580);
+      case PromoBannerStyle.healthy:
+        return Colors.white;
+      case PromoBannerStyle.palace:
+        return const Color(0xFFF25A50);
+    }
+  }
+
+  Widget _buildButton(PromoBanner promo) {
+    switch (promo.style) {
+      case PromoBannerStyle.gourmet:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE8C882), Color(0xFFD4A750)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFD4A750).withValues(alpha: 0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Text(
+            'ORDER NOW',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+        );
+      case PromoBannerStyle.healthy:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Text(
+            'ORDER NOW',
+            style: TextStyle(
+              color: Color(0xFF0D3B23),
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+        );
+      case PromoBannerStyle.palace:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B1E22),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF8B1E22).withValues(alpha: 0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Text(
+            'ORDER NOW',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+        );
+    }
   }
 }
 

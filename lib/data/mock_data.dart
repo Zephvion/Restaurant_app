@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../models/address.dart';
 import '../models/app_notification.dart';
 import '../models/dish.dart';
@@ -113,19 +115,46 @@ class MockData {
 
   static const List<PromoBanner> promos = [
     PromoBanner(
-      headline: 'GET 10% OFF',
-      code: 'WELCOMEBACK',
-      imageUrl: 'assets/images/order/extracted/promo_banner_1.webp',
-    ),
-    PromoBanner(
-      headline: 'FREE DELIVERY',
-      code: 'FREESHIP',
-      imageUrl: 'assets/images/order/extracted/promo_banner_1.webp',
-    ),
-    PromoBanner(
-      headline: 'FLAT ₹50 OFF',
+      style: PromoBannerStyle.gourmet,
+      tag: 'gourmet FOOD FESTIVAL',
+      headline: 'Flat ₹50 OFF',
+      subtitle: 'Unlock the extraordinary',
       code: 'PARAGON50',
-      imageUrl: 'assets/images/order/extracted/promo_banner_1.webp',
+      imageUrl: 'assets/images/order/extracted/promo_gourmet_pasta.jpg',
+      accentColor: Color(0xFFE5C580),
+      gradientColors: [
+        Color(0xFF0C241E),
+        Color(0xFF091814),
+        Color(0xFF0E0E11),
+      ],
+    ),
+    PromoBanner(
+      style: PromoBannerStyle.healthy,
+      tag: 'High Fibre',
+      headline: 'Free Delivery',
+      subtitle: 'Meals packed with fresh flavours.',
+      code: 'FREESHIP',
+      imageUrl: 'assets/images/order/extracted/promo_healthy_salad.jpg',
+      accentColor: Colors.white,
+      gradientColors: [
+        Color(0xFF0D3B23),
+        Color(0xFF092416),
+        Color(0xFF0E0E11),
+      ],
+    ),
+    PromoBanner(
+      style: PromoBannerStyle.palace,
+      tag: 'Paragon Palace',
+      headline: 'Get flat 10% OFF*',
+      subtitle: 'on delicious authentic dishes',
+      code: 'WELCOMEBACK',
+      imageUrl: 'assets/images/order/extracted/promo_biryani_handi.jpg',
+      accentColor: Color(0xFF8B1E22),
+      gradientColors: [
+        Color(0xFF2E1015),
+        Color(0xFF1B0B0E),
+        Color(0xFF0E0E11),
+      ],
     ),
   ];
 
