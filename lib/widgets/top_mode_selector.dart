@@ -30,7 +30,7 @@ const List<ModeConfig> kAppModes = [
     id: 'order_food',
     label: 'Order Food',
     icon: Icons.lunch_dining_rounded,
-    accentColor: Color(0xFFFF5252), // Vibrant Coral Red
+    accentColor: Color(0xFFFF4B4B), // Coral Crimson
     microTag: 'DELIVERY',
     route: AppRoutes.foodHome,
   ),
@@ -39,7 +39,7 @@ const List<ModeConfig> kAppModes = [
     id: 'take_away',
     label: 'Take Away',
     icon: Icons.shopping_bag_rounded,
-    accentColor: Color(0xFFFF9800), // Vibrant Amber Orange
+    accentColor: Color(0xFFFF9500), // Golden Amber
     microTag: 'PICKUP',
     route: AppRoutes.takeawayDashboard,
   ),
@@ -48,7 +48,7 @@ const List<ModeConfig> kAppModes = [
     id: 'reserve_table',
     label: 'Reserve Table',
     icon: Icons.table_restaurant_rounded,
-    accentColor: Color(0xFFFFB300), // Warm Gold
+    accentColor: Color(0xFFFFC107), // Paragon Warm Gold
     microTag: 'BOOKING',
     route: AppRoutes.reserveDashboard,
   ),
@@ -57,7 +57,7 @@ const List<ModeConfig> kAppModes = [
     id: 'catering',
     label: 'Catering',
     icon: Icons.room_service_rounded,
-    accentColor: Color(0xFF26A69A), // Teal
+    accentColor: Color(0xFF10B981), // Emerald Mint
     microTag: 'EVENTS',
     route: AppRoutes.cateringDashboard,
   ),
@@ -66,7 +66,7 @@ const List<ModeConfig> kAppModes = [
     id: 'food_planner',
     label: 'Food Planner',
     icon: Icons.calendar_month_rounded,
-    accentColor: Color(0xFFAB47BC), // Amethyst Purple
+    accentColor: Color(0xFFA855F7), // Royal Amethyst
     microTag: 'WEEKLY',
     route: AppRoutes.foodPlanner,
   ),
@@ -88,7 +88,7 @@ class TopModeSelector extends StatefulWidget {
     this.controller,
     this.padding = EdgeInsets.zero,
     this.onModeChanged,
-    this.canvasColor = const Color(0xFF16161D),
+    this.canvasColor = const Color(0xFF0E0E11),
     this.backgroundColor = const Color(0xFF0E0E11),
   });
 
@@ -364,7 +364,7 @@ class _ModeTabContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOutCubic,
       padding: const EdgeInsets.symmetric(
         horizontal: 2,
@@ -374,39 +374,45 @@ class _ModeTabContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Mode Icon
+          // Mode Icon with ambient glowing container when selected
           AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
-            width: isSelected ? 28 : 22,
-            height: isSelected ? 28 : 22,
-            decoration: isSelected
-                ? BoxDecoration(
-                    color: mode.accentColor.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(8),
-                  )
-                : null,
+            width: isSelected ? 30 : 26,
+            height: isSelected ? 30 : 26,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? mode.accentColor.withValues(alpha: 0.16)
+                  : Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: isSelected
+                    ? mode.accentColor.withValues(alpha: 0.35)
+                    : Colors.white.withValues(alpha: 0.05),
+                width: 1.0,
+              ),
+            ),
             alignment: Alignment.center,
             child: Icon(
               mode.icon,
-              size: isSelected ? 18 : 16,
+              size: isSelected ? 18 : 15,
               color: isSelected
                   ? mode.accentColor
-                  : Colors.white.withValues(alpha: 0.60),
+                  : Colors.white.withValues(alpha: 0.50),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           // Mode Label
           AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 400),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
             style: TextStyle(
-              fontSize: isSelected ? 10.5 : 9.5,
-              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+              fontSize: isSelected ? 11.0 : 10.0,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: isSelected
                   ? Colors.white
-                  : Colors.white.withValues(alpha: 0.65),
-              letterSpacing: 0.1,
+                  : Colors.white.withValues(alpha: 0.55),
+              letterSpacing: isSelected ? 0.2 : 0.0,
               height: 1.1,
             ),
             child: FittedBox(
@@ -430,9 +436,11 @@ class _ModeTabContent extends StatelessWidget {
 /// - Convex rounded corners on top ($R_{top} = 12$).
 /// - Concave fillet flaring arcs at the bottom ($R_{bottom} = 6..8$) that sweep outward
 ///   onto the baseline.
-/// - Glowing ambient shadow.
-/// - Top and side highlight stroke (no stroke at bottom baseline).
-/// - Baseline divider line on either side of the flared tab.
+/// - Focused ambient top crest halo glow (avoids lateral bleeding into screen background).
+/// - Volumetric ambient inner top-down gradient fill.
+/// - Dissolving vertical stroke gradient: crisp bright apex that gracefully fades to 0%
+///   opacity before the baseline, completely eliminating harsh colored side wings.
+/// - Hairline baseline divider line flanking the flared tab.
 class _SwiggyFlaredTabPainter extends CustomPainter {
   const _SwiggyFlaredTabPainter({
     required this.left,
@@ -462,7 +470,7 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
     final endX = (right + rBottom).clamp(0.0, totalWidth);
     final effectiveRTop = rTop.clamp(2.0, (right - left) / 2.5);
 
-    // 1. Construct the closed organic flared tab path for fill and shadow
+    // 1. Construct the closed organic flared tab path for fill and inner glow
     final fillPath = Path();
     fillPath.moveTo(startX, bottom);
 
@@ -503,19 +511,44 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
     fillPath.lineTo(startX, bottom);
     fillPath.close();
 
-    // 2. Ambient top glow shadow
-    final glowPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.22)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawPath(fillPath, glowPaint);
+    // 2. Focused ambient top-crest halo glow (avoids bleeding below the baseline or harsh lateral horns)
+    final crestGlowRect = Rect.fromLTRB(left + 2, top - 2, right - 2, top + 18);
+    final crestGlowPath = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        crestGlowRect,
+        Radius.circular(effectiveRTop),
+      ));
+    final crestGlowPaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.28)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawPath(crestGlowPath, crestGlowPaint);
 
-    // 3. Tab fill (matches content canvas below)
+    // 3. Tab base fill (matches content canvas below perfectly)
     final fillPaint = Paint()
       ..color = fillColor
       ..style = PaintingStyle.fill;
     canvas.drawPath(fillPath, fillPaint);
 
-    // 4. Highlight stroke on top and flared sides (excluding bottom baseline)
+    // 4. Volumetric ambient inner top-down gradient
+    // Adds luxurious depth at the top crown while dissolving seamlessly into the page background at the baseline
+    final tabBounds = Rect.fromLTRB(startX, top, endX, bottom);
+    final innerGlowPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          accentColor.withValues(alpha: 0.16),
+          accentColor.withValues(alpha: 0.05),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.45, 0.95],
+      ).createShader(tabBounds)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, innerGlowPaint);
+
+    // 5. Dissolving highlight stroke along the arched cap and flared sides
+    // Uses a vertical gradient shader that fades to 0% opacity before the baseline,
+    // completely eliminating harsh colored side wings while keeping the curved cap ultra crisp.
     final strokePath = Path();
     strokePath.moveTo(startX, bottom);
     if (left > startX) {
@@ -551,15 +584,25 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
     }
 
     final strokePaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.90)
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          accentColor.withValues(alpha: 0.95), // Crisp luminous top apex
+          accentColor.withValues(alpha: 0.65), // Upper curved corners
+          accentColor.withValues(alpha: 0.18), // Dissolving mid-body
+          Colors.transparent,                  // Completely transparent at baseline
+        ],
+        stops: const [0.0, 0.35, 0.70, 0.96],
+      ).createShader(tabBounds)
       ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(strokePath, strokePaint);
 
-    // 5. Baseline divider line flanking the active tab on left and right
+    // 6. Refined baseline divider line flanking the active tab
     final baselinePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.10)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
