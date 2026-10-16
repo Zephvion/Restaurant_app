@@ -230,7 +230,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                     _DateStrip(
                       weekStart: _weekStart,
                       selectedOffset: _selectedDayOffset,
-                      onSelect: (i) => setState(() => _selectedDayOffset = i),
+                      onSelect: (i) => setState(() =>
+                          _selectedDayOffset = (_selectedDayOffset == i ? null : i)),
                     ),
                     const SizedBox(height: 24),
 
@@ -249,7 +250,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                       children: _timeSlots.map((slot) {
                         final isSelected = slot == _selectedTimeSlot;
                         return GestureDetector(
-                          onTap: () => setState(() => _selectedTimeSlot = slot),
+                          onTap: () => setState(() => _selectedTimeSlot =
+                              (_selectedTimeSlot == slot ? '' : slot)),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(
@@ -296,8 +298,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                         children: _eventTypes.map((type) {
                           final isSelected = type == _selectedEventType;
                           return GestureDetector(
-                            onTap: () =>
-                                setState(() => _selectedEventType = type),
+                            onTap: () => setState(() => _selectedEventType =
+                                (_selectedEventType == type ? '' : type)),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               margin: const EdgeInsets.only(right: 10),
@@ -346,8 +348,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
                       children: _guestRanges.map((range) {
                         final isSelected = range == _selectedGuestRange;
                         return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedGuestRange = range),
+                          onTap: () => setState(() => _selectedGuestRange =
+                              (_selectedGuestRange == range ? null : range)),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(

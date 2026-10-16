@@ -135,12 +135,12 @@ class RecommendedDishCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                height: 116,
+                height: 104,
                 width: double.infinity,
                 child: NetworkImageWithFallback(url: dish.imageUrl),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -150,23 +150,24 @@ class RecommendedDishCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       '₹ ${dish.price.toInt()}',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     DishBadges(dish: dish),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     FoodQuantityButton(
+                      height: 28,
                       quantity: effectiveQuantity,
                       onAdd: onAdd,
                       onIncrement: onIncrement ?? onAdd,

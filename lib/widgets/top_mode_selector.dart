@@ -72,7 +72,16 @@ const List<ModeConfig> kAppModes = [
   ),
 ];
 
-/// A Swiggy-style top mode selector with organic curved flared tabs.
+/// Returns the chosen accent color for an app mode [id]
+Color getModeAccentColor(String id) {
+  try {
+    return kAppModes.firstWhere((m) => m.id == id).accentColor;
+  } catch (_) {
+    return const Color(0xFFFF4B4B);
+  }
+}
+
+/// A top mode selector with organic curved flared tabs.
 ///
 /// Features:
 /// - ZERO rectangular cards or closed outline boxes.
@@ -289,7 +298,7 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                   ),
                   duration: const Duration(milliseconds: 550),
                   curve: Curves.easeInOutCubic,
-                  builder: (context, animIndex, child) {
+                  builder: (context, animIndex, _) {
                     final left = sidePad + animIndex * (tabWidth + tabGap);
                     final right = left + tabWidth;
 
@@ -305,7 +314,7 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                     )!;
 
                     return CustomPaint(
-                      painter: _SwiggyFlaredTabPainter(
+                      painter: _OrganicFlaredTabPainter(
                         left: left,
                         right: right,
                         top: _tabTop,
@@ -316,31 +325,53 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                         accentColor: currentColor,
                         totalWidth: totalWidth,
                       ),
-                      child: child,
+                      child: Stack(
+                        children: [
+                          if (currentIndex > 0)
+                            _buildUnselectedGroupContainer(
+                              startIdx: 0,
+                              endIdx: currentIndex - 1,
+                              sidePad: sidePad,
+                              tabWidth: tabWidth,
+                              tabGap: tabGap,
+                              color: currentColor,
+                            ),
+                          if (currentIndex < kAppModes.length - 1)
+                            _buildUnselectedGroupContainer(
+                              startIdx: currentIndex + 1,
+                              endIdx: kAppModes.length - 1,
+                              sidePad: sidePad,
+                              tabWidth: tabWidth,
+                              tabGap: tabGap,
+                              color: currentColor,
+                            ),
+                          ...List.generate(kAppModes.length, (i) {
+                            final mode = kAppModes[i];
+                            final isSelected = i == currentIndex;
+                            final tabLeft = sidePad + i * (tabWidth + tabGap);
+
+                            return Positioned(
+                              left: tabLeft,
+                              top: _tabTop,
+                              width: tabWidth,
+                              height: _barHeight - _tabTop,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _handleTabTap(i),
+                                child: Center(
+                                  child: _ModeTabContent(
+                                    mode: mode,
+                                    isSelected: isSelected,
+                                    activeColor: currentColor,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     );
                   },
-                  child: Stack(
-                    children: List.generate(kAppModes.length, (i) {
-                      final mode = kAppModes[i];
-                      final isSelected = i == currentIndex;
-                      final tabLeft = sidePad + i * (tabWidth + tabGap);
-
-                      return Positioned(
-                        left: tabLeft,
-                        top: _tabTop,
-                        width: tabWidth,
-                        height: _barHeight - _tabTop,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => _handleTabTap(i),
-                          child: _ModeTabContent(
-                            mode: mode,
-                            isSelected: isSelected,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
                 ),
               ),
             ),
@@ -349,88 +380,111 @@ class _TopModeSelectorState extends State<TopModeSelector> {
       ),
     );
   }
-}
 
-/// Renders the icon, label, and micro tag inside each tab slot.
-class _ModeTabContent extends StatelessWidget {
-  const _ModeTabContent({
-    required this.mode,
-    required this.isSelected,
-  });
+  Widget _buildUnselectedGroupContainer({
+    required int startIdx,
+    required int endIdx,
+    required double sidePad,
+    required double tabWidth,
+    required double tabGap,
+    required Color color,
+  }) {
+    final left = sidePad + startIdx * (tabWidth + tabGap);
+    final count = endIdx - startIdx + 1;
+    final width = count * tabWidth + (count - 1) * tabGap;
+    const top = _tabTop + 5.0;
+    const height = _barHeight - _tabTop - 11.0;
 
-  final ModeConfig mode;
-  final bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOutCubic,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 2,
-        vertical: 6,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Mode Icon with ambient glowing container when selected
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            width: isSelected ? 30 : 26,
-            height: isSelected ? 30 : 26,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? mode.accentColor.withValues(alpha: 0.16)
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: isSelected
-                    ? mode.accentColor.withValues(alpha: 0.35)
-                    : Colors.white.withValues(alpha: 0.05),
-                width: 1.0,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              mode.icon,
-              size: isSelected ? 18 : 15,
-              color: isSelected
-                  ? mode.accentColor
-                  : Colors.white.withValues(alpha: 0.50),
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: IgnorePointer(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withValues(alpha: 0.55),
+              width: 1.2,
             ),
           ),
-          const SizedBox(height: 5),
-          // Mode Label
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            style: TextStyle(
-              fontSize: isSelected ? 11.0 : 10.0,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.55),
-              letterSpacing: isSelected ? 0.2 : 0.0,
-              height: 1.1,
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                mode.label,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ],
+          child: count > 1
+              ? Stack(
+                  children: List.generate(count - 1, (i) {
+                    final divLeft = (i + 1) * (tabWidth + tabGap) - tabGap / 2;
+                    return Positioned(
+                      left: divLeft - 0.5,
+                      top: 10,
+                      bottom: 10,
+                      width: 1,
+                      child: Container(
+                        color: color.withValues(alpha: 0.22),
+                      ),
+                    );
+                  }),
+                )
+              : null,
+        ),
       ),
     );
   }
 }
 
-/// Custom painter that draws the Swiggy arched bell/folder tab with concave flaring shoulders.
+/// Renders the button icon (in white) and text label.
+class _ModeTabContent extends StatelessWidget {
+  const _ModeTabContent({
+    required this.mode,
+    required this.isSelected,
+    required this.activeColor,
+  });
+
+  final ModeConfig mode;
+  final bool isSelected;
+  final Color activeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          mode.icon,
+          size: isSelected ? 21 : 18,
+          color: Colors.white,
+        ),
+        const SizedBox(height: 5),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+          style: TextStyle(
+            fontSize: isSelected ? 11.0 : 10.0,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.82),
+            letterSpacing: isSelected ? 0.2 : 0.0,
+            height: 1.1,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              mode.label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Custom painter that draws the organic arched bell/folder tab with concave flaring shoulders.
 ///
 /// Follows smooth C1-continuous curvature:
 /// - Convex rounded corners on top ($R_{top} = 12$).
@@ -441,8 +495,8 @@ class _ModeTabContent extends StatelessWidget {
 /// - Dissolving vertical stroke gradient: crisp bright apex that gracefully fades to 0%
 ///   opacity before the baseline, completely eliminating harsh colored side wings.
 /// - Hairline baseline divider line flanking the flared tab.
-class _SwiggyFlaredTabPainter extends CustomPainter {
-  const _SwiggyFlaredTabPainter({
+class _OrganicFlaredTabPainter extends CustomPainter {
+  const _OrganicFlaredTabPainter({
     required this.left,
     required this.right,
     required this.top,
@@ -599,23 +653,10 @@ class _SwiggyFlaredTabPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(strokePath, strokePaint);
-
-    // 6. Refined baseline divider line flanking the active tab
-    final baselinePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    if (startX > 0.5) {
-      canvas.drawLine(Offset(0, bottom), Offset(startX, bottom), baselinePaint);
-    }
-    if (endX < totalWidth - 0.5) {
-      canvas.drawLine(Offset(endX, bottom), Offset(totalWidth, bottom), baselinePaint);
-    }
   }
 
   @override
-  bool shouldRepaint(covariant _SwiggyFlaredTabPainter oldDelegate) {
+  bool shouldRepaint(covariant _OrganicFlaredTabPainter oldDelegate) {
     return oldDelegate.left != left ||
         oldDelegate.right != right ||
         oldDelegate.accentColor != accentColor ||

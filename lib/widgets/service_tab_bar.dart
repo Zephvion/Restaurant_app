@@ -50,7 +50,7 @@ const _kTabs = [
   ),
 ];
 
-/// A Swiggy-style horizontal tab bar placed at the top of each service intro
+/// A horizontal tab bar placed at the top of each service intro
 /// screen. The [activeId] chip is highlighted; tapping any other chip
 /// replaces the current route with that service's intro screen.
 ///

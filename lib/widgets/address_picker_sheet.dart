@@ -515,7 +515,7 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
         fontSize: 12,
       ),
       onSelected: (val) {
-        if (val) setState(() => _labelCtrl.text = label);
+        setState(() => _labelCtrl.text = val ? label : '');
       },
     );
   }

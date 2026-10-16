@@ -797,6 +797,18 @@ class MockData {
       assetKind: 'phonepe',
     ),
     PaymentMethod(
+      id: 'upi_paytm',
+      title: 'Paytm UPI',
+      kind: PaymentKind.upi,
+      assetKind: 'paytm',
+    ),
+    PaymentMethod(
+      id: 'upi_bhim',
+      title: 'BHIM UPI',
+      kind: PaymentKind.upi,
+      assetKind: 'bhim',
+    ),
+    PaymentMethod(
       id: 'upi_id',
       title: 'artiabraham@oksbi',
       kind: PaymentKind.upi,

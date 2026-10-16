@@ -6,31 +6,35 @@ import '../../models/dish.dart';
 import '../../models/menu_category.dart';
 import '../../models/promo_banner.dart';
 import '../../routes/app_routes.dart';
-import '../../services/auth_service.dart';
-import '../../services/location_service.dart';
 import '../../services/menu_service.dart';
-import '../../services/session_manager.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/address_picker_sheet.dart';
 import '../../widgets/basket_bar.dart';
 import '../../widgets/coupon_sheet.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/dish_card.dart';
+import '../../widgets/main_top_header.dart';
 import '../../widgets/menu_list_tile.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
+import '../../widgets/themed_page_background.dart';
 
 /// The main "Order Food" menu: interactive delivery header, search, promo carousel,
 /// category tabs with dynamic filtering, sort options, clickable categories and dish rails.
 class FoodHomeScreen extends StatefulWidget {
-  const FoodHomeScreen({super.key});
+  const FoodHomeScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
 
   @override
   State<FoodHomeScreen> createState() => _FoodHomeScreenState();
 }
 
-class _FoodHomeScreenState extends State<FoodHomeScreen> {
+class _FoodHomeScreenState extends State<FoodHomeScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final PageController _promoController = PageController(viewportFraction: 0.9);
   Timer? _promoTimer;
   int _selectedTab = 0;
@@ -100,16 +104,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
 
   void _add(Dish dish) => _cart.add(dish);
 
-  void _openAddressPicker() {
-    AddressPickerSheet.show(
-      context: context,
-      onAddressSelected: (addr) {
-        setState(() {}); // refresh delivery location header & fees
-      },
-    );
-  }
-
-
   List<Dish> _applyFiltersAndSort(List<Dish> source) {
     List<Dish> list;
 
@@ -159,58 +153,70 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final filteredDishes = _applyFiltersAndSort(_dishes);
 
+    final listContent = ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        if (!widget.isEmbedded) ...[
+          const MainTopHeader(accentColor: Color(0xFFFF4B4B)),
+          const SizedBox(height: 10),
+          const DashboardTabBar(activeId: 'order_food'),
+          const SizedBox(height: 12),
+        ] else ...[
+          const SizedBox(height: 12),
+        ],
+        Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _searchBar(),
+              ),
+              const SizedBox(height: 20),
+              _promoCarousel(),
+              const SizedBox(height: 22),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _menuSortRow(),
+              ),
+              const SizedBox(height: 14),
+              _categoryTabs(),
+              const SizedBox(height: 18),
+              _featuredRail(filteredDishes),
+              const SizedBox(height: 28),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _sectionHeader('Explore by Category'),
+              ),
+              const SizedBox(height: 14),
+              _categoryCircles(),
+              const SizedBox(height: 26),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _sectionHeader('Combination Breakfast'),
+              ),
+              const SizedBox(height: 14),
+              _combinationList(),
+              const SizedBox(height: 26),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _sectionHeader('Recommended Breakfast'),
+              ),
+              const SizedBox(height: 14),
+              _recommendedRail(),
+            ],
+          );
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            _header(),
-            const SizedBox(height: 10),
-            const DashboardTabBar(activeId: 'order_food'),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _searchBar(),
+      backgroundColor: Colors.transparent,
+      body: widget.isEmbedded
+          ? listContent
+          : ThemedPageBackground(
+              accentColor: const Color(0xFFFF4B4B),
+              child: SafeArea(
+                bottom: false,
+                child: listContent,
+              ),
             ),
-            const SizedBox(height: 20),
-            _promoCarousel(),
-            const SizedBox(height: 22),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _menuSortRow(),
-            ),
-            const SizedBox(height: 14),
-            _categoryTabs(),
-            const SizedBox(height: 18),
-            _featuredRail(filteredDishes),
-            const SizedBox(height: 28),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _sectionHeader('Explore by Category'),
-            ),
-            const SizedBox(height: 14),
-            _categoryCircles(),
-            const SizedBox(height: 26),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _sectionHeader('Combination Breakfast'),
-            ),
-            const SizedBox(height: 14),
-            _combinationList(),
-            const SizedBox(height: 26),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _sectionHeader('Recommended Breakfast'),
-            ),
-            const SizedBox(height: 14),
-            _recommendedRail(),
-          ],
-        ),
-      ),
       bottomNavigationBar: AnimatedBuilder(
         animation: _cart,
         builder: (context, _) {
@@ -231,131 +237,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
     );
   }
 
-  // ---- Sections ----------------------------------------------------------
-
-  Widget _header() {
-    final currentArea = LocationService.instance.currentDeliveryArea;
-    final user = AuthService.instance.currentUser;
-    final userInitial = user?.displayName.trim().isNotEmpty == true
-        ? user!.displayName.trim()[0].toUpperCase()
-        : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            color: AppColors.textPrimary,
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-              }
-            },
-          ),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.account),
-            child: ClipOval(
-              child: Container(
-                width: 40,
-                height: 40,
-                color: AppColors.maroon,
-                alignment: Alignment.center,
-                child: (user?.photoUrl.trim().isNotEmpty == true)
-                    ? NetworkImageWithFallback(
-                        url: user!.photoUrl.trim(),
-                        fallbackIcon: Icons.person,
-                      )
-                    : Text(
-                        userInitial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: _openAddressPicker,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Deliver to',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on,
-                          color: AppColors.accentRed, size: 16),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          (currentArea.isNotEmpty && !currentArea.toLowerCase().contains('palazhi'))
-                              ? currentArea
-                              : (SessionManager.instance.getSelectedAddress()?.label ?? 'Current Location'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down,
-                          color: AppColors.textPrimary, size: 18),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // ── Dedicated Track Live Order Button ─────────────────────────
-          IconButton(
-            tooltip: 'Track Live Order',
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.delivery_dining_outlined,
-                    color: AppColors.copper, size: 24),
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accentRed,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.trackOrder),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded,
-                color: AppColors.textPrimary),
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.notifications),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _searchBar() {
     return GestureDetector(
@@ -438,8 +319,13 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
           return GestureDetector(
             onTap: () {
               setState(() {
-                _selectedTab = i;
-                _activeCategoryFilter = i == 0 ? 'All' : tabName;
+                if (_selectedTab == i && i != 0) {
+                  _selectedTab = 0;
+                  _activeCategoryFilter = 'All';
+                } else {
+                  _selectedTab = i;
+                  _activeCategoryFilter = i == 0 ? 'All' : tabName;
+                }
               });
             },
             behavior: HitTestBehavior.opaque,
@@ -524,23 +410,22 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 
   Widget _categoryCircles() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.78,
-        ),
+    return SizedBox(
+      height: 104,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: MockData.categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, i) {
           final cat = MockData.categories[i];
-          return _CategoryCircle(
-            category: cat,
-            onTap: () => _openCategory(cat.name),
+          return SizedBox(
+            width: 72,
+            child: _CategoryCircle(
+              category: cat,
+              onTap: () => _openCategory(cat.name),
+            ),
           );
         },
       ),
@@ -580,7 +465,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
       animation: _cart,
       builder: (context, _) {
         return SizedBox(
-          height: 272,
+          height: 216,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -614,7 +499,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
   }
 }
 
-/// A single promo card in the carousel matching the highlighted Swiggy offer cards,
+/// A single promo card in the carousel matching the highlighted offer cards,
 /// blending seamlessly into the dark page background while showcasing authentic restaurant offers.
 class _PromoCard extends StatelessWidget {
   const _PromoCard({required this.promo});

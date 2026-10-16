@@ -136,8 +136,8 @@ class _SelectRestaurantScreenState extends State<SelectRestaurantScreen> {
                 ..._filtered.map((r) => _RestaurantTile(
                       restaurant: r,
                       selected: _selectedRestaurant?.id == r.id,
-                      onTap: () =>
-                          setState(() => _selectedRestaurant = r),
+                      onTap: () => setState(() => _selectedRestaurant =
+                          (_selectedRestaurant?.id == r.id ? null : r)),
                     )),
               ],
             ),

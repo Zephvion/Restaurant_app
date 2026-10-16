@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/mock_data.dart';
 import '../../models/reservation.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
@@ -8,40 +7,65 @@ import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
-import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/main_top_header.dart';
 import '../../widgets/payment_gateway_sheet.dart';
+import '../../widgets/themed_page_background.dart';
 
 /// Shows the user's existing reservations (empty state or a list of cards)
 /// with a ＋ button to start a new reservation.
-class ReserveDashboardScreen extends StatelessWidget {
-  const ReserveDashboardScreen({super.key});
+class ReserveDashboardScreen extends StatefulWidget {
+  const ReserveDashboardScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
+
+  @override
+  State<ReserveDashboardScreen> createState() => _ReserveDashboardScreenState();
+}
+
+class _ReserveDashboardScreenState extends State<ReserveDashboardScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: AnimatedBuilder(
-        animation: ReservationController.instance,
-        builder: (context, _) {
-          final ctrl = ReservationController.instance;
-          return Column(
-            children: [
-              // ── top hero image ──────────────────────────────────────────
-              _HeroHeader(),
-              // ── Swiggy-style Section Switcher ───────────────────────────
+    super.build(context);
+    const modeAccent = Color(0xFFFFC107);
+    final content = AnimatedBuilder(
+      animation: ReservationController.instance,
+      builder: (context, _) {
+        final ctrl = ReservationController.instance;
+        return Column(
+          children: [
+            if (!widget.isEmbedded) ...[
+              const MainTopHeader(accentColor: modeAccent),
+              const SizedBox(height: 10),
               const DashboardTabBar(activeId: 'reserve_table'),
-              // ── content ────────────────────────────────────────────────
-              Expanded(
-                child: ctrl.isEmpty
-                    ? _EmptyState(onAdd: () => _goAdd(context))
-                    : _ReservationList(
-                        reservations: ctrl.reservations,
-                        onAdd: () => _goAdd(context),
-                      ),
-              ),
             ],
-          );
-        },
+            // ── content ────────────────────────────────────────────────
+            Expanded(
+              child: ctrl.isEmpty
+                  ? _EmptyState(onAdd: () => _goAdd(context))
+                  : _ReservationList(
+                      reservations: ctrl.reservations,
+                      onAdd: () => _goAdd(context),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: ThemedPageBackground(
+        accentColor: modeAccent,
+        child: widget.isEmbedded
+            ? content
+            : SafeArea(
+                bottom: false,
+                child: content,
+              ),
       ),
     );
   }
@@ -50,60 +74,6 @@ class ReserveDashboardScreen extends StatelessWidget {
       Navigator.of(context).pushNamed(AppRoutes.selectRestaurant);
 }
 
-// ── Hero header ──────────────────────────────────────────────────────────────
-
-class _HeroHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 260,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: NetworkImageWithFallback(
-              url: MockData.reserveTableHero,
-              fit: BoxFit.cover,
-              fallbackIcon: Icons.restaurant,
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context)
-                            .pushReplacementNamed(AppRoutes.home);
-                      }
-                    },
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.location_on_outlined,
-                        color: Colors.white),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded,
-                        color: Colors.white),
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.notifications),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -956,13 +926,20 @@ class _AddButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 52,
-        height: 52,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFC107),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFC107).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+        child: const Icon(Icons.add, color: Colors.black, size: 28),
       ),
     );
   }

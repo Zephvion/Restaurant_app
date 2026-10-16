@@ -64,16 +64,7 @@ class ReservationService {
             .collection('reservations')
             .where('userId', isEqualTo: userId)
             .get()
-            .timeout(
-              const Duration(seconds: 3),
-              onTimeout: () {
-                debugPrint('Firestore fetch reservations timed out; using local.');
-                return FirebaseFirestore.instance
-                    .collection('reservations')
-                    .limit(0)
-                    .get();
-              },
-            );
+            .timeout(const Duration(seconds: 3));
         if (query.docs.isNotEmpty) {
           final items = query.docs
               .map((doc) => Reservation.fromMap(doc.data(), id: doc.id))
@@ -84,7 +75,7 @@ class ReservationService {
           return items;
         }
       } catch (e) {
-        debugPrint('Error fetching reservations from Firestore: $e');
+        debugPrint('Firestore fetch reservations fallback to local: $e');
       }
     }
     return _localReservations;

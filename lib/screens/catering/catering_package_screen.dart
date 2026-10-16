@@ -211,7 +211,8 @@ class _CateringPackageScreenState extends State<CateringPackageScreen> {
                   _PackageCard(
                     pkg: pkg,
                     isSelected: _selectedPackageId == pkg.id,
-                    onTap: () => setState(() => _selectedPackageId = pkg.id),
+                    onTap: () => setState(() => _selectedPackageId =
+                        (_selectedPackageId == pkg.id ? '' : pkg.id)),
                   ),
                   const SizedBox(height: 14),
                 ],

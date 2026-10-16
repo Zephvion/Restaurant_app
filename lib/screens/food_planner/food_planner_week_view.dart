@@ -9,16 +9,24 @@ import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
+import '../../widgets/main_top_header.dart';
+import '../../widgets/themed_page_background.dart';
 
 /// Tab 0: "My week" category-driven meal planner dashboard.
 class FoodPlannerWeekView extends StatefulWidget {
-  const FoodPlannerWeekView({super.key});
+  const FoodPlannerWeekView({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
 
   @override
   State<FoodPlannerWeekView> createState() => _FoodPlannerWeekViewState();
 }
 
-class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
+class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   bool _dismissedReminder = false;
 
   @override
@@ -347,39 +355,24 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return AnimatedBuilder(
       animation: FoodPlannerController.instance,
       builder: (context, _) {
         final ctrl = FoodPlannerController.instance;
         final hasSelectedDay = ctrl.selectedDayOffset >= 0;
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-                // ── Top Header / Banner ──────────────────────────────────
-                if (!hasSelectedDay)
-                  const _BannerHeader()
-                else
-                  _PlainHeader(
-                    onBack: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context)
-                            .pushReplacementNamed(AppRoutes.home);
-                      }
-                    },
-                    onNotify: () => Navigator.of(context)
-                        .pushNamed(AppRoutes.notifications),
-                  ),
-
-                // ── Swiggy-style Section Switcher ───────────────────────────
-                const DashboardTabBar(
-                  activeId: 'food_planner',
-                  padding: EdgeInsets.symmetric(vertical: 4),
-                ),
+        final listContent = ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            if (!widget.isEmbedded) ...[
+              const MainTopHeader(accentColor: Color(0xFFA855F7)),
+              const SizedBox(height: 10),
+              const DashboardTabBar(
+                activeId: 'food_planner',
+                padding: EdgeInsets.symmetric(vertical: 4),
+              ),
+            ],
 
                 // ── Header Text & Date Strip ────────────────────────────────
                 Padding(
@@ -551,7 +544,19 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView> {
                 ),
                 const SizedBox(height: 40),
               ],
-            ),
+            );
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: ThemedPageBackground(
+            accentColor: const Color(0xFFA855F7),
+            child: widget.isEmbedded
+                ? listContent
+                : SafeArea(
+                    bottom: false,
+                    child: listContent,
+                  ),
+          ),
         );
       },
     );
@@ -1170,7 +1175,7 @@ class _DateStrip extends StatelessWidget {
               width: 52,
               height: 64,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.accentRed : AppColors.surface,
+                color: isSelected ? const Color(0xFFA855F7) : AppColors.surface,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Column(

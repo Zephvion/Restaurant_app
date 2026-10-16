@@ -792,7 +792,8 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           final cat = categories[index];
           final isSelected = cat == _selectedCategory;
           return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = cat),
+            onTap: () => setState(() => _selectedCategory =
+                _selectedCategory == cat ? 'Frequent order' : cat),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -996,7 +997,8 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           final icon = _getIconForCategory(cat);
 
           return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = cat),
+            onTap: () => setState(() => _selectedCategory =
+                _selectedCategory == cat ? 'Frequent order' : cat),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(

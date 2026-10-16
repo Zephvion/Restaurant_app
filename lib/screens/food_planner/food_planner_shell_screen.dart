@@ -10,7 +10,9 @@ import 'food_planner_week_view.dart';
 
 /// Main Shell screen for the Food Planner housing the persistent 4-tab bottom navigation bar.
 class FoodPlannerShellScreen extends StatelessWidget {
-  const FoodPlannerShellScreen({super.key});
+  const FoodPlannerShellScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
 
   @override
   Widget build(BuildContext context) {
@@ -20,14 +22,15 @@ class FoodPlannerShellScreen extends StatelessWidget {
         final ctrl = FoodPlannerController.instance;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isEmbedded ? Colors.transparent : AppColors.background,
           body: IndexedStack(
             index: ctrl.activeTabIndex,
-            children: const [
-              FoodPlannerWeekView(),
-              FoodPlannerCalorieView(),
-              FoodPlannerCalculatorScreen(),
-              FoodPlannerAccountView(),
+            children: [
+              FoodPlannerWeekView(isEmbedded: isEmbedded),
+              const FoodPlannerCalorieView(),
+              const FoodPlannerCalculatorScreen(),
+              const FoodPlannerAccountView(),
             ],
           ),
           bottomNavigationBar: FoodPlannerBottomNav(

@@ -182,7 +182,8 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
           ? const Icon(Icons.check_circle_rounded, color: AppColors.copper, size: 20)
           : const Icon(Icons.circle_outlined, color: AppColors.hint, size: 20),
       onTap: () {
-        setState(() => _activeSort = option);
+        setState(() => _activeSort =
+            _activeSort == option ? DishSortOption.popularity : option);
         Navigator.of(ctx).pop();
       },
     );
@@ -399,13 +400,11 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
               cat.toLowerCase() == _selectedCategory.toLowerCase();
           return GestureDetector(
             onTap: () {
-              if (!isSelected) {
-                setState(() {
-                  _selectedCategory = cat;
-                  _searchQuery = '';
-                  _searchController.clear();
-                });
-              }
+              setState(() {
+                _selectedCategory = isSelected ? 'All' : cat;
+                _searchQuery = '';
+                _searchController.clear();
+              });
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),

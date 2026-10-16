@@ -7,38 +7,50 @@ import '../../services/location_service.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
-import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/main_top_header.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/themed_page_background.dart';
 import 'takeaway_order_card.dart';
 
 /// Dashboard screen for Take Away:
-/// Domino's-style experience showing the nearest store with live GPS distance,
+/// experience showing the nearest store with live GPS distance,
 /// one-tap store switching, quick ordering CTA, and order tracking.
-class TakeawayDashboardScreen extends StatelessWidget {
-  const TakeawayDashboardScreen({super.key});
+class TakeawayDashboardScreen extends StatefulWidget {
+  const TakeawayDashboardScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
+
+  @override
+  State<TakeawayDashboardScreen> createState() =>
+      _TakeawayDashboardScreenState();
+}
+
+class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: AnimatedBuilder(
-        animation: TakeawayController.instance,
-        builder: (context, _) {
-          final ctrl = TakeawayController.instance;
-          final currentRest = ctrl.activeRestaurant;
-          final distKm = ctrl.distanceToSelectedKm;
+    super.build(context);
+    final content = AnimatedBuilder(
+      animation: TakeawayController.instance,
+      builder: (context, _) {
+        final ctrl = TakeawayController.instance;
+        final currentRest = ctrl.activeRestaurant;
+        final distKm = ctrl.distanceToSelectedKm;
 
-          return Column(
-            children: [
-              // ── Top Hero Image ──────────────────────────────────────────
-              const _HeroHeader(),
-              // ── Section Switcher ─────────────────────────────────────────
+        return Column(
+          children: [
+            if (!widget.isEmbedded) ...[
+              const MainTopHeader(accentColor: Color(0xFFFF9500)),
+              const SizedBox(height: 10),
               const DashboardTabBar(activeId: 'take_away'),
-              // ── Main Content ────────────────────────────────────────────
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                  children: [
+            ],
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                children: [
                     // Domino's Style Store Card
                     _NearbyStoreCard(
                       restaurant: currentRest,
@@ -139,7 +151,19 @@ class TakeawayDashboardScreen extends StatelessWidget {
             ],
           );
         },
-      ),
+      );
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: widget.isEmbedded
+          ? content
+          : ThemedPageBackground(
+              accentColor: const Color(0xFFFF9500),
+              child: SafeArea(
+                bottom: false,
+                child: content,
+              ),
+            ),
     );
   }
 
@@ -147,70 +171,6 @@ class TakeawayDashboardScreen extends StatelessWidget {
       Navigator.of(context).pushNamed(AppRoutes.takeawaySelectRestaurant);
 }
 
-// ── Hero header ──────────────────────────────────────────────────────────────
-
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 220,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: NetworkImageWithFallback(
-              url: MockData.takeawayCounter,
-              fit: BoxFit.cover,
-              fallbackIcon: Icons.takeout_dining,
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.7),
-                  Colors.transparent,
-                  AppColors.background.withValues(alpha: 0.9),
-                ],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context)
-                            .pushReplacementNamed(AppRoutes.home);
-                      }
-                    },
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded,
-                        color: Colors.white),
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.notifications),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Domino's Style Store Card ────────────────────────────────────────────────
 
@@ -238,7 +198,7 @@ class _NearbyStoreCard extends StatelessWidget {
         color: AppColors.backgroundElevated,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.copper.withValues(alpha: 0.4),
+          color: const Color(0xFFFF9500).withValues(alpha: 0.35),
           width: 1.2,
         ),
         boxShadow: [
@@ -259,10 +219,10 @@ class _NearbyStoreCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.copper.withValues(alpha: 0.15),
+                  color: const Color(0xFFFF9500).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: AppColors.copper.withValues(alpha: 0.5),
+                    color: const Color(0xFFFF9500).withValues(alpha: 0.5),
                     width: 0.8,
                   ),
                 ),
@@ -270,12 +230,12 @@ class _NearbyStoreCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.storefront_rounded,
-                        color: AppColors.copper, size: 14),
+                        color: Color(0xFFFF9500), size: 14),
                     SizedBox(width: 5),
                     Text(
                       'PICKUP STORE',
                       style: TextStyle(
-                        color: AppColors.copper,
+                        color: Color(0xFFFF9500),
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
@@ -409,6 +369,8 @@ class _NearbyStoreCard extends StatelessWidget {
           // Order Now CTA Button
           PrimaryButton(
             label: 'Order Takeaway from this Outlet',
+            backgroundColor: const Color(0xFFFF9500),
+            foregroundColor: Colors.black,
             onPressed: onOrderNow,
           ),
         ],

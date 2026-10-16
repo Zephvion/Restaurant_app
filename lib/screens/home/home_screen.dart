@@ -18,11 +18,13 @@ class _ServiceTab {
     required this.label,
     required this.icon,
     required this.route,
+    required this.accentColor,
   });
   final String id;
   final String label;
   final IconData icon;
   final String route;
+  final Color accentColor;
 }
 
 const _tabs = [
@@ -31,30 +33,35 @@ const _tabs = [
     label: 'Order Food',
     icon: Icons.lunch_dining_rounded,
     route: AppRoutes.foodHome,
+    accentColor: Color(0xFFFF4B4B),
   ),
   _ServiceTab(
     id: 'take_away',
     label: 'Take Away',
     icon: Icons.shopping_bag_rounded,
     route: AppRoutes.takeawayDashboard,
+    accentColor: Color(0xFFFF9500),
   ),
   _ServiceTab(
     id: 'reserve_table',
     label: 'Reserve Table',
     icon: Icons.table_restaurant_rounded,
     route: AppRoutes.reserveDashboard,
+    accentColor: Color(0xFFFFC107),
   ),
   _ServiceTab(
     id: 'catering',
     label: 'Catering',
     icon: Icons.room_service_rounded,
     route: AppRoutes.cateringDashboard,
+    accentColor: Color(0xFF10B981),
   ),
   _ServiceTab(
     id: 'food_planner',
     label: 'Food Planner',
     icon: Icons.calendar_month_rounded,
     route: AppRoutes.foodPlanner,
+    accentColor: Color(0xFFA855F7),
   ),
 ];
 
@@ -245,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            // ── Swiggy-style organic flared top mode selector ───────────────
+            // ── Organic flared top mode selector ────────────────────────────
             TopModeSelector(
               controller: _tabController,
               backgroundColor: AppColors.background,
@@ -287,8 +294,37 @@ class _HomeScreenState extends State<HomeScreen>
                 },
               ),
             ),
-            // ── Red accent bar ──────────────────────────────────────────────
-            Container(height: 6, color: AppColors.accentRed),
+            // ── Dynamic mode accent bar ──────────────────────────────────────
+            AnimatedBuilder(
+              animation: _tabController.animation ?? _tabController,
+              builder: (context, _) {
+                final animVal = _tabController.animation?.value ??
+                    _tabController.index.toDouble();
+                final lowerIndex = animVal.floor().clamp(0, _tabs.length - 1);
+                final upperIndex = animVal.ceil().clamp(0, _tabs.length - 1);
+                final t = animVal - lowerIndex;
+                final activeColor = Color.lerp(
+                      _tabs[lowerIndex].accentColor,
+                      _tabs[upperIndex].accentColor,
+                      t,
+                    ) ??
+                    _tabs[_tabController.index].accentColor;
+
+                return Container(
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: activeColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: activeColor.withValues(alpha: 0.5),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -331,10 +367,34 @@ class _ServicePage extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x22000000),
-                  Color(0xBB000000),
+                  Color(0x33000000),
+                  Color(0xCC000000),
                 ],
                 stops: [0.3, 1.0],
+              ),
+            ),
+          ),
+
+          // Top atmospheric ambient wash
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 180,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      tab.accentColor.withValues(alpha: 0.12),
+                      tab.accentColor.withValues(alpha: 0.03),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
               ),
             ),
           ),
@@ -351,10 +411,14 @@ class _ServicePage extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.maroon,
+                    color: tab.accentColor.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: tab.accentColor.withValues(alpha: 0.45),
+                      width: 1.2,
+                    ),
                   ),
-                  child: Icon(tab.icon, color: Colors.white, size: 28),
+                  child: Icon(tab.icon, color: tab.accentColor, size: 28),
                 ),
                 const SizedBox(height: 16),
 
@@ -387,18 +451,19 @@ class _ServicePage extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onEnter,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.maroon,
-                    foregroundColor: Colors.white,
+                    backgroundColor: tab.accentColor,
+                    foregroundColor: Colors.black,
+                    elevation: 8,
+                    shadowColor: tab.accentColor.withValues(alpha: 0.45),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(40)),
                     textStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                       fontSize: 14,
-                      letterSpacing: 0.6,
+                      letterSpacing: 0.8,
                     ),
-                    elevation: 0,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

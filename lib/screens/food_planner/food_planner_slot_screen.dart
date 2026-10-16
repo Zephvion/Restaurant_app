@@ -14,8 +14,8 @@ class FoodPlannerSlotScreen extends StatefulWidget {
 }
 
 class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
-  late String _selectedTime;
-  late String _selectedLocation;
+  String? _selectedTime;
+  String? _selectedLocation;
   bool _repeatPreviousWeek = false;
 
   final List<String> _breakfastSlots = [
@@ -110,11 +110,12 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
   }
 
   void _proceed() {
+    if (_selectedTime == null || _selectedLocation == null) return;
     final ctrl = FoodPlannerController.instance;
     ctrl.setupSlot(
       mealType: ctrl.currentSlotMealType,
-      timeSlot: _selectedTime,
-      location: _selectedLocation,
+      timeSlot: _selectedTime!,
+      location: _selectedLocation!,
     );
     Navigator.of(context).pushNamed(AppRoutes.foodPlannerMenu);
   }
@@ -125,9 +126,13 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
     final mealType = ctrl.currentSlotMealType;
     final slots = _getAvailableSlots(mealType);
 
-    if (slots.isNotEmpty && !slots.contains(_selectedTime)) {
+    if (_selectedTime != null && slots.isNotEmpty && !slots.contains(_selectedTime)) {
       _selectedTime = slots.first;
     }
+
+    final canProceed = slots.isNotEmpty &&
+        _selectedTime != null &&
+        _selectedLocation != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -179,7 +184,8 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
                         children: slots.map((time) {
                           final isSelected = _selectedTime == time;
                           return GestureDetector(
-                            onTap: () => setState(() => _selectedTime = time),
+                            onTap: () => setState(() =>
+                                _selectedTime = _selectedTime == time ? null : time),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               margin: const EdgeInsets.only(right: 12),
@@ -244,7 +250,8 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
                     children: _locations.map((loc) {
                       final isSelected = _selectedLocation == loc;
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedLocation = loc),
+                        onTap: () => setState(() =>
+                            _selectedLocation = _selectedLocation == loc ? null : loc),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(right: 14),
@@ -314,26 +321,26 @@ class _FoodPlannerSlotScreenState extends State<FoodPlannerSlotScreen> {
               right: 24,
               bottom: 24,
               child: GestureDetector(
-                onTap: slots.isEmpty ? null : _proceed,
+                onTap: canProceed ? _proceed : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   height: 56,
                   decoration: BoxDecoration(
-                    color: slots.isEmpty
-                        ? AppColors.surface.withValues(alpha: 0.4)
-                        : AppColors.surface,
+                    color: canProceed
+                        ? AppColors.surface
+                        : AppColors.surface.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: slots.isEmpty ? Colors.white10 : Colors.transparent,
+                      color: canProceed ? Colors.transparent : Colors.white10,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     'NEXT',
                     style: TextStyle(
-                      color: slots.isEmpty
-                          ? AppColors.textSecondary.withValues(alpha: 0.5)
-                          : AppColors.textPrimary,
+                      color: canProceed
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       letterSpacing: 1.5,

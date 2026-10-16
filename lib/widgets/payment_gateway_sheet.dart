@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/payment_method.dart';
 import '../services/cashfree_gateway_service.dart';
 import '../theme/app_colors.dart';
+import 'payment_brand_mark.dart';
 
 enum PaymentGatewayStatus {
   selecting,
@@ -449,11 +450,10 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           ),
         ),
         const SizedBox(height: 12),
-        _buildUpiOption('Google Pay', Icons.account_balance_wallet,
-            const Color(0xFF4285F4)),
-        _buildUpiOption('PhonePe', Icons.payments, const Color(0xFF5F259F)),
-        _buildUpiOption('Paytm', Icons.qr_code, const Color(0xFF00BAF2)),
-        _buildUpiOption('BHIM UPI', Icons.flash_on, const Color(0xFF00796B)),
+        _buildUpiOption('Google Pay', 'gpay', const Color(0xFF4285F4)),
+        _buildUpiOption('PhonePe', 'phonepe', const Color(0xFF5F259F)),
+        _buildUpiOption('Paytm', 'paytm', const Color(0xFF00BAF2)),
+        _buildUpiOption('BHIM UPI', 'bhim', const Color(0xFF00796B)),
         const SizedBox(height: 8),
         // Enter UPI ID option
         GestureDetector(
@@ -473,13 +473,19 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Or enter UPI ID / VPA',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    const Row(
+                      children: [
+                        PaymentBrandMark(assetKind: 'upi', size: 28),
+                        SizedBox(width: 10),
+                        Text(
+                          'Or enter UPI ID / VPA',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                     Icon(
                       _useCustomUpi
@@ -762,7 +768,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     );
   }
 
-  Widget _buildUpiOption(String appName, IconData icon, Color color) {
+  Widget _buildUpiOption(String appName, String assetKind, Color color) {
     final isSelected = !_useCustomUpi && _selectedUpiApp == appName;
     return GestureDetector(
       onTap: () => setState(() {
@@ -782,15 +788,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
+            PaymentBrandMark(assetKind: assetKind, size: 36),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
@@ -892,20 +890,23 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
     );
 
     Color brandColor;
-    IconData brandIcon;
+    String brandAssetKind;
     final lower = _selectedUpiApp.toLowerCase();
     if (lower.contains('phonepe')) {
       brandColor = const Color(0xFF5F259F);
-      brandIcon = Icons.payments_rounded;
+      brandAssetKind = 'phonepe';
     } else if (lower.contains('google pay') || lower.contains('gpay')) {
       brandColor = const Color(0xFF4285F4);
-      brandIcon = Icons.account_balance_wallet_rounded;
+      brandAssetKind = 'gpay';
     } else if (lower.contains('paytm')) {
       brandColor = const Color(0xFF00BAF2);
-      brandIcon = Icons.qr_code_rounded;
+      brandAssetKind = 'paytm';
+    } else if (lower.contains('bhim')) {
+      brandColor = const Color(0xFF00796B);
+      brandAssetKind = 'bhim';
     } else {
       brandColor = AppColors.copper;
-      brandIcon = Icons.flash_on_rounded;
+      brandAssetKind = 'upi';
     }
 
     final qrApiUrl =
@@ -919,15 +920,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
           // Header
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: brandColor.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(brandIcon, color: brandColor, size: 24),
-              ),
+              PaymentBrandMark(assetKind: brandAssetKind, size: 44),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -1047,7 +1040,7 @@ class _PaymentGatewaySheetState extends State<PaymentGatewaySheet> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(brandIcon, color: brandColor, size: 36),
+                        PaymentBrandMark(assetKind: brandAssetKind, size: 36),
                         const SizedBox(height: 6),
                         Text(
                           _selectedUpiApp,

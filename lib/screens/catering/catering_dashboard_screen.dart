@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/mock_data.dart';
 import '../../models/catering_order.dart';
 import '../../models/payment_method.dart';
 import '../../routes/app_routes.dart';
@@ -9,20 +8,27 @@ import '../../state/catering_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
-import '../../widgets/network_image_with_fallback.dart';
+import '../../widgets/main_top_header.dart';
 import '../../widgets/payment_gateway_sheet.dart';
+import '../../widgets/themed_page_background.dart';
 
 /// Dashboard screen for Catering:
 /// Shows empty state ("No catering orders yet") or active order cards with progress stepper,
 /// coordinator call modal, pickup/kitchen details, and mock payment gateway integration.
 class CateringDashboardScreen extends StatefulWidget {
-  const CateringDashboardScreen({super.key});
+  const CateringDashboardScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
 
   @override
   State<CateringDashboardScreen> createState() => _CateringDashboardScreenState();
 }
 
-class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
+class _CateringDashboardScreenState extends State<CateringDashboardScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -33,30 +39,43 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: AnimatedBuilder(
-        animation: CateringController.instance,
-        builder: (context, _) {
-          final ctrl = CateringController.instance;
-          return Column(
-            children: [
-              // ── Top Hero Image ──────────────────────────────────────────
-              const _HeroHeader(),
-              // ── Swiggy-style Section Switcher ───────────────────────────
+    super.build(context);
+    const modeAccent = Color(0xFF10B981);
+    final content = AnimatedBuilder(
+      animation: CateringController.instance,
+      builder: (context, _) {
+        final ctrl = CateringController.instance;
+        return Column(
+          children: [
+            if (!widget.isEmbedded) ...[
+              const MainTopHeader(accentColor: modeAccent),
+              const SizedBox(height: 10),
               const DashboardTabBar(activeId: 'catering'),
-              // ── Main Content ────────────────────────────────────────────
-              Expanded(
-                child: ctrl.hasNoOrders
-                    ? _EmptyState(onAdd: () => _goNotice(context))
-                    : _OrdersList(
-                        orders: ctrl.orders,
-                        onAdd: () => _goNotice(context),
-                      ),
-              ),
             ],
-          );
-        },
+            // ── Main Content ────────────────────────────────────────────
+            Expanded(
+              child: ctrl.hasNoOrders
+                  ? _EmptyState(onAdd: () => _goNotice(context))
+                  : _OrdersList(
+                      orders: ctrl.orders,
+                      onAdd: () => _goNotice(context),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: ThemedPageBackground(
+        accentColor: modeAccent,
+        child: widget.isEmbedded
+            ? content
+            : SafeArea(
+                bottom: false,
+                child: content,
+              ),
       ),
     );
   }
@@ -65,79 +84,6 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
       Navigator.of(context).pushNamed(AppRoutes.cateringNotice);
 }
 
-// ── Hero header ──────────────────────────────────────────────────────────────
-
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 240,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: NetworkImageWithFallback(
-              url: MockData.cateringTable,
-              fit: BoxFit.cover,
-              fallbackIcon: Icons.room_service,
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.6),
-                  Colors.transparent,
-                  AppColors.background.withValues(alpha: 0.9),
-                ],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context)
-                            .pushReplacementNamed(AppRoutes.home);
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Paragon Catering Hub',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded,
-                        color: Colors.white),
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.notifications),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -958,13 +904,20 @@ class _AddButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 52,
-        height: 52,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: const Color(0xFF10B981),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF10B981).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+        child: const Icon(Icons.add, color: Colors.black, size: 28),
       ),
     );
   }

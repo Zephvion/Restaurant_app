@@ -57,15 +57,13 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
   }
 
   PaymentMethod? get _selected {
-    if (_selectedId == null) {
-      return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
-    }
+    if (_selectedId == null) return null;
     if (_selectedId == _netBankingMethod.id) return _netBankingMethod;
     if (_selectedId == _walletMethod.id) return _walletMethod;
     for (final m in [..._cards, ..._upi, MockData.cashOnDelivery]) {
       if (m.id == _selectedId) return m;
     }
-    return _cards.isNotEmpty ? _cards.first : MockData.cashOnDelivery;
+    return null;
   }
 
   Future<void> _proceed() async {
@@ -255,7 +253,8 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
     return Column(
       children: [
         InkWell(
-          onTap: () => setState(() => _selectedId = method.id),
+          onTap: () =>
+              setState(() => _selectedId = selected ? null : method.id),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -571,11 +570,25 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
                   onPressed: () {
                     final upiId = upiCtrl.text.trim();
                     if (upiId.isEmpty) return;
+                    final lower = upiId.toLowerCase();
+                    String detectedAsset = 'upi';
+                    if (lower.contains('okhdfcbank') ||
+                        lower.contains('okaxis') ||
+                        lower.contains('oksbi') ||
+                        lower.contains('okicici')) {
+                      detectedAsset = 'gpay';
+                    } else if (lower.contains('ybl') ||
+                        lower.contains('ibl') ||
+                        lower.contains('axl')) {
+                      detectedAsset = 'phonepe';
+                    } else if (lower.contains('paytm')) {
+                      detectedAsset = 'paytm';
+                    }
                     final newUpi = PaymentMethod(
                       id: 'upi_${DateTime.now().millisecondsSinceEpoch}',
                       title: upiId,
                       kind: PaymentKind.upi,
-                      assetKind: 'upi',
+                      assetKind: detectedAsset,
                     );
                     setState(() {
                       _upi.add(newUpi);

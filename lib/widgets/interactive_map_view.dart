@@ -86,7 +86,7 @@ class MercatorProjection {
 
 /// An authentic, high-performance real map canvas for live delivery tracking
 /// and interactive GPS location selection, powered by CartoDB Voyager / Dark Matter
-/// real street map tiles, Zomato/Swiggy-style route polylines, and live vehicle telemetry.
+/// real street map tiles, animated route polylines, and live vehicle telemetry.
 class InteractiveMapView extends StatefulWidget {
   const InteractiveMapView({
     super.key,
@@ -464,7 +464,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView>
                       isDark: isDark,
                     ),
 
-                    // ── 3. Zomato/Swiggy Delivery Route Overlay ───────────────
+                    // ── 3. Live Delivery Route Overlay ─────────────────────────
                     if (route != null)
                       CustomPaint(
                         size: Size(width, height),
@@ -1050,7 +1050,7 @@ class _MapTileWidgetState extends State<_MapTileWidget> {
   }
 }
 
-/// Custom painter for Zomato/Swiggy/Uber-style delivery routes.
+/// Custom painter for live delivery routes.
 /// Paints a transparent overlay directly on top of the real street map tiles.
 class _RouteOverlayPainter extends CustomPainter {
   const _RouteOverlayPainter({
@@ -1126,7 +1126,7 @@ class _RouteOverlayPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullRoutePath, casingPaint);
 
-    // C. Remaining Delivery Path (Swiggy / Zomato energetic crimson-orange)
+    // C. Remaining Delivery Path (energetic crimson-orange)
     final remainingPaint = Paint()
       ..color = const Color(0xFFFF5232)
       ..strokeWidth = 4.2

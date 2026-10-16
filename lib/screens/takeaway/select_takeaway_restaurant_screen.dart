@@ -269,7 +269,13 @@ class _SelectTakeawayRestaurantScreenState
                       isNearest: isNearest,
                       selected: (_selectedRestaurant?.id == r.id) ||
                           (_selectedRestaurant == null && i == 0),
-                      onTap: () => setState(() => _selectedRestaurant = r),
+                      onTap: () => setState(() {
+                        if (_selectedRestaurant?.id == r.id) {
+                          _selectedRestaurant = null;
+                        } else {
+                          _selectedRestaurant = r;
+                        }
+                      }),
                     );
                   }(),
                 ],

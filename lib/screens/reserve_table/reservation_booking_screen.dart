@@ -43,6 +43,7 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
   }
 
   bool get _isTodaySelected {
+    if (_selectedDayOffset == null) return false;
     final now = DateTime.now();
     final sel = _selectedDate;
     return sel.year == now.year && sel.month == now.month && sel.day == now.day;
@@ -89,8 +90,12 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
 
   void _onDaySelected(int i) {
     setState(() {
-      _selectedDayOffset = i;
-      _validateSelectedTime();
+      if (_selectedDayOffset == i) {
+        _selectedDayOffset = null;
+      } else {
+        _selectedDayOffset = i;
+        _validateSelectedTime();
+      }
     });
   }
 
@@ -99,8 +104,11 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
       _selectedTime != null &&
       _selectedGuests != null;
 
-  Restaurant get _restaurant =>
-      ModalRoute.of(context)!.settings.arguments as Restaurant;
+  Restaurant get _restaurant {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Restaurant) return args;
+    return MockData.restaurants.first;
+  }
 
   void _nextWeek() => setState(() {
         _weekStart = _weekStart.add(const Duration(days: 7));
@@ -289,7 +297,8 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
                       slots: _availableTimeSlots,
                       isToday: _isTodaySelected,
                       selectedTime: _selectedTime,
-                      onSelect: (t) => setState(() => _selectedTime = t),
+                      onSelect: (t) => setState(
+                          () => _selectedTime = _selectedTime == t ? null : t),
                     ),
                     const SizedBox(height: 28),
                     // ── Guest count ───────────────────────────────────────
@@ -301,7 +310,8 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
                     const SizedBox(height: 14),
                     _GuestRow(
                       selected: _selectedGuests,
-                      onSelect: (g) => setState(() => _selectedGuests = g),
+                      onSelect: (g) => setState(() =>
+                          _selectedGuests = _selectedGuests == g ? null : g),
                     ),
                   ],
                 ),

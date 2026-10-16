@@ -232,7 +232,15 @@ class _CouponSheetState extends State<CouponSheet> {
               _CouponTile(
                 coupon: coupon,
                 isApplied: applied == coupon.code,
-                onApply: () => _applyCode(coupon.code),
+                onApply: () {
+                  if (applied == coupon.code) {
+                    cart.applyCoupon(null);
+                    Navigator.of(context).pop();
+                    AppToast.showInfo(context, 'Coupon removed');
+                  } else {
+                    _applyCode(coupon.code);
+                  }
+                },
               ),
               const SizedBox(height: 10),
             ],

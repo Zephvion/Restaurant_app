@@ -176,7 +176,11 @@ class _CateringSelectRestaurantScreenState
                     isSelected: _selectedRestaurant?.id == rest.id,
                     onTap: () {
                       setState(() {
-                        _selectedRestaurant = rest;
+                        if (_selectedRestaurant?.id == rest.id) {
+                          _selectedRestaurant = null;
+                        } else {
+                          _selectedRestaurant = rest;
+                        }
                       });
                     },
                   ),

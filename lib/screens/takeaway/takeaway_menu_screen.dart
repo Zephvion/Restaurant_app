@@ -609,7 +609,8 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
               color: AppColors.copper, size: 20)
           : const Icon(Icons.circle_outlined, color: AppColors.hint, size: 20),
       onTap: () {
-        setState(() => _activeSort = option);
+        setState(() => _activeSort =
+            (_activeSort == option ? DishSortOption.popularity : option));
         Navigator.of(ctx).pop();
       },
     );
@@ -667,7 +668,13 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
         itemBuilder: (context, i) {
           final selected = i == _selectedTab;
           return GestureDetector(
-            onTap: () => setState(() => _selectedTab = i),
+            onTap: () => setState(() {
+              if (_selectedTab == i && i != 0) {
+                _selectedTab = 0;
+              } else {
+                _selectedTab = i;
+              }
+            }),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

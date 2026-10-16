@@ -187,20 +187,30 @@ class _SearchScreenState extends State<SearchScreen> {
           spacing: 8,
           runSpacing: 8,
           children: popularCategories.map((cat) {
+            final isSelected = _query.toLowerCase() == cat.toLowerCase();
             return ActionChip(
-              backgroundColor: AppColors.backgroundElevated,
-              side: const BorderSide(color: AppColors.border),
+              backgroundColor: isSelected
+                  ? AppColors.copper.withValues(alpha: 0.2)
+                  : AppColors.backgroundElevated,
+              side: BorderSide(
+                color: isSelected ? AppColors.copper : AppColors.border,
+              ),
               label: Text(
                 cat,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: isSelected ? AppColors.copper : AppColors.textPrimary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               onPressed: () {
-                _controller.text = cat;
-                setState(() => _query = cat);
+                if (isSelected) {
+                  _controller.clear();
+                  setState(() => _query = '');
+                } else {
+                  _controller.text = cat;
+                  setState(() => _query = cat);
+                }
               },
             );
           }).toList(),

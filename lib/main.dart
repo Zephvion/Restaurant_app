@@ -19,6 +19,7 @@ import 'screens/order_food/notifications_screen.dart';
 import 'screens/order_food/order_food_intro_screen.dart';
 import 'screens/order_food/order_success_screen.dart';
 import 'screens/order_food/payment_methods_screen.dart';
+import 'screens/dashboard/main_dashboard_shell.dart';
 import 'screens/order_food/payment_options_screen.dart';
 import 'screens/order_food/previous_order_screen.dart';
 import 'screens/order_food/product_detail_screen.dart';
@@ -123,10 +124,25 @@ class ParagonApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       builder: (context, child) {
-        return Center(
+        final mq = MediaQuery.of(context);
+        const double maxMobileWidth = 430.0;
+        final effectiveWidth =
+            mq.size.width > maxMobileWidth ? maxMobileWidth : mq.size.width;
+        final mobileMediaQuery = mq.copyWith(
+          size: Size(effectiveWidth, mq.size.height),
+        );
+
+        return Container(
+          color: const Color(0xFF0A0A0C),
+          alignment: Alignment.center,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: child ?? const SizedBox.shrink(),
+            constraints: const BoxConstraints(maxWidth: maxMobileWidth),
+            child: MediaQuery(
+              data: mobileMediaQuery,
+              child: ClipRect(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
           ),
         );
       },
@@ -146,7 +162,8 @@ class ParagonApp extends StatelessWidget {
 
         // ── Order Food flow ───────────────────────────────────────────────
         AppRoutes.orderFood: (_) => const OrderFoodIntroScreen(),
-        AppRoutes.foodHome: (_) => const FoodHomeScreen(),
+        AppRoutes.foodHome: (_) =>
+            const MainDashboardShell(initialTab: 'order_food'),
         AppRoutes.categoryListing: (_) => const CategoryListingScreen(),
         AppRoutes.productDetail: (_) => const ProductDetailScreen(),
         AppRoutes.cart: (_) => const CartScreen(),
@@ -162,7 +179,8 @@ class ParagonApp extends StatelessWidget {
 
         // ── Reserve Table flow ─────────────────────────────────────────────
         AppRoutes.reserveTable: (_) => const ReserveTableIntroScreen(),
-        AppRoutes.reserveDashboard: (_) => const ReserveDashboardScreen(),
+        AppRoutes.reserveDashboard: (_) =>
+            const MainDashboardShell(initialTab: 'reserve_table'),
         AppRoutes.selectRestaurant: (_) => const SelectRestaurantScreen(),
         AppRoutes.reservationBooking: (_) => const ReservationBookingScreen(),
         AppRoutes.tablePicker: (_) => const TablePickerScreen(),
@@ -170,7 +188,8 @@ class ParagonApp extends StatelessWidget {
 
         // ── Take Away flow ─────────────────────────────────────────────────
         AppRoutes.takeaway: (_) => const TakeawayIntroScreen(),
-        AppRoutes.takeawayDashboard: (_) => const TakeawayDashboardScreen(),
+        AppRoutes.takeawayDashboard: (_) =>
+            const MainDashboardShell(initialTab: 'take_away'),
         AppRoutes.takeawaySelectRestaurant: (_) =>
             const SelectTakeawayRestaurantScreen(),
         AppRoutes.takeawayMenu: (_) => const TakeawayMenuScreen(),
@@ -178,7 +197,8 @@ class ParagonApp extends StatelessWidget {
 
         // ── Catering flow ──────────────────────────────────────────────────
         AppRoutes.catering: (_) => const CateringIntroScreen(),
-        AppRoutes.cateringDashboard: (_) => const CateringDashboardScreen(),
+        AppRoutes.cateringDashboard: (_) =>
+            const MainDashboardShell(initialTab: 'catering'),
         AppRoutes.cateringNotice: (_) => const CateringNoticeScreen(),
         AppRoutes.cateringSelectRestaurant: (_) =>
             const CateringSelectRestaurantScreen(),
@@ -189,7 +209,8 @@ class ParagonApp extends StatelessWidget {
 
         // ── Food Planner flow ──────────────────────────────────────────────
         AppRoutes.foodPlannerIntro: (_) => const FoodPlannerIntroScreen(),
-        AppRoutes.foodPlanner: (_) => const FoodPlannerShellScreen(),
+        AppRoutes.foodPlanner: (_) =>
+            const MainDashboardShell(initialTab: 'food_planner'),
         AppRoutes.foodPlannerSlot: (_) => const FoodPlannerSlotScreen(),
         AppRoutes.foodPlannerMenu: (_) => const FoodPlannerMenuScreen(),
         AppRoutes.foodPlannerProduct: (_) => const FoodPlannerProductScreen(),
