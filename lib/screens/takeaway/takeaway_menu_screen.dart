@@ -9,6 +9,7 @@ import '../../state/app_mode_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/takeaway_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/dish_card.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/price_text.dart';
 import '../../widgets/veg_indicator.dart';
@@ -790,7 +791,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
 
   Widget _buildDishGrid(List<Dish> dishes, {EdgeInsetsGeometry? padding}) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final childAspectRatio = screenWidth < 380 ? 0.60 : 0.65;
+    final childAspectRatio = screenWidth < 380 ? 0.72 : 0.75;
 
     return GridView.builder(
       shrinkWrap: true,
@@ -1282,127 +1283,13 @@ class _TakeawayFoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = dish.subtitle == null
-        ? dish.name
-        : '${dish.name} - ${dish.subtitle}';
-
-    return GestureDetector(
+    return TacoBellProductCard(
+      dish: dish,
+      quantity: quantity,
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Food image with rounded corners
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: NetworkImageWithFallback(
-                    url: dish.imageUrl,
-                    fallbackIcon: Icons.restaurant,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Title & Veg / Non-Veg Indicator
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: dish.isVeg
-                        ? const Color(0xFF22C55E)
-                        : AppColors.accentRed,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-
-            // Price & Star Rating
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '₹ ${dish.price.toInt()}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 12),
-                    const SizedBox(width: 2),
-                    Text(
-                      dish.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 3),
-
-            // Macro details (Calories & Weight)
-            Text(
-              '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-
-            // Stepper / ADD Button
-            _TakeawayQuantityButton(
-              quantity: quantity,
-              onAdd: onAdd,
-              onIncrement: onIncrement,
-              onDecrement: onDecrement,
-            ),
-          ],
-        ),
-      ),
+      onAdd: onAdd,
+      onIncrement: onIncrement,
+      onDecrement: onDecrement,
     );
   }
 }

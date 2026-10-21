@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../routes/app_routes.dart';
 import '../state/app_mode_controller.dart';
+import '../theme/mode_theme.dart';
 
 /// Configuration for the 5 Restaurant App modes in the top selector.
 class ModeConfig {
@@ -10,18 +11,22 @@ class ModeConfig {
     required this.id,
     required this.label,
     required this.icon,
+    this.assetPath,
     required this.accentColor,
     required this.microTag,
     required this.route,
+    required this.theme,
   });
 
   final AppMode mode;
   final String id;
   final String label;
   final IconData icon;
+  final String? assetPath;
   final Color accentColor;
   final String microTag;
   final String route;
+  final ModeTheme theme;
 }
 
 const List<ModeConfig> kAppModes = [
@@ -30,45 +35,55 @@ const List<ModeConfig> kAppModes = [
     id: 'order_food',
     label: 'Order Food',
     icon: Icons.lunch_dining_rounded,
-    accentColor: Color(0xFFFF4B4B), // Coral Crimson
+    assetPath: 'assets/icons/modes/mode_order_food.png',
+    accentColor: Color(0xFF5A001E), // Dark Wine / Deep Burgundy (Swiggy)
     microTag: 'DELIVERY',
     route: AppRoutes.foodHome,
+    theme: ModeTheme.orderFood,
   ),
   ModeConfig(
     mode: AppMode.takeAway,
     id: 'take_away',
     label: 'Take Away',
     icon: Icons.shopping_bag_rounded,
+    assetPath: 'assets/icons/modes/mode_take_away.png',
     accentColor: Color(0xFFFF9500), // Golden Amber
     microTag: 'PICKUP',
     route: AppRoutes.takeawayDashboard,
+    theme: ModeTheme.takeAway,
   ),
   ModeConfig(
     mode: AppMode.reserveTable,
     id: 'reserve_table',
     label: 'Reserve Table',
     icon: Icons.table_restaurant_rounded,
+    assetPath: 'assets/icons/modes/mode_reserve_table.png',
     accentColor: Color(0xFFFFC107), // Paragon Warm Gold
     microTag: 'BOOKING',
     route: AppRoutes.reserveDashboard,
+    theme: ModeTheme.reserveTable,
   ),
   ModeConfig(
     mode: AppMode.catering,
     id: 'catering',
     label: 'Catering',
     icon: Icons.room_service_rounded,
+    assetPath: 'assets/icons/modes/mode_catering.png',
     accentColor: Color(0xFF10B981), // Emerald Mint
     microTag: 'EVENTS',
     route: AppRoutes.cateringDashboard,
+    theme: ModeTheme.catering,
   ),
   ModeConfig(
     mode: AppMode.foodPlanner,
     id: 'food_planner',
     label: 'Food Planner',
     icon: Icons.calendar_month_rounded,
+    assetPath: 'assets/icons/modes/mode_food_planner.png',
     accentColor: Color(0xFFA855F7), // Royal Amethyst
     microTag: 'WEEKLY',
     route: AppRoutes.foodPlanner,
+    theme: ModeTheme.foodPlanner,
   ),
 ];
 
@@ -81,14 +96,28 @@ Color getModeAccentColor(String id) {
   }
 }
 
-/// A top mode selector with organic curved flared tabs.
+/// Returns the chosen theme for an app mode [id]
+ModeTheme getModeTheme(String id) {
+  try {
+    return kAppModes.firstWhere((m) => m.id == id).theme;
+  } catch (_) {
+    return ModeTheme.orderFood;
+  }
+}
+
+/// A top mode selector with organic curved flared tabs that dynamically
+/// adapts its background, fill, outline, and glow to the selected mode's theme.
 ///
 /// Features:
-/// - ZERO rectangular cards or closed outline boxes.
+/// - Both selected and unselected tabs reproduce Swiggy's custom-shaped navigation tabs.
+/// - Unselected tabs are custom-shaped panels with gently crowned tops, rounded corners,
+///   sculpted side boundaries, and curved lower transitions into the shared background.
 /// - Selected mode is an elevated arched tab with concave flaring shoulders that
-///   connect flush into the content canvas below with no bottom border.
-/// - Unselected modes sit naturally on the header as subdued icons and labels.
-/// - Smooth horizontal glide animation when switching between modes.
+///   connect flush into the continuous baseline shelf.
+/// - The continuous navigation background dynamically adopts the active mode palette.
+/// - Thin, delicate outline around the curved tab apex and baseline shelf.
+/// - Unselected modes sit naturally on the header with softly tinted muted icons and labels.
+/// - Smooth horizontal glide and theme interpolation when switching between modes.
 class TopModeSelector extends StatefulWidget {
   const TopModeSelector({
     super.key,
@@ -97,8 +126,9 @@ class TopModeSelector extends StatefulWidget {
     this.controller,
     this.padding = EdgeInsets.zero,
     this.onModeChanged,
-    this.canvasColor = const Color(0xFF0E0E11),
-    this.backgroundColor = const Color(0xFF0E0E11),
+    this.canvasColor = Colors.transparent,
+    this.backgroundColor = Colors.transparent,
+    this.theme,
   });
 
   final int? selectedIndex;
@@ -108,6 +138,7 @@ class TopModeSelector extends StatefulWidget {
   final ValueChanged<AppMode>? onModeChanged;
   final Color canvasColor;
   final Color backgroundColor;
+  final ModeTheme? theme;
 
   @override
   State<TopModeSelector> createState() => _TopModeSelectorState();
@@ -116,12 +147,12 @@ class TopModeSelector extends StatefulWidget {
 class _TopModeSelectorState extends State<TopModeSelector> {
   final ScrollController _scrollController = ScrollController();
 
-  static const double _barHeight = 74.0;
+  static const double _barHeight = 76.0;
   static const double _tabTop = 4.0;
 
   double _lastTabWidth = 68.0;
-  double _lastTabGap = 6.0;
-  double _lastSidePad = 8.0;
+  double _lastTabGap = 4.0;
+  double _lastSidePad = 6.0;
 
   int get _currentIndex {
     if (widget.controller != null) {
@@ -137,6 +168,14 @@ class _TopModeSelectorState extends State<TopModeSelector> {
     final mode = AppModeController.instance.mode;
     final idx = kAppModes.indexWhere((m) => m.mode == mode);
     return idx >= 0 ? idx : 0;
+  }
+
+  ModeTheme _resolveThemeForAnimIndex(double animIndex) {
+    if (widget.theme != null) return widget.theme!;
+    final lower = animIndex.floor().clamp(0, kAppModes.length - 1);
+    final upper = animIndex.ceil().clamp(0, kAppModes.length - 1);
+    final t = (animIndex - lower).clamp(0.0, 1.0);
+    return ModeTheme.lerp(kAppModes[lower].theme, kAppModes[upper].theme, t);
   }
 
   @override
@@ -157,7 +196,8 @@ class _TopModeSelectorState extends State<TopModeSelector> {
       widget.controller?.addListener(_onControllerChange);
     }
     if (oldWidget.activeId != widget.activeId ||
-        oldWidget.selectedIndex != widget.selectedIndex) {
+        oldWidget.selectedIndex != widget.selectedIndex ||
+        oldWidget.theme != widget.theme) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _autoScrollToActive(animated: true);
       });
@@ -173,21 +213,21 @@ class _TopModeSelectorState extends State<TopModeSelector> {
   }
 
   void _onControllerChange() {
-    if (mounted) {
-      setState(() {});
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _autoScrollToActive(animated: true);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+        _autoScrollToActive(animated: true);
+      }
+    });
   }
 
   void _onModeControllerChange() {
-    if (mounted) {
-      setState(() {});
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _autoScrollToActive(animated: true);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+        _autoScrollToActive(animated: true);
+      }
+    });
   }
 
   void _autoScrollToActive({bool animated = true}) {
@@ -244,41 +284,39 @@ class _TopModeSelectorState extends State<TopModeSelector> {
           double tabGap;
           double tabWidth;
           double totalWidth;
-          double rBottom;
-          const double rTop = 12.0;
 
           if (maxW.isFinite && maxW > 0) {
-            if (maxW < 330) {
-              sidePad = 6.0;
-              tabGap = 4.0;
-              tabWidth = 62.0;
+            if (maxW < 340) {
+              sidePad = 4.0;
+              tabGap = 2.0;
+              tabWidth = 60.0;
               totalWidth = sidePad * 2 + n * tabWidth + (n - 1) * tabGap;
-              rBottom = 6.0;
             } else if (maxW <= 460) {
-              sidePad = (maxW < 370) ? 6.0 : 8.0;
-              tabGap = (maxW < 370) ? 4.0 : 6.0;
+              sidePad = (maxW < 370) ? 4.0 : 6.0;
+              tabGap = (maxW < 370) ? 2.0 : 4.0;
               tabWidth = (maxW - (sidePad * 2) - ((n - 1) * tabGap)) / n;
               totalWidth = maxW;
-              rBottom = sidePad;
             } else {
-              tabWidth = 78.0;
-              tabGap = 8.0;
+              tabWidth = 76.0;
+              tabGap = 6.0;
               final contentW = n * tabWidth + (n - 1) * tabGap;
-              sidePad = ((maxW - contentW) / 2).clamp(8.0, double.infinity);
+              sidePad = ((maxW - contentW) / 2).clamp(6.0, double.infinity);
               totalWidth = maxW;
-              rBottom = 8.0;
             }
           } else {
-            sidePad = 8.0;
-            tabGap = 6.0;
+            sidePad = 6.0;
+            tabGap = 4.0;
             tabWidth = 68.0;
             totalWidth = sidePad * 2 + n * tabWidth + (n - 1) * tabGap;
-            rBottom = 8.0;
           }
 
           _lastTabWidth = tabWidth;
           _lastTabGap = tabGap;
           _lastSidePad = sidePad;
+
+          const double rTop = 15.0;
+          const double rBottom = 11.0;
+          const double shelfY = 66.0;
 
           return Container(
             width: double.infinity,
@@ -296,55 +334,30 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                     begin: currentIndex.toDouble(),
                     end: currentIndex.toDouble(),
                   ),
-                  duration: const Duration(milliseconds: 550),
+                  duration: const Duration(milliseconds: 500),
                   curve: Curves.easeInOutCubic,
                   builder: (context, animIndex, _) {
-                    final left = sidePad + animIndex * (tabWidth + tabGap);
-                    final right = left + tabWidth;
-
-                    final lowerIdx =
-                        animIndex.floor().clamp(0, kAppModes.length - 1);
-                    final upperIdx =
-                        animIndex.ceil().clamp(0, kAppModes.length - 1);
-                    final t = (animIndex - lowerIdx).clamp(0.0, 1.0);
-                    final currentColor = Color.lerp(
-                      kAppModes[lowerIdx].accentColor,
-                      kAppModes[upperIdx].accentColor,
-                      t,
-                    )!;
+                    final activeTheme = _resolveThemeForAnimIndex(animIndex);
+                    final animLeft = sidePad + animIndex * (tabWidth + tabGap);
+                    final animRight = animLeft + tabWidth;
 
                     return CustomPaint(
-                      painter: _OrganicFlaredTabPainter(
-                        left: left,
-                        right: right,
+                      painter: _SwiggyModeBarPainter(
+                        left: animLeft,
+                        right: animRight,
                         top: _tabTop,
-                        bottom: _barHeight,
+                        shelfY: shelfY,
                         rTop: rTop,
                         rBottom: rBottom,
-                        fillColor: widget.canvasColor,
-                        accentColor: currentColor,
+                        sidePad: sidePad,
+                        tabWidth: tabWidth,
+                        tabGap: tabGap,
                         totalWidth: totalWidth,
+                        theme: activeTheme,
                       ),
                       child: Stack(
                         children: [
-                          if (currentIndex > 0)
-                            _buildUnselectedGroupContainer(
-                              startIdx: 0,
-                              endIdx: currentIndex - 1,
-                              sidePad: sidePad,
-                              tabWidth: tabWidth,
-                              tabGap: tabGap,
-                              color: currentColor,
-                            ),
-                          if (currentIndex < kAppModes.length - 1)
-                            _buildUnselectedGroupContainer(
-                              startIdx: currentIndex + 1,
-                              endIdx: kAppModes.length - 1,
-                              sidePad: sidePad,
-                              tabWidth: tabWidth,
-                              tabGap: tabGap,
-                              color: currentColor,
-                            ),
+                          // Tab content and tap targets for all 5 modes
                           ...List.generate(kAppModes.length, (i) {
                             final mode = kAppModes[i];
                             final isSelected = i == currentIndex;
@@ -358,11 +371,14 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () => _handleTabTap(i),
-                                child: Center(
-                                  child: _ModeTabContent(
-                                    mode: mode,
-                                    isSelected: isSelected,
-                                    activeColor: currentColor,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                  child: Center(
+                                    child: _ModeTabContent(
+                                      mode: mode,
+                                      isSelected: isSelected,
+                                      theme: activeTheme,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -380,143 +396,163 @@ class _TopModeSelectorState extends State<TopModeSelector> {
       ),
     );
   }
-
-  Widget _buildUnselectedGroupContainer({
-    required int startIdx,
-    required int endIdx,
-    required double sidePad,
-    required double tabWidth,
-    required double tabGap,
-    required Color color,
-  }) {
-    final left = sidePad + startIdx * (tabWidth + tabGap);
-    final count = endIdx - startIdx + 1;
-    final width = count * tabWidth + (count - 1) * tabGap;
-    const top = _tabTop + 5.0;
-    const height = _barHeight - _tabTop - 11.0;
-
-    return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      child: IgnorePointer(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withValues(alpha: 0.55),
-              width: 1.2,
-            ),
-          ),
-          child: count > 1
-              ? Stack(
-                  children: List.generate(count - 1, (i) {
-                    final divLeft = (i + 1) * (tabWidth + tabGap) - tabGap / 2;
-                    return Positioned(
-                      left: divLeft - 0.5,
-                      top: 10,
-                      bottom: 10,
-                      width: 1,
-                      child: Container(
-                        color: color.withValues(alpha: 0.22),
-                      ),
-                    );
-                  }),
-                )
-              : null,
-        ),
-      ),
-    );
-  }
 }
 
-/// Renders the button icon (in white) and text label.
-class _ModeTabContent extends StatelessWidget {
-  const _ModeTabContent({
-    required this.mode,
-    required this.isSelected,
-    required this.activeColor,
-  });
-
-  final ModeConfig mode;
-  final bool isSelected;
-  final Color activeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          mode.icon,
-          size: isSelected ? 21 : 18,
-          color: Colors.white,
-        ),
-        const SizedBox(height: 5),
-        AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          style: TextStyle(
-            fontSize: isSelected ? 11.0 : 10.0,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.82),
-            letterSpacing: isSelected ? 0.2 : 0.0,
-            height: 1.1,
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              mode.label,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Custom painter that draws the organic arched bell/folder tab with concave flaring shoulders.
-///
-/// Follows smooth C1-continuous curvature:
-/// - Convex rounded corners on top ($R_{top} = 12$).
-/// - Concave fillet flaring arcs at the bottom ($R_{bottom} = 6..8$) that sweep outward
-///   onto the baseline.
-/// - Focused ambient top crest halo glow (avoids lateral bleeding into screen background).
-/// - Volumetric ambient inner top-down gradient fill.
-/// - Dissolving vertical stroke gradient: crisp bright apex that gracefully fades to 0%
-///   opacity before the baseline, completely eliminating harsh colored side wings.
-/// - Hairline baseline divider line flanking the flared tab.
-class _OrganicFlaredTabPainter extends CustomPainter {
-  const _OrganicFlaredTabPainter({
+/// Swiggy-identical custom painter that renders:
+/// 1. The continuous navigation background dynamically adapted to the active mode theme
+/// 2. Individually custom-shaped unselected tabs with:
+///    - Gently curved, raised upper edge with rounded top corners ($R \approx 10.5$)
+///    - Slightly slanted, sculpted side boundaries
+///    - Curved lower transitions into the shared baseline shelf
+///    - Subtle borders separating neighboring tabs
+///    - Dark, translucent panel fills that blend into the theme background
+/// 3. The selected tab's raised, curved upper profile with convex corners ($R \approx 16$)
+/// 4. Custom curved lower transitions with concave fillets ($R \approx 12$) connecting flush to the shelf
+/// 5. A thin, subtle highlight outline around the selected tab and shelf line in the mode's accent palette
+/// 6. A slightly brighter translucent fill and halo glow on the active tab
+class _SwiggyModeBarPainter extends CustomPainter {
+  const _SwiggyModeBarPainter({
     required this.left,
     required this.right,
     required this.top,
-    required this.bottom,
+    required this.shelfY,
     required this.rTop,
     required this.rBottom,
-    required this.fillColor,
-    required this.accentColor,
+    required this.sidePad,
+    required this.tabWidth,
+    required this.tabGap,
     required this.totalWidth,
+    required this.theme,
   });
 
   final double left;
   final double right;
   final double top;
-  final double bottom;
+  final double shelfY;
   final double rTop;
   final double rBottom;
-  final Color fillColor;
-  final Color accentColor;
+  final double sidePad;
+  final double tabWidth;
+  final double tabGap;
   final double totalWidth;
+  final ModeTheme theme;
+
+  void _drawUnselectedTab(
+    Canvas canvas, {
+    required double tLeft,
+    required double tRight,
+    required double tTop,
+    required double shelfY,
+    required double rTop,
+    required double rBottom,
+    required double opacity,
+  }) {
+    if (opacity <= 0.01) return;
+
+    final unselRect = Rect.fromLTRB(tLeft, tTop, tRight, shelfY);
+    const topInset = 1.2;
+    final effectiveRTop = rTop.clamp(4.0, (tRight - tLeft) / 2.6);
+    final xLeftTop = tLeft + topInset;
+    final xRightTop = tRight - topInset;
+    final midX = (tLeft + tRight) / 2;
+    final apexY = tTop - 1.2;
+
+    // 1. Soft and muted left outline (traces lower fillet into shelf and slanted left boundary)
+    final leftPath = Path();
+    leftPath.moveTo(tLeft, shelfY);
+    leftPath.arcToPoint(
+      Offset(tLeft + topInset * 0.5, shelfY - rBottom),
+      radius: Radius.circular(rBottom),
+      clockwise: false,
+    );
+    leftPath.quadraticBezierTo(
+      xLeftTop - 0.5,
+      (shelfY + tTop) / 2,
+      xLeftTop,
+      tTop + effectiveRTop,
+    );
+
+    final leftPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          theme.tabBorderSide.withValues(alpha: 0.12 * opacity),
+          theme.shelfLine.withValues(alpha: 0.05 * opacity),
+        ],
+      ).createShader(unselRect)
+      ..strokeWidth = 0.95
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(leftPath, leftPaint);
+
+    // 2. Gently curved top crown outline (rounded corners and apex crowning)
+    final topPath = Path();
+    topPath.moveTo(xLeftTop, tTop + effectiveRTop);
+    topPath.arcToPoint(
+      Offset(xLeftTop + effectiveRTop, tTop),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: true,
+    );
+    topPath.quadraticBezierTo(
+      midX,
+      apexY,
+      xRightTop - effectiveRTop,
+      tTop,
+    );
+    topPath.arcToPoint(
+      Offset(xRightTop, tTop + effectiveRTop),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: true,
+    );
+
+    final topPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          theme.tabBorderApex.withValues(alpha: 0.18 * opacity),
+          theme.tabBorderApex.withValues(alpha: 0.32 * opacity),
+          theme.tabBorderApex.withValues(alpha: 0.38 * opacity),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(unselRect)
+      ..strokeWidth = 1.05
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(topPath, topPaint);
+
+    // 3. Brighter and sharper right outline (traces slanted right boundary and lower fillet into shelf)
+    final rightPath = Path();
+    rightPath.moveTo(xRightTop, tTop + effectiveRTop);
+    rightPath.quadraticBezierTo(
+      xRightTop + 0.5,
+      (shelfY + tTop) / 2,
+      tRight - topInset * 0.5,
+      shelfY - rBottom,
+    );
+    rightPath.arcToPoint(
+      Offset(tRight, shelfY),
+      radius: Radius.circular(rBottom),
+      clockwise: false,
+    );
+
+    final rightPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          theme.tabBorderApex.withValues(alpha: 0.38 * opacity),
+          theme.tabBorderSide.withValues(alpha: 0.24 * opacity),
+          theme.shelfLine.withValues(alpha: 0.08 * opacity),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(unselRect)
+      ..strokeWidth = 1.15
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(rightPath, rightPaint);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -524,96 +560,181 @@ class _OrganicFlaredTabPainter extends CustomPainter {
     final endX = (right + rBottom).clamp(0.0, totalWidth);
     final effectiveRTop = rTop.clamp(2.0, (right - left) / 2.5);
 
-    // 1. Construct the closed organic flared tab path for fill and inner glow
-    final fillPath = Path();
-    fillPath.moveTo(startX, bottom);
-
-    if (left > startX) {
-      fillPath.arcToPoint(
-        Offset(left, bottom - rBottom),
-        radius: Radius.circular(rBottom),
-        clockwise: false,
-      );
-    } else {
-      fillPath.lineTo(left, bottom - rBottom);
-    }
-
-    fillPath.lineTo(left, top + effectiveRTop);
-    fillPath.arcToPoint(
-      Offset(left + effectiveRTop, top),
-      radius: Radius.circular(effectiveRTop),
-      clockwise: true,
-    );
-    fillPath.lineTo(right - effectiveRTop, top);
-    fillPath.arcToPoint(
-      Offset(right, top + effectiveRTop),
-      radius: Radius.circular(effectiveRTop),
-      clockwise: true,
-    );
-    fillPath.lineTo(right, bottom - rBottom);
+    // 1. Upper navigation surface:
+    // Fills (0, 0) to (totalWidth, shelfY), cleanly carving OUT the active tab arch
+    // so the active tab remains transparent to receive the lower background layer.
+    final upperBgPath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(totalWidth, 0)
+      ..lineTo(totalWidth, shelfY)
+      ..lineTo(endX, shelfY);
 
     if (endX > right) {
-      fillPath.arcToPoint(
-        Offset(endX, bottom),
+      upperBgPath.arcToPoint(
+        Offset(right, shelfY - rBottom),
         radius: Radius.circular(rBottom),
-        clockwise: false,
+        clockwise: true,
       );
     } else {
-      fillPath.lineTo(right, bottom);
+      upperBgPath.lineTo(right, shelfY - rBottom);
     }
 
-    fillPath.lineTo(startX, bottom);
-    fillPath.close();
+    upperBgPath.lineTo(right, top + effectiveRTop);
+    upperBgPath.arcToPoint(
+      Offset(right - effectiveRTop, top),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: false,
+    );
+    upperBgPath.lineTo(left + effectiveRTop, top);
+    upperBgPath.arcToPoint(
+      Offset(left, top + effectiveRTop),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: false,
+    );
+    upperBgPath.lineTo(left, shelfY - rBottom);
 
-    // 2. Focused ambient top-crest halo glow (avoids bleeding below the baseline or harsh lateral horns)
-    final crestGlowRect = Rect.fromLTRB(left + 2, top - 2, right - 2, top + 18);
-    final crestGlowPath = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        crestGlowRect,
-        Radius.circular(effectiveRTop),
-      ));
-    final crestGlowPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.28)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawPath(crestGlowPath, crestGlowPaint);
+    if (left > startX) {
+      upperBgPath.arcToPoint(
+        Offset(startX, shelfY),
+        radius: Radius.circular(rBottom),
+        clockwise: true,
+      );
+    } else {
+      upperBgPath.lineTo(startX, shelfY);
+    }
 
-    // 3. Tab base fill (matches content canvas below perfectly)
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(fillPath, fillPaint);
+    upperBgPath.lineTo(0, shelfY);
+    upperBgPath.close();
 
-    // 4. Volumetric ambient inner top-down gradient
-    // Adds luxurious depth at the top crown while dissolving seamlessly into the page background at the baseline
-    final tabBounds = Rect.fromLTRB(startX, top, endX, bottom);
-    final innerGlowPaint = Paint()
+    final upperBgPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          accentColor.withValues(alpha: 0.16),
-          accentColor.withValues(alpha: 0.05),
-          Colors.transparent,
+          theme.navBgTop,
+          theme.upperBackgroundColor,
         ],
-        stops: const [0.0, 0.45, 0.95],
-      ).createShader(tabBounds)
+        stops: const [0.0, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, totalWidth, shelfY))
       ..style = PaintingStyle.fill;
-    canvas.drawPath(fillPath, innerGlowPaint);
+    canvas.drawPath(upperBgPath, upperBgPaint);
 
-    // 5. Dissolving highlight stroke along the arched cap and flared sides
-    // Uses a vertical gradient shader that fades to 0% opacity before the baseline,
-    // completely eliminating harsh colored side wings while keeping the curved cap ultra crisp.
-    final strokePath = Path();
-    strokePath.moveTo(startX, bottom);
+    // 2. Lower navigation surface & Selected Tab:
+    // Seamless single physical surface covering the area below shelfY
+    // and rising UP into the custom active tab.
+    final lowerBgPath = Path()
+      ..moveTo(0, shelfY)
+      ..lineTo(startX, shelfY);
+
     if (left > startX) {
-      strokePath.arcToPoint(
-        Offset(left, bottom - rBottom),
+      lowerBgPath.arcToPoint(
+        Offset(left, shelfY - rBottom),
         radius: Radius.circular(rBottom),
         clockwise: false,
       );
     } else {
-      strokePath.lineTo(left, bottom - rBottom);
+      lowerBgPath.lineTo(left, shelfY - rBottom);
     }
+
+    lowerBgPath.lineTo(left, top + effectiveRTop);
+    lowerBgPath.arcToPoint(
+      Offset(left + effectiveRTop, top),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: true,
+    );
+    lowerBgPath.lineTo(right - effectiveRTop, top);
+    lowerBgPath.arcToPoint(
+      Offset(right, top + effectiveRTop),
+      radius: Radius.circular(effectiveRTop),
+      clockwise: true,
+    );
+    lowerBgPath.lineTo(right, shelfY - rBottom);
+
+    if (endX > right) {
+      lowerBgPath.arcToPoint(
+        Offset(endX, shelfY),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      lowerBgPath.lineTo(endX, shelfY);
+    }
+
+    lowerBgPath.lineTo(totalWidth, shelfY);
+    lowerBgPath.lineTo(totalWidth, size.height);
+    lowerBgPath.lineTo(0, size.height);
+    lowerBgPath.close();
+
+    final lowerBounds = Rect.fromLTWH(0, top, totalWidth, size.height - top);
+    final lowerBgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          theme.tabFillTop,
+          theme.tabFillMiddle,
+          theme.lowerBackgroundColor,
+          theme.lowerBackgroundColor,
+        ],
+        stops: const [0.0, 0.32, 0.70, 1.0],
+      ).createShader(lowerBounds)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(lowerBgPath, lowerBgPaint);
+
+    // 3. Render each unselected tab as a custom-shaped curved panel
+    final unselTop = top + 4.5;
+    const rUnselTop = 10.5;
+    const rUnselBottom = 6.0;
+    final activeCenter = (left + right) / 2;
+
+    for (int i = 0; i < kAppModes.length; i++) {
+      final tLeft = sidePad + i * (tabWidth + tabGap);
+      final tRight = tLeft + tabWidth;
+      final tCenter = tLeft + tabWidth / 2;
+      final dist = (tCenter - activeCenter).abs() / tabWidth;
+
+      // When dist >= 0.8 it is completely unselected (opacity = 1.0)
+      // When dist < 0.4 it is under the sliding active tab (opacity = 0.0)
+      final opacity = ((dist - 0.4) / 0.4).clamp(0.0, 1.0);
+
+      _drawUnselectedTab(
+        canvas,
+        tLeft: tLeft,
+        tRight: tRight,
+        tTop: unselTop,
+        shelfY: shelfY,
+        rTop: rUnselTop,
+        rBottom: rUnselBottom,
+        opacity: opacity,
+      );
+    }
+
+
+    // 5. Ambient top crest halo glow on selected tab
+    final glowRect = Rect.fromLTRB(left + 2, top - 2, right - 2, top + 16);
+    final glowPath = Path()
+      ..addRRect(RRect.fromRectAndRadius(glowRect, Radius.circular(effectiveRTop)));
+    final glowPaint = Paint()
+      ..color = theme.glowColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawPath(glowPath, glowPaint);
+
+    // 6. Thin, subtle outline separating the upper and lower surfaces
+    // Traced continuously along shelfY and around the custom curved active tab
+    final strokePath = Path();
+    strokePath.moveTo(0, shelfY);
+    strokePath.lineTo(startX, shelfY);
+
+    if (left > startX) {
+      strokePath.arcToPoint(
+        Offset(left, shelfY - rBottom),
+        radius: Radius.circular(rBottom),
+        clockwise: false,
+      );
+    } else {
+      strokePath.lineTo(left, shelfY - rBottom);
+    }
+
     strokePath.lineTo(left, top + effectiveRTop);
     strokePath.arcToPoint(
       Offset(left + effectiveRTop, top),
@@ -626,41 +747,174 @@ class _OrganicFlaredTabPainter extends CustomPainter {
       radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-    strokePath.lineTo(right, bottom - rBottom);
+    strokePath.lineTo(right, shelfY - rBottom);
+
     if (endX > right) {
       strokePath.arcToPoint(
-        Offset(endX, bottom),
+        Offset(endX, shelfY),
         radius: Radius.circular(rBottom),
         clockwise: false,
       );
     } else {
-      strokePath.lineTo(right, bottom);
+      strokePath.lineTo(right, shelfY);
     }
 
+    strokePath.lineTo(totalWidth, shelfY);
+
+    final strokeBounds = Rect.fromLTRB(0, top, totalWidth, shelfY + 2);
     final strokePaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          accentColor.withValues(alpha: 0.95), // Crisp luminous top apex
-          accentColor.withValues(alpha: 0.65), // Upper curved corners
-          accentColor.withValues(alpha: 0.18), // Dissolving mid-body
-          Colors.transparent,                  // Completely transparent at baseline
+          theme.tabBorderApex,
+          theme.tabBorderSide,
+          theme.shelfLine,
         ],
-        stops: const [0.0, 0.35, 0.70, 0.96],
-      ).createShader(tabBounds)
-      ..strokeWidth = 1.6
+        stops: const [0.0, 0.45, 0.95],
+      ).createShader(strokeBounds)
+      ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(strokePath, strokePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _OrganicFlaredTabPainter oldDelegate) {
+  bool shouldRepaint(covariant _SwiggyModeBarPainter oldDelegate) {
     return oldDelegate.left != left ||
         oldDelegate.right != right ||
-        oldDelegate.accentColor != accentColor ||
-        oldDelegate.fillColor != fillColor ||
-        oldDelegate.totalWidth != totalWidth;
+        oldDelegate.top != top ||
+        oldDelegate.shelfY != shelfY ||
+        oldDelegate.totalWidth != totalWidth ||
+        oldDelegate.sidePad != sidePad ||
+        oldDelegate.tabWidth != tabWidth ||
+        oldDelegate.tabGap != tabGap ||
+        oldDelegate.theme != theme;
+  }
+}
+
+/// Renders the Swiggy-styled tab icon, badge, and label with theme-tinted colors.
+class _ModeTabContent extends StatelessWidget {
+  const _ModeTabContent({
+    required this.mode,
+    required this.isSelected,
+    required this.theme,
+  });
+
+  final ModeConfig mode;
+  final bool isSelected;
+  final ModeTheme theme;
+
+  Widget _buildIcon() {
+    final inactiveColor = theme.inactiveIcon;
+
+    Widget buildAssetOrFallback() {
+      if (mode.assetPath != null) {
+        return AnimatedOpacity(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOutCubic,
+          opacity: isSelected ? 1.0 : 0.82,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
+            scale: isSelected ? 1.06 : 0.94,
+            child: Image.asset(
+              mode.assetPath!,
+              width: 26,
+              height: 26,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                mode.icon,
+                size: 24,
+                color: isSelected ? theme.activeIcon : inactiveColor,
+              ),
+            ),
+          ),
+        );
+      }
+      return Icon(
+        mode.icon,
+        size: 24,
+        color: isSelected ? theme.activeIcon : inactiveColor,
+      );
+    }
+
+    if (mode.id == 'take_away') {
+      return Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          buildAssetOrFallback(),
+          Positioned(
+            bottom: -5,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0066FF), // Swiggy Instamart Blue pill badge preserved
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: const Text(
+                '15 Mins',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 7.5,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return buildAssetOrFallback();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      offset: Offset(0, isSelected ? 0.0 : 0.035),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOutCubic,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 28,
+            child: Center(child: _buildIcon()),
+          ),
+          const SizedBox(height: 5),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
+            style: TextStyle(
+              fontSize: isSelected ? 11.0 : 10.0,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              color: isSelected ? theme.activeText : theme.inactiveText,
+              letterSpacing: isSelected ? 0.2 : 0.0,
+              height: 1.1,
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                mode.label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

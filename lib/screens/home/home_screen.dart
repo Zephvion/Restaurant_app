@@ -255,8 +255,8 @@ class _HomeScreenState extends State<HomeScreen>
             // ── Organic flared top mode selector ────────────────────────────
             TopModeSelector(
               controller: _tabController,
-              backgroundColor: AppColors.background,
-              canvasColor: AppColors.background,
+              backgroundColor: Colors.transparent,
+              canvasColor: Colors.transparent,
               onModeChanged: (mode) {
                 final idx = kAppModes.indexWhere((m) => m.mode == mode);
                 if (idx >= 0 && idx != (_pageController.page?.round() ?? -1)) {
@@ -406,22 +406,6 @@ class _ServicePage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon badge
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: tab.accentColor.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: tab.accentColor.withValues(alpha: 0.45),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Icon(tab.icon, color: tab.accentColor, size: 28),
-                ),
-                const SizedBox(height: 16),
-
                 // Title
                 Text(
                   tab.label.toUpperCase(),

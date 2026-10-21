@@ -195,10 +195,10 @@ class _NearbyStoreCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFFF9500).withValues(alpha: 0.35),
+          color: const Color(0xFF303036),
           width: 1.2,
         ),
         boxShadow: [
@@ -403,12 +403,12 @@ class _NearbyOutletTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isSelected
-              ? AppColors.copper
-              : AppColors.border.withValues(alpha: 0.6),
+              ? const Color(0xFF10B981)
+              : const Color(0xFF303036),
           width: isSelected ? 1.4 : 1.0,
         ),
       ),
@@ -418,13 +418,13 @@ class _NearbyOutletTile extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppColors.copper.withValues(alpha: 0.15)
-                  : AppColors.backgroundElevated,
+                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                  : const Color(0xFF26262C),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.storefront_rounded,
-              color: isSelected ? AppColors.copper : AppColors.textSecondary,
+              color: isSelected ? const Color(0xFF10B981) : const Color(0xFF9A9AA5),
               size: 20,
             ),
           ),

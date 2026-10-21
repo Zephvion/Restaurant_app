@@ -288,9 +288,9 @@ class _CateringPackageScreenState extends State<CateringPackageScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       child: Row(
         children: [
@@ -301,17 +301,17 @@ class _CateringPackageScreenState extends State<CateringPackageScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
+                    color: Color(0xFFF5F5F5),
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
+                    color: Color(0xFF9A9AA5),
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -319,8 +319,8 @@ class _CateringPackageScreenState extends State<CateringPackageScreen> {
           ),
           Switch(
             value: value,
-            activeColor: AppColors.copper,
-            activeTrackColor: AppColors.copper.withValues(alpha: 0.3),
+            activeColor: const Color(0xFF10B981),
+            activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
             onChanged: onChanged,
           ),
         ],
@@ -347,12 +347,10 @@ class _PackageCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.accentRed.withValues(alpha: 0.08)
-              : AppColors.surface,
+          color: const Color(0xFF1E1E23),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppColors.accentRed : AppColors.border,
+            color: isSelected ? const Color(0xFF10B981) : const Color(0xFF303036),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -367,13 +365,13 @@ class _PackageCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.copper.withValues(alpha: 0.15),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     pkg.tag,
                     style: const TextStyle(
-                      color: AppColors.copper,
+                      color: Color(0xFF10B981),
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.8,
@@ -383,9 +381,9 @@ class _PackageCard extends StatelessWidget {
                 Text(
                   '₹ ${pkg.pricePerPlate.toInt()} / Plate',
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: Color(0xFFFFC72C),
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -394,7 +392,7 @@ class _PackageCard extends StatelessWidget {
             Text(
               pkg.title,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: Color(0xFFF5F5F5),
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
@@ -403,7 +401,7 @@ class _PackageCard extends StatelessWidget {
             Text(
               pkg.description,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: Color(0xFF9A9AA5),
                 fontSize: 12,
               ),
             ),
@@ -416,19 +414,19 @@ class _PackageCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
+                    color: const Color(0xFF26262C),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.check,
-                          size: 12, color: Color(0xFF22C55E)),
+                          size: 12, color: Color(0xFF10B981)),
                       const SizedBox(width: 4),
                       Text(
                         h,
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: Color(0xFFF5F5F5),
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),

@@ -91,9 +91,9 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
                             Text(
                               '₹ ${dish.price.toInt()}',
                               style: const TextStyle(
-                                color: AppColors.textPrimary,
+                                color: Color(0xFFFFC72C),
                                 fontSize: 26,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -171,15 +171,16 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
                         child: Container(
                           height: 56,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: const Color(0xFF1E1E23),
                             borderRadius: BorderRadius.circular(28),
+                            border: Border.all(color: const Color(0xFF10B981), width: 1.5),
                           ),
                           alignment: Alignment.center,
                           child: const Text(
                             'ADD TO CART',
                             style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.w800,
                               fontSize: 15,
                               letterSpacing: 1.5,
                             ),
@@ -192,8 +193,9 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
                             height: 56,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
+                              color: const Color(0xFF1E1E23),
                               borderRadius: BorderRadius.circular(28),
+                              border: Border.all(color: const Color(0xFF303036)),
                             ),
                             child: Row(
                               children: [
@@ -346,8 +348,9 @@ class _MacroBadge extends StatelessWidget {
       width: 72,
       height: 72,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -355,7 +358,7 @@ class _MacroBadge extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: Color(0xFFF5F5F5),
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -364,7 +367,7 @@ class _MacroBadge extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: Color(0xFF9A9AA5),
               fontSize: 11,
             ),
           ),
@@ -421,8 +424,9 @@ class _ReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

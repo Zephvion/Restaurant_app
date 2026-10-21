@@ -20,12 +20,12 @@ class TakeawayOrderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCancelled
               ? AppColors.accentRed.withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.06),
+              : const Color(0xFF303036),
         ),
       ),
       child: Column(
@@ -44,8 +44,8 @@ class TakeawayOrderCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.copper,
-                        fontSize: 15,
+                        color: Color(0xFFF5F5F5),
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -53,7 +53,7 @@ class TakeawayOrderCard extends StatelessWidget {
                     Text(
                       '${order.formattedDate} · ${order.formattedTime}',
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
+                        color: Color(0xFF9A9AA5),
                         fontSize: 12,
                       ),
                     ),
@@ -70,7 +70,7 @@ class TakeawayOrderCard extends StatelessWidget {
                   border: Border.all(
                     color: isCancelled
                         ? AppColors.accentRed.withValues(alpha: 0.4)
-                        : const Color(0xFF388E3C),
+                        : const Color(0xFF10B981),
                   ),
                 ),
                 child: Row(
@@ -82,7 +82,7 @@ class TakeawayOrderCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isCancelled
                             ? AppColors.accentRed
-                            : const Color(0xFF4CAF50),
+                            : const Color(0xFF10B981),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -92,7 +92,7 @@ class TakeawayOrderCard extends StatelessWidget {
                       style: TextStyle(
                         color: isCancelled
                             ? AppColors.accentRed
-                            : const Color(0xFF4CAF50),
+                            : const Color(0xFF10B981),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -117,16 +117,16 @@ class TakeawayOrderCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: AppColors.textPrimary,
+                            color: Color(0xFFF5F5F5),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       Text(
-                        '\$${item.lineTotal.toStringAsFixed(2)}',
+                        '₹${item.lineTotal.toStringAsFixed(2)}',
                         style: const TextStyle(
-                          color: AppColors.textSecondary,
+                          color: Color(0xFF9A9AA5),
                           fontSize: 12,
                         ),
                       ),
@@ -140,17 +140,17 @@ class TakeawayOrderCard extends StatelessWidget {
                 Text(
                   'Paid via ${order.paymentMethod}',
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Color(0xFF9A9AA5),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  '\$${order.grandTotal.toStringAsFixed(2)}',
+                  '₹${order.grandTotal.toStringAsFixed(2)}',
                   style: const TextStyle(
-                    color: AppColors.accentRed,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFFC72C),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],

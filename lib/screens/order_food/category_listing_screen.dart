@@ -7,6 +7,7 @@ import '../../services/menu_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/basket_bar.dart';
+import '../../widgets/dish_card.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/paragon_bottom_nav.dart';
 
@@ -483,7 +484,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
     }
 
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final childAspectRatio = screenWidth < 380 ? 0.60 : 0.65;
+    final childAspectRatio = screenWidth < 380 ? 0.72 : 0.75;
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
@@ -513,7 +514,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
   }
 }
 
-/// Food card displayed in the 2-column category grid matching the Food Planner design system.
+/// Food card displayed in the 2-column category grid matching Taco Bell design.
 class _CategoryFoodCard extends StatelessWidget {
   const _CategoryFoodCard({
     required this.dish,
@@ -535,203 +536,14 @@ class _CategoryFoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return TacoBellProductCard(
+      dish: dish,
+      inCart: inCart,
+      quantity: quantity,
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Food image with rounded corners matching Food Planner
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: NetworkImageWithFallback(
-                    url: dish.imageUrl,
-                    fallbackIcon: Icons.restaurant,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Title & Veg / Non-Veg Indicator
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: dish.isVeg
-                        ? const Color(0xFF22C55E)
-                        : AppColors.accentRed,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    dish.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-
-            // Price & Star Rating
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '₹ ${dish.price.toInt()}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Color(0xFFF5B942), size: 12),
-                    const SizedBox(width: 2),
-                    Text(
-                      dish.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 3),
-
-            // Macro details (Calories & Weight)
-            Text(
-              '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-
-            // Stepper / ADD Button
-            _CategoryQuantityButton(
-              quantity: quantity,
-              onAdd: onAdd,
-              onIncrement: onIncrement,
-              onDecrement: onDecrement,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact full-width quantity button matching the Food Planner design.
-class _CategoryQuantityButton extends StatelessWidget {
-  const _CategoryQuantityButton({
-    required this.quantity,
-    required this.onAdd,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  final int quantity;
-  final VoidCallback onAdd;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  @override
-  Widget build(BuildContext context) {
-    if (quantity == 0) {
-      return SizedBox(
-        width: double.infinity,
-        height: 32,
-        child: ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentRed,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 0,
-            padding: EdgeInsets.zero,
-          ),
-          onPressed: onAdd,
-          icon: const Icon(Icons.add, size: 14, color: Colors.white),
-          label: const Text(
-            'ADD',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      height: 32,
-      decoration: BoxDecoration(
-        color: AppColors.accentRed,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.remove, color: Colors.white, size: 14),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: onDecrement,
-          ),
-          Text(
-            '$quantity',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white, size: 14),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: onIncrement,
-          ),
-        ],
-      ),
+      onAdd: onAdd,
+      onIncrement: onIncrement,
+      onDecrement: onDecrement,
     );
   }
 }

@@ -58,15 +58,15 @@ class _ReserveDashboardScreenState extends State<ReserveDashboardScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: ThemedPageBackground(
-        accentColor: modeAccent,
-        child: widget.isEmbedded
-            ? content
-            : SafeArea(
+      body: widget.isEmbedded
+          ? content
+          : ThemedPageBackground(
+              accentColor: modeAccent,
+              child: SafeArea(
                 bottom: false,
                 child: content,
               ),
-      ),
+            ),
     );
   }
 
@@ -233,14 +233,12 @@ class _ReservationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCancelled
               ? Colors.redAccent.withValues(alpha: 0.25)
-              : isCompleted
-                  ? Colors.white12
-                  : AppColors.accentRed.withValues(alpha: 0.35),
+              : const Color(0xFF303036),
           width: 1,
         ),
       ),
