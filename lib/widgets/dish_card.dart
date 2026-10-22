@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/dish.dart';
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
-import 'app_toast.dart';
+import 'app_banner.dart';
 import 'network_image_with_fallback.dart';
 
 /// Authentic Indian FSSAI dietary indicator (green circle for veg, red triangle for non-veg).
