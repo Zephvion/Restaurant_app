@@ -184,25 +184,37 @@ class TacoBellProductCard extends StatelessWidget {
 
               // 2. Metadata row: Veg/Non-Veg + Bestseller tag + Rating pill
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  DietaryIndicator(isVeg: dish.isVeg, size: 12),
-                  if (dish.rating >= 4.6) ...[
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.star_outline_rounded,
-                      size: 11,
-                      color: Color(0xFFEF4444),
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DietaryIndicator(isVeg: dish.isVeg, size: 12),
+                        if (dish.rating >= 4.6) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star_outline_rounded,
+                            size: 11,
+                            color: Color(0xFFEF4444),
+                          ),
+                          const Flexible(
+                            child: Text(
+                              'Bestseller',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const Text(
-                      'Bestseller',
-                      style: TextStyle(
-                        color: Color(0xFFEF4444),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
+                  ),
+                  const SizedBox(width: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 5,
@@ -323,7 +335,7 @@ class TacoBellProductCard extends StatelessWidget {
                     child: Container(
                       height: 28,
                       constraints: const BoxConstraints(minWidth: 62),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
@@ -333,14 +345,25 @@ class TacoBellProductCard extends StatelessWidget {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'ADD',
-                        style: TextStyle(
-                          color: Color(0xFF10B981),
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                        ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add,
+                            size: 13,
+                            color: Color(0xFF10B981),
+                          ),
+                          SizedBox(width: 2),
+                          Text(
+                            'ADD',
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

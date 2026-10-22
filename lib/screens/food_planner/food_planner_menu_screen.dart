@@ -9,7 +9,6 @@ import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dish_card.dart';
-import '../../widgets/network_image_with_fallback.dart';
 
 /// Meal Menu selection screen for the Food Planner matching the Home Page Food Order layout.
 /// Features category tabs, dynamic filtering, horizontal featured rails, category circles,
@@ -22,7 +21,7 @@ class FoodPlannerMenuScreen extends StatefulWidget {
 }
 
 class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
-  String _selectedCategory = 'Frequent order';
+  String _selectedCategory = 'All / Popular';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -36,16 +35,16 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     switch (mealType) {
       case MealType.breakfast:
         return const [
-          'Frequent order',
+          'All / Popular',
           'Dosa & Idli',
           'Appam & Stew',
           'Puttu & Poori',
+          'Combos & Sets',
           'Beverages',
-          'Combos',
         ];
       case MealType.lunch:
         return const [
-          'Frequent order',
+          'All / Popular',
           'Kerala Meals',
           'Biriyani',
           'Fish Curries',
@@ -55,7 +54,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         ];
       case MealType.dinner:
         return const [
-          'Frequent order',
+          'All / Popular',
           'Porotta & Breads',
           'Curries & Roast',
           'Grilled & Tandoori',
@@ -64,11 +63,11 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         ];
       case MealType.snacks:
         return const [
-          'Frequent order',
-          'Beverages',
+          'All / Popular',
           'Snacks & Bites',
-          'Desserts',
           'Healthy Bowls',
+          'Desserts',
+          'Beverages',
         ];
     }
   }
@@ -82,7 +81,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
     // ── 1. Breakfast Categories ──────────────────────────────────────────────
     if (mealType == MealType.breakfast) {
-      if (catLower == 'frequent order' || catLower == 'all') {
+      if (catLower.contains('all') || catLower.contains('popular') || catLower.contains('frequent')) {
         return [
           MockData.plainDosa,
           MockData.kuzhipaniyaram,
@@ -215,7 +214,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
     // ── 2. Lunch Categories ──────────────────────────────────────────────────
     if (mealType == MealType.lunch) {
-      if (catLower == 'frequent order' || catLower == 'all') {
+      if (catLower.contains('all') || catLower.contains('popular') || catLower.contains('frequent')) {
         return [
           MockData.meals,
           ...MockData.biriyaniDishes,
@@ -314,7 +313,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
     // ── 3. Dinner Categories ─────────────────────────────────────────────────
     if (mealType == MealType.dinner) {
-      if (catLower == 'frequent order' || catLower == 'all') {
+      if (catLower.contains('all') || catLower.contains('popular') || catLower.contains('frequent')) {
         return [
           ...MockData.chickenDishes,
           ...MockData.biriyaniDishes,
@@ -411,7 +410,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
     // ── 4. Snacks & Drinks Categories ────────────────────────────────────────
     if (mealType == MealType.snacks) {
-      if (catLower == 'frequent order' || catLower == 'all') {
+      if (catLower.contains('all') || catLower.contains('popular') || catLower.contains('frequent')) {
         return [
           MockData.freshJuiceOrange,
           MockData.kuzhipaniyaram,
@@ -488,6 +487,9 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           activeDishes = _getDishesForCategory(mealType, _selectedCategory);
         }
 
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final childAspectRatio = screenWidth < 380 ? 0.68 : 0.72;
+
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
@@ -502,7 +504,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${mealType.label.toUpperCase()} MENU',
+                  'ADD TO ${mealType.label.toUpperCase()}',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 17,
@@ -537,7 +539,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                           color: AppColors.accentRed, size: 14),
                       const SizedBox(width: 4),
                       Text(
-                        '${ctrl.getPlannedCaloriesForDay()} kcal',
+                        '${ctrl.getPlannedCaloriesForDay()} / ${ctrl.targetKcal} kcal',
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 12,
@@ -550,140 +552,121 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
               ),
             ],
           ),
-          body: Stack(
-            children: [
-              ListView(
-                padding: const EdgeInsets.only(bottom: 120),
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Stack(
                 children: [
-                  const SizedBox(height: 8),
+                  CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
 
-                  // ── Quick Meal Selector Tabs ──────────────────────────────
-                  _mealTypeSegmentedSwitch(ctrl),
-                  const SizedBox(height: 14),
+                            // ── Quick Meal Selector Tabs ──────────────────────────
+                            _mealTypeSegmentedSwitch(ctrl),
+                            const SizedBox(height: 12),
 
-                  // ── Search Bar ────────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _searchField(),
-                  ),
-                  const SizedBox(height: 16),
+                            // ── Calorie Context Banner ────────────────────────────
+                            _calorieBudgetHelper(ctrl, mealType),
+                            const SizedBox(height: 12),
 
-                  // ── Category Pills (Horizontal) ───────────────────────────
-                  _categoryPills(categories),
-                  const SizedBox(height: 20),
+                            // ── Search Bar ────────────────────────────────────────
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: _searchField(),
+                            ),
+                            const SizedBox(height: 16),
 
-                  // ── Featured Dishes Section ───────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _searchQuery.trim().isNotEmpty
-                              ? 'Search Results ("$_searchQuery")'
-                              : (_selectedCategory == 'Frequent order'
-                                  ? '${mealType.label} Specials'
-                                  : _selectedCategory),
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
+                            // ── Unified Category Selector (Single, with Icons) ───
+                            _categorySelector(categories),
+                            const SizedBox(height: 16),
+
+                            // ── Selected Category Header ──────────────────────────
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _searchQuery.trim().isNotEmpty
+                                          ? 'Search Results for "$_searchQuery"'
+                                          : _selectedCategory,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${activeDishes.length} ${activeDishes.length == 1 ? 'dish' : 'dishes'}',
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                         ),
-                        Text(
-                          _searchQuery.trim().isNotEmpty
-                              ? '${activeDishes.length} found'
-                              : '${activeDishes.length} items',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // ── Main Food Cards Rail ──────────────────────────────────
-                  _featuredFoodCardsRail(ctrl, activeDishes),
-                  const SizedBox(height: 28),
-
-                  // ── Explore Categories Icons Grid ─────────────────────────
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Explore by Category',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _categoryCirclesGrid(mealType, categories),
-                  const SizedBox(height: 28),
 
-                  // ── Combination / Set Platters Section ────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          mealType == MealType.breakfast
-                              ? 'Combination Breakfast'
-                              : mealType == MealType.lunch
-                                  ? 'Combination Lunch Platters'
-                                  : 'Combination Dinner Sets',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                      // ── Selected Category Dishes Grid ─────────────────────────
+                      if (activeDishes.isEmpty)
+                        SliverToBoxAdapter(
+                          child: _emptyDishesState(),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                          sliver: SliverGrid(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: childAspectRatio,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final dish = activeDishes[index];
+                                final qty = ctrl.getQuantity(dish.id);
+                                return TacoBellProductCard(
+                                  dish: dish,
+                                  quantity: qty,
+                                  onTap: () => _openProduct(dish),
+                                  onAdd: () => ctrl.addToBasket(dish.id),
+                                  onIncrement: () => ctrl.addToBasket(dish.id),
+                                  onDecrement: () => ctrl.removeFromBasket(dish.id),
+                                );
+                              },
+                              childCount: activeDishes.length,
+                            ),
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 14, color: AppColors.textSecondary),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  _combinationList(ctrl, mealType),
-                  const SizedBox(height: 28),
 
-                  // ── Chef Recommended Specials Rail ────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Chef Recommended for ${mealType.label}',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 14, color: AppColors.textSecondary),
-                      ],
+                  // ── Floating Cart Bar when items in basket ─────────────────────
+                  if (totalItems > 0)
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: 24,
+                      child: _floatingCartBar(context, ctrl),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  _recommendedRail(ctrl, mealType),
                 ],
               ),
-
-              // ── Floating Cart Bar when items in basket ─────────────────────
-              if (totalItems > 0)
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 24,
-                  child: _floatingCartBar(context, ctrl),
-                ),
-            ],
+            ),
           ),
         );
       },
@@ -729,7 +712,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    type.label,
+                    type.displayName.split(' ').first,
                     style: TextStyle(
                       color: isSelected ? Colors.white : AppColors.textSecondary,
                       fontSize: 13,
@@ -779,172 +762,184 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     );
   }
 
-  // ── Category Pills (Horizontal) ─────────────────────────────────────────────
+  // ── Calorie Context Banner ──────────────────────────────────────────────────
 
-  Widget _categoryPills(List<String> categories) {
+  Widget _calorieBudgetHelper(FoodPlannerController ctrl, MealType mealType) {
+    int targetForSlot;
+    switch (mealType) {
+      case MealType.breakfast:
+        targetForSlot = (ctrl.targetKcal * 0.25).round();
+        break;
+      case MealType.lunch:
+        targetForSlot = (ctrl.targetKcal * 0.35).round();
+        break;
+      case MealType.dinner:
+        targetForSlot = (ctrl.targetKcal * 0.30).round();
+        break;
+      case MealType.snacks:
+        targetForSlot = (ctrl.targetKcal * 0.10).round();
+        break;
+    }
+
+    final plannedSlotKcal = ctrl.getSlotCalories(ctrl.selectedDayOffset, mealType);
+    int basketKcal = 0;
+    ctrl.basket.forEach((id, qty) {
+      final dish = ctrl.findDish(id);
+      if (dish != null) basketKcal += (dish.kcal > 0 ? dish.kcal : 320) * qty;
+    });
+
+    final currentTotal = plannedSlotKcal + basketKcal;
+    final progress = targetForSlot > 0
+        ? (currentTotal / targetForSlot).clamp(0.0, 1.0)
+        : 0.0;
+    final isOverBudget = targetForSlot > 0 && currentTotal > targetForSlot;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isOverBudget
+                ? AppColors.accentRed.withValues(alpha: 0.5)
+                : AppColors.border,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (isOverBudget ? AppColors.accentRed : AppColors.copper)
+                        .withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.local_fire_department_rounded,
+                    color: isOverBudget ? AppColors.accentRed : AppColors.copper,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${mealType.displayName.split(' ').first} Target: ~$targetForSlot kcal',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        basketKcal > 0
+                            ? '$plannedSlotKcal planned + $basketKcal in cart = $currentTotal kcal'
+                            : '$plannedSlotKcal kcal planned for today',
+                        style: TextStyle(
+                          color: isOverBudget
+                              ? AppColors.accentRed
+                              : AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    color: isOverBudget ? AppColors.accentRed : AppColors.copper,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppColors.surfaceLight,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isOverBudget ? AppColors.accentRed : AppColors.copper,
+                ),
+                minHeight: 6,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Unified Category Selector (Single, with Icons) ──────────────────────────
+
+  Widget _categorySelector(List<String> categories) {
     return SizedBox(
-      height: 38,
+      height: 44,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final cat = categories[index];
-          final isSelected = cat == _selectedCategory;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory =
-                _selectedCategory == cat ? 'Frequent order' : cat),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.copper : AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? AppColors.copper : AppColors.border,
-                ),
-              ),
-              child: Text(
-                cat,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ── Main Food Cards Rail ────────────────────────────────────────────────────
-
-  Widget _featuredFoodCardsRail(FoodPlannerController ctrl, List<Dish> dishes) {
-    if (dishes.isEmpty) {
-      final isSearching = _searchQuery.trim().isNotEmpty;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Center(
-            child: Text(
-              isSearching
-                  ? 'No dishes matching "$_searchQuery" across categories.'
-                  : 'No items found in this category.',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-          ),
-        ),
-      );
-    }
-
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final cardWidth = screenWidth < 460
-        ? ((screenWidth - 40 - 14) / 2).floorToDouble()
-        : 180.0;
-
-    return SizedBox(
-      height: 242,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: dishes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) {
-          final dish = dishes[index];
-          final qty = ctrl.getQuantity(dish.id);
-
-          return TacoBellProductCard(
-            dish: dish,
-            width: cardWidth,
-            quantity: qty,
-            onTap: () => _openProduct(dish),
-            onAdd: () => ctrl.addToBasket(dish.id),
-            onIncrement: () => ctrl.addToBasket(dish.id),
-            onDecrement: () => ctrl.removeFromBasket(dish.id),
-          );
-        },
-      ),
-    );
-  }
-
-  // ── Explore Categories Grid ─────────────────────────────────────────────────
-
-  Widget _categoryCirclesGrid(MealType mealType, List<String> categories) {
-    final displayCats = categories.where((c) => c != 'Frequent order').toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-        ),
-        itemCount: displayCats.length,
-        itemBuilder: (context, i) {
-          final cat = displayCats[i];
-          final isSelected = cat == _selectedCategory;
+          final isSelected = cat == _selectedCategory && _searchQuery.isEmpty;
           final icon = _getIconForCategory(cat);
 
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory =
-                _selectedCategory == cat ? 'Frequent order' : cat),
+          return InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () {
+              setState(() {
+                _selectedCategory = cat;
+                _searchQuery = '';
+                _searchController.clear();
+              });
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.copper.withValues(alpha: 0.25)
-                    : AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
+                color: isSelected ? AppColors.copper : AppColors.surface,
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: isSelected ? AppColors.copper : AppColors.border,
-                  width: isSelected ? 1.8 : 1.0,
+                  width: isSelected ? 1.5 : 1.0,
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.copper.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.copper
-                          : AppColors.surfaceLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      icon,
-                      color: isSelected ? Colors.white : AppColors.copper,
-                      size: 20,
-                    ),
+                  Icon(
+                    icon,
+                    size: 16,
+                    color: isSelected ? Colors.white : AppColors.copper,
                   ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      cat,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isSelected
-                            ? AppColors.copper
-                            : AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w800 : FontWeight.w600,
-                      ),
+                  const SizedBox(width: 6),
+                  Text(
+                    cat,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ],
@@ -958,6 +953,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
 
   IconData _getIconForCategory(String cat) {
     final lower = cat.toLowerCase();
+    if (lower.contains('all') || lower.contains('popular')) return Icons.auto_awesome_rounded;
     if (lower.contains('dosa') || lower.contains('idli')) return Icons.bakery_dining_rounded;
     if (lower.contains('appam') || lower.contains('stew')) return Icons.rice_bowl_rounded;
     if (lower.contains('puttu') || lower.contains('poori')) return Icons.breakfast_dining_rounded;
@@ -967,315 +963,76 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     if (lower.contains('chicken')) return Icons.kebab_dining_rounded;
     if (lower.contains('porotta') || lower.contains('bread')) return Icons.flatware_rounded;
     if (lower.contains('grill') || lower.contains('tandoori')) return Icons.outdoor_grill_rounded;
-    if (lower.contains('beverage')) return Icons.local_drink_rounded;
+    if (lower.contains('snack') || lower.contains('bite')) return Icons.lunch_dining_rounded;
+    if (lower.contains('dessert') || lower.contains('bowl')) return Icons.icecream_rounded;
+    if (lower.contains('beverage') || lower.contains('drink')) return Icons.local_drink_rounded;
+    if (lower.contains('combo')) return Icons.local_offer_rounded;
     return Icons.restaurant_menu_rounded;
   }
 
-  // ── Combination List ────────────────────────────────────────────────────────
+  // ── Empty State ─────────────────────────────────────────────────────────────
 
-  Widget _combinationList(FoodPlannerController ctrl, MealType mealType) {
-    final List<Map<String, dynamic>> combos;
-    switch (mealType) {
-      case MealType.breakfast:
-        combos = [
-          {
-            'id': 'appam_stew_c',
-            'title': 'Appam & Vegetable Stew (2 nos)',
-            'price': 160,
-            'imageUrl': 'assets/images/order/extracted/thumb_appam.webp',
-          },
-          {
-            'id': 'idiyappam_kadala_c',
-            'title': 'Idiyappam & Kadala Curry (4 nos)',
-            'price': 170,
-            'imageUrl': 'assets/images/order/extracted/thumb_idiyappam.webp',
-          },
-          {
-            'id': 'puttu_kadala_c',
-            'title': 'Puttu & Spiced Kadala Curry',
-            'price': 150,
-            'imageUrl': 'assets/images/order/extracted/rec_puttu.webp',
-          },
-        ];
-        break;
-      case MealType.lunch:
-        combos = [
-          {
-            'id': 'seafood_sadhya_c',
-            'title': 'Paragon Seafood Sadhya Thali',
-            'price': 340,
-            'imageUrl': 'assets/images/foodplanner/extracted/card_meals.webp',
-          },
-          {
-            'id': 'thalassery_biryani_c',
-            'title': 'Thalassery Chicken Biryani Combo',
-            'price': 290,
-            'imageUrl': 'assets/images/order/extracted/dish_chicken_biryani.webp',
-          },
-        ];
-        break;
-      case MealType.dinner:
-        combos = [
-          {
-            'id': 'porotta_beef_c',
-            'title': 'Malabar Porotta (3 nos) & Curry',
-            'price': 240,
-            'imageUrl': 'assets/images/order/extracted/dish_porotta.webp',
-          },
-          {
-            'id': 'appam_roast_c',
-            'title': 'Appam (3 nos) & Egg Roast',
-            'price': 220,
-            'imageUrl': 'assets/images/order/extracted/dish_egg_roast.webp',
-          },
-        ];
-        break;
-      case MealType.snacks:
-        combos = [
-          {
-            'id': 'snack_combo_1',
-            'title': 'Kuzhi Paniyaram & Sulaimani Chai',
-            'price': 90,
-            'imageUrl': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
-          },
-          {
-            'id': 'snack_combo_2',
-            'title': 'Cold Pressed Juice & Fruit Salad',
-            'price': 130,
-            'imageUrl': 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
-          },
-        ];
-        break;
-    }
-
+  Widget _emptyDishesState() {
+    final isSearching = _searchQuery.trim().isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: combos.map((item) {
-          final id = item['id'] as String;
-          final title = item['title'] as String;
-          final price = item['price'] as int;
-          final imageUrl = item['imageUrl'] as String;
-          final qty = ctrl.getQuantity(id);
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E23),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF303036), width: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSearching ? Icons.search_off_rounded : Icons.restaurant_rounded,
+              size: 48,
+              color: AppColors.textSecondary,
             ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 72,
-                    height: 72,
-                    child: NetworkImageWithFallback(
-                      url: imageUrl,
-                      fallbackIcon: Icons.restaurant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Color(0xFFF5F5F5),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '₹ $price',
-                        style: const TextStyle(
-                          color: Color(0xFFFFC72C),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 90,
-                  child: _QuantityButton(
-                    quantity: qty,
-                    onAdd: () => ctrl.addToBasket(id),
-                    onIncrement: () => ctrl.addToBasket(id),
-                    onDecrement: () => ctrl.removeFromBasket(id),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            Text(
+              isSearching
+                  ? 'No dishes matching "$_searchQuery"'
+                  : 'No items found in this category',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // ── Chef Recommended Rail ───────────────────────────────────────────────────
-
-  Widget _recommendedRail(FoodPlannerController ctrl, MealType mealType) {
-    final List<Map<String, dynamic>> recommended;
-    switch (mealType) {
-      case MealType.breakfast:
-        recommended = [
-          {
-            'id': 'plain_dosa_rec',
-            'title': 'Plain Dosa (2 nos)',
-            'price': 140,
-            'imageUrl': 'assets/images/order/extracted/featured_dosa.webp',
-          },
-          {
-            'id': 'puttu_kadala_rec',
-            'title': 'Puttu & Kadala',
-            'price': 150,
-            'imageUrl': 'assets/images/order/extracted/rec_puttu.webp',
-          },
-        ];
-        break;
-      case MealType.lunch:
-        recommended = [
-          {
-            'id': 'paragon_biriyani_rec',
-            'title': 'Paragon Dum Biryani',
-            'price': 260,
-            'imageUrl': 'assets/images/order/extracted/dish_chicken_biryani.webp',
-          },
-          {
-            'id': 'kerala_meals_rec',
-            'title': 'Special Kerala Meals',
-            'price': 220,
-            'imageUrl': 'assets/images/foodplanner/extracted/card_meals.webp',
-          },
-        ];
-        break;
-      case MealType.dinner:
-        recommended = [
-          {
-            'id': 'malabar_parotta_rec',
-            'title': 'Malabar Coin Porotta (5 nos)',
-            'price': 160,
-            'imageUrl': 'assets/images/order/extracted/dish_porotta.webp',
-          },
-          {
-            'id': 'tandoori_chicken_rec',
-            'title': 'Grilled Chicken Tikka',
-            'price': 290,
-            'imageUrl': 'assets/images/order/extracted/dish_tandoori.webp',
-          },
-        ];
-        break;
-      case MealType.snacks:
-        recommended = [
-          {
-            'id': 'orange_juice_rec',
-            'title': 'Cold Pressed Orange Juice',
-            'price': 80,
-            'imageUrl': 'https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=70',
-          },
-          {
-            'id': 'kuzhi_paniyaram_rec',
-            'title': 'Crispy Kuzhi Paniyaram (6 pcs)',
-            'price': 95,
-            'imageUrl': 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=70',
-          },
-        ];
-        break;
-    }
-
-    final cardWidth = ((MediaQuery.of(context).size.width - 40 - 14) / 2).clamp(160.0, 220.0);
-
-    return SizedBox(
-      height: 242,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: recommended.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) {
-          final item = recommended[index];
-          final id = item['id'] as String;
-          final title = item['title'] as String;
-          final price = item['price'] as int;
-          final imageUrl = item['imageUrl'] as String;
-          final qty = ctrl.getQuantity(id);
-
-          return Container(
-            width: cardWidth,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E23),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF303036), width: 1),
+            const SizedBox(height: 6),
+            Text(
+              isSearching
+                  ? 'Try searching with a different dish name or clear search.'
+                  : 'Select another category above to view delicious options.',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+              textAlign: TextAlign.center,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 110,
-                    child: NetworkImageWithFallback(
-                      url: imageUrl,
-                      fallbackIcon: Icons.restaurant,
-                    ),
+            if (isSearching) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.copper,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFFF5F5F5),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '🔥 320 kcal · ⚖️ 300 gm',
-                  style: TextStyle(color: Color(0xFF9A9AA5), fontSize: 10),
-                ),
-                const Spacer(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '₹ $price',
-                      style: const TextStyle(
-                        color: Color(0xFFFFC72C),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 76,
-                      child: _QuantityButton(
-                        quantity: qty,
-                        onAdd: () => ctrl.addToBasket(id),
-                        onIncrement: () => ctrl.addToBasket(id),
-                        onDecrement: () => ctrl.removeFromBasket(id),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+                child: const Text('Clear Search'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1294,38 +1051,49 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
     final mealLabel = ctrl.currentSlotMealType.label;
 
     return Container(
-      height: 56,
+      height: 54,
       decoration: BoxDecoration(
         color: AppColors.accentRed,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(27),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.local_fire_department,
-                  color: Colors.white, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} · $totalKcal kcal',
-                style: const TextStyle(
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.local_fire_department,
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  letterSpacing: 0.8,
+                  size: 18,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${ctrl.basketTotalItems} ${ctrl.basketTotalItems == 1 ? 'ITEM' : 'ITEMS'} · $totalKcal kcal',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
               ctrl.confirmBasketToPlan();
@@ -1338,98 +1106,33 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                   route.settings.name == AppRoutes.foodPlanner ||
                   route.isFirst);
             },
-            child: Row(
-              children: [
-                Text(
-                  'CONFIRM $mealLabel',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    letterSpacing: 0.8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'CONFIRM $mealLabel',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.check_circle_outline,
-                    color: Colors.white, size: 18),
-              ],
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Quantity Stepper Button ───────────────────────────────────────────────────
-
-class _QuantityButton extends StatelessWidget {
-  const _QuantityButton({
-    required this.quantity,
-    required this.onAdd,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  final int quantity;
-  final VoidCallback onAdd;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  @override
-  Widget build(BuildContext context) {
-    if (quantity == 0) {
-      return SizedBox(
-        width: double.infinity,
-        height: 32,
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF10B981),
-            side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            elevation: 0,
-            padding: EdgeInsets.zero,
-          ),
-          onPressed: onAdd,
-          child: const Text(
-            'ADD',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      height: 32,
-      decoration: BoxDecoration(
-        color: const Color(0xFF10B981),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.remove, color: Colors.white, size: 14),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: onDecrement,
-          ),
-          Text(
-            '$quantity',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white, size: 14),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: onIncrement,
           ),
         ],
       ),
