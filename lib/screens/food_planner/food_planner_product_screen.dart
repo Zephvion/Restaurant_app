@@ -35,7 +35,8 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
           body: Stack(
             children: [
               ListView(
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: EdgeInsets.only(
+                    bottom: 120 + MediaQuery.paddingOf(context).bottom),
                 children: [
                   // ── Food Photo Header ────────────────────────────────────
                   _ImageHeader(dish: dish),
@@ -164,7 +165,7 @@ class _FoodPlannerProductScreenState extends State<FoodPlannerProductScreen> {
               Positioned(
                 left: 24,
                 right: 24,
-                bottom: 24,
+                bottom: 24 + MediaQuery.paddingOf(context).bottom,
                 child: qty == 0
                     ? GestureDetector(
                         onTap: () => ctrl.addToBasket(dish.id),

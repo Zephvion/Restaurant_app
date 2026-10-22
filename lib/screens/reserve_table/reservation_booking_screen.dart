@@ -153,7 +153,8 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
       body: Stack(
         children: [
           ListView(
-            padding: const EdgeInsets.only(bottom: 100),
+            padding: EdgeInsets.only(
+                bottom: 100 + MediaQuery.paddingOf(context).bottom),
             children: [
               // ── Hero image ─────────────────────────────────────────────
               SizedBox(
@@ -322,7 +323,7 @@ class _ReservationBookingScreenState extends State<ReservationBookingScreen> {
           Positioned(
             left: 24,
             right: 24,
-            bottom: 24,
+            bottom: 24 + MediaQuery.paddingOf(context).bottom,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _canProceed ? AppColors.accentRed : AppColors.surface,

@@ -437,123 +437,6 @@ class _OrganicModeBarPainter extends CustomPainter {
   final double totalWidth;
   final ModeTheme theme;
 
-  void _drawUnselectedTab(
-    Canvas canvas, {
-    required double tLeft,
-    required double tRight,
-    required double tTop,
-    required double shelfY,
-    required double rTop,
-    required double rBottom,
-    required double opacity,
-  }) {
-    if (opacity <= 0.01) return;
-
-    final unselRect = Rect.fromLTRB(tLeft, tTop, tRight, shelfY);
-    const topInset = 1.2;
-    final effectiveRTop = rTop.clamp(4.0, (tRight - tLeft) / 2.6);
-    final xLeftTop = tLeft + topInset;
-    final xRightTop = tRight - topInset;
-    final midX = (tLeft + tRight) / 2;
-    final apexY = tTop - 1.2;
-
-    // 1. Soft and muted left outline (traces lower fillet into shelf and slanted left boundary)
-    final leftPath = Path();
-    leftPath.moveTo(tLeft, shelfY);
-    leftPath.arcToPoint(
-      Offset(tLeft + topInset * 0.5, shelfY - rBottom),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
-    leftPath.quadraticBezierTo(
-      xLeftTop - 0.5,
-      (shelfY + tTop) / 2,
-      xLeftTop,
-      tTop + effectiveRTop,
-    );
-
-    final leftPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          theme.tabBorderSide.withValues(alpha: 0.12 * opacity),
-          theme.shelfLine.withValues(alpha: 0.05 * opacity),
-        ],
-      ).createShader(unselRect)
-      ..strokeWidth = 0.95
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(leftPath, leftPaint);
-
-    // 2. Gently curved top crown outline (rounded corners and apex crowning)
-    final topPath = Path();
-    topPath.moveTo(xLeftTop, tTop + effectiveRTop);
-    topPath.arcToPoint(
-      Offset(xLeftTop + effectiveRTop, tTop),
-      radius: Radius.circular(effectiveRTop),
-      clockwise: true,
-    );
-    topPath.quadraticBezierTo(
-      midX,
-      apexY,
-      xRightTop - effectiveRTop,
-      tTop,
-    );
-    topPath.arcToPoint(
-      Offset(xRightTop, tTop + effectiveRTop),
-      radius: Radius.circular(effectiveRTop),
-      clockwise: true,
-    );
-
-    final topPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          theme.tabBorderApex.withValues(alpha: 0.18 * opacity),
-          theme.tabBorderApex.withValues(alpha: 0.32 * opacity),
-          theme.tabBorderApex.withValues(alpha: 0.38 * opacity),
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(unselRect)
-      ..strokeWidth = 1.05
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(topPath, topPaint);
-
-    // 3. Brighter and sharper right outline (traces slanted right boundary and lower fillet into shelf)
-    final rightPath = Path();
-    rightPath.moveTo(xRightTop, tTop + effectiveRTop);
-    rightPath.quadraticBezierTo(
-      xRightTop + 0.5,
-      (shelfY + tTop) / 2,
-      tRight - topInset * 0.5,
-      shelfY - rBottom,
-    );
-    rightPath.arcToPoint(
-      Offset(tRight, shelfY),
-      radius: Radius.circular(rBottom),
-      clockwise: false,
-    );
-
-    final rightPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          theme.tabBorderApex.withValues(alpha: 0.38 * opacity),
-          theme.tabBorderSide.withValues(alpha: 0.24 * opacity),
-          theme.shelfLine.withValues(alpha: 0.08 * opacity),
-        ],
-        stops: const [0.0, 0.55, 1.0],
-      ).createShader(unselRect)
-      ..strokeWidth = 1.15
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(rightPath, rightPaint);
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     final startX = (left - rBottom).clamp(0.0, totalWidth);
@@ -607,15 +490,7 @@ class _OrganicModeBarPainter extends CustomPainter {
     upperBgPath.close();
 
     final upperBgPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          theme.navBgTop,
-          theme.upperBackgroundColor,
-        ],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, totalWidth, shelfY))
+      ..color = theme.upperBackgroundColor
       ..style = PaintingStyle.fill;
     canvas.drawPath(upperBgPath, upperBgPaint);
 
@@ -665,52 +540,12 @@ class _OrganicModeBarPainter extends CustomPainter {
     lowerBgPath.lineTo(0, size.height);
     lowerBgPath.close();
 
-    final lowerBounds = Rect.fromLTWH(0, top, totalWidth, size.height - top);
     final lowerBgPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          theme.tabFillTop,
-          theme.tabFillMiddle,
-          theme.lowerBackgroundColor,
-          theme.lowerBackgroundColor,
-        ],
-        stops: const [0.0, 0.32, 0.70, 1.0],
-      ).createShader(lowerBounds)
+      ..color = theme.lowerBackgroundColor
       ..style = PaintingStyle.fill;
     canvas.drawPath(lowerBgPath, lowerBgPaint);
 
-    // 3. Render each unselected tab as a custom-shaped curved panel
-    final unselTop = top + 4.5;
-    const rUnselTop = 10.5;
-    const rUnselBottom = 6.0;
-    final activeCenter = (left + right) / 2;
-
-    for (int i = 0; i < kAppModes.length; i++) {
-      final tLeft = sidePad + i * (tabWidth + tabGap);
-      final tRight = tLeft + tabWidth;
-      final tCenter = tLeft + tabWidth / 2;
-      final dist = (tCenter - activeCenter).abs() / tabWidth;
-
-      // When dist >= 0.8 it is completely unselected (opacity = 1.0)
-      // When dist < 0.4 it is under the sliding active tab (opacity = 0.0)
-      final opacity = ((dist - 0.4) / 0.4).clamp(0.0, 1.0);
-
-      _drawUnselectedTab(
-        canvas,
-        tLeft: tLeft,
-        tRight: tRight,
-        tTop: unselTop,
-        shelfY: shelfY,
-        rTop: rUnselTop,
-        rBottom: rUnselBottom,
-        opacity: opacity,
-      );
-    }
-
-
-    // 5. Ambient top crest halo glow on selected tab
+    // 3. Ambient top crest halo glow on selected tab
     final glowRect = Rect.fromLTRB(left + 2, top - 2, right - 2, top + 16);
     final glowPath = Path()
       ..addRRect(RRect.fromRectAndRadius(glowRect, Radius.circular(effectiveRTop)));
@@ -719,64 +554,29 @@ class _OrganicModeBarPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawPath(glowPath, glowPaint);
 
-    // 6. Thin, subtle outline separating the upper and lower surfaces
-    // Traced continuously along shelfY and around the custom curved active tab
-    final strokePath = Path();
-    strokePath.moveTo(0, shelfY);
-    strokePath.lineTo(startX, shelfY);
-
-    if (left > startX) {
-      strokePath.arcToPoint(
-        Offset(left, shelfY - rBottom),
-        radius: Radius.circular(rBottom),
-        clockwise: false,
-      );
-    } else {
-      strokePath.lineTo(left, shelfY - rBottom);
-    }
-
-    strokePath.lineTo(left, top + effectiveRTop);
-    strokePath.arcToPoint(
+    // 4. Delicate top arch outline on the selected tab (no horizontal dividing line)
+    final tabOutlinePath = Path();
+    tabOutlinePath.moveTo(left, shelfY - rBottom);
+    tabOutlinePath.lineTo(left, top + effectiveRTop);
+    tabOutlinePath.arcToPoint(
       Offset(left + effectiveRTop, top),
       radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-    strokePath.lineTo(right - effectiveRTop, top);
-    strokePath.arcToPoint(
+    tabOutlinePath.lineTo(right - effectiveRTop, top);
+    tabOutlinePath.arcToPoint(
       Offset(right, top + effectiveRTop),
       radius: Radius.circular(effectiveRTop),
       clockwise: true,
     );
-    strokePath.lineTo(right, shelfY - rBottom);
+    tabOutlinePath.lineTo(right, shelfY - rBottom);
 
-    if (endX > right) {
-      strokePath.arcToPoint(
-        Offset(endX, shelfY),
-        radius: Radius.circular(rBottom),
-        clockwise: false,
-      );
-    } else {
-      strokePath.lineTo(right, shelfY);
-    }
-
-    strokePath.lineTo(totalWidth, shelfY);
-
-    final strokeBounds = Rect.fromLTRB(0, top, totalWidth, shelfY + 2);
-    final strokePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          theme.tabBorderApex,
-          theme.tabBorderSide,
-          theme.shelfLine,
-        ],
-        stops: const [0.0, 0.45, 0.95],
-      ).createShader(strokeBounds)
-      ..strokeWidth = 1.2
+    final tabOutlinePaint = Paint()
+      ..color = theme.tabBorderApex.withValues(alpha: 0.35)
+      ..strokeWidth = 1.15
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    canvas.drawPath(strokePath, strokePaint);
+    canvas.drawPath(tabOutlinePath, tabOutlinePaint);
   }
 
   @override

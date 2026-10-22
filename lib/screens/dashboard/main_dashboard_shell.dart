@@ -148,58 +148,68 @@ class _MainDashboardShellState extends State<MainDashboardShell>
 
 
           // ── Shell Content ───────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // ── Persistent Top Header ─────────────────────────────────────
-                MainTopHeader(accentColor: activeColor),
-                const SizedBox(height: 10),
-                // ── Persistent Organic Flared Tab Bar ────────────────────────
-                TopModeSelector(
-                  controller: _tabController,
-                  theme: activeTheme,
-                  backgroundColor: Colors.transparent,
-                  canvasColor: Colors.transparent,
-                  onModeChanged: (mode) {
-                    final idx = kAppModes.indexWhere((m) => m.mode == mode);
-                    if (idx >= 0 && idx != (_pageController.page?.round() ?? -1)) {
-                      _goToPage(idx);
-                    }
-                  },
-                ),
-                // ── Smooth animated PageView of the 5 dashboards ────────────
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const BouncingScrollPhysics(),
-                    onPageChanged: (index) {
-                      if (_tabController.index != index) {
-                        _isManualSwitch = true;
-                        _tabController.animateTo(
-                          index,
-                          duration: const Duration(milliseconds: 550),
-                          curve: Curves.easeInOutCubic,
-                        );
-                        AppModeController.instance.setMode(kAppModes[index].mode);
-                        Future.delayed(const Duration(milliseconds: 580), () {
-                          if (mounted) {
-                            _isManualSwitch = false;
+          Column(
+            children: [
+              // ── Unified Top Masthead (Header + 5-Mode Navigation) ─────────────────
+              // Top bar and unselected mode buttons share the exact same surface color.
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                color: activeTheme.upperBackgroundColor,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MainTopHeader(accentColor: activeColor),
+                      TopModeSelector(
+                        controller: _tabController,
+                        theme: activeTheme,
+                        backgroundColor: Colors.transparent,
+                        canvasColor: Colors.transparent,
+                        onModeChanged: (mode) {
+                          final idx = kAppModes.indexWhere((m) => m.mode == mode);
+                          if (idx >= 0 && idx != (_pageController.page?.round() ?? -1)) {
+                            _goToPage(idx);
                           }
-                        });
-                      }
-                    },
-                    children: const [
-                      FoodHomeScreen(isEmbedded: true),
-                      TakeawayDashboardScreen(isEmbedded: true),
-                      ReserveDashboardScreen(isEmbedded: true),
-                      CateringDashboardScreen(isEmbedded: true),
-                      FoodPlannerShellScreen(isEmbedded: true),
+                        },
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // ── Smooth animated PageView of the 5 dashboards ────────────
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const BouncingScrollPhysics(),
+                  onPageChanged: (index) {
+                    if (_tabController.index != index) {
+                      _isManualSwitch = true;
+                      _tabController.animateTo(
+                        index,
+                        duration: const Duration(milliseconds: 550),
+                        curve: Curves.easeInOutCubic,
+                      );
+                      AppModeController.instance.setMode(kAppModes[index].mode);
+                      Future.delayed(const Duration(milliseconds: 580), () {
+                        if (mounted) {
+                          _isManualSwitch = false;
+                        }
+                      });
+                    }
+                  },
+                  children: const [
+                    FoodHomeScreen(isEmbedded: true),
+                    TakeawayDashboardScreen(isEmbedded: true),
+                    ReserveDashboardScreen(isEmbedded: true),
+                    CateringDashboardScreen(isEmbedded: true),
+                    FoodPlannerShellScreen(isEmbedded: true),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

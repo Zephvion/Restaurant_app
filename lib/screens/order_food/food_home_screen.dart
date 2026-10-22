@@ -185,13 +185,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _sectionHeader('Explore by Category'),
               ),
-              const SizedBox(height: 14),
-              _categoryCircles(),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _menuSortRow(),
-              ),
               const SizedBox(height: 10),
             ],
           ),
@@ -199,10 +192,10 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
         SliverPersistentHeader(
           pinned: true,
           delegate: _PinnedCategoryHeaderDelegate(
-            height: 48,
+            height: 110,
             child: Container(
-              alignment: Alignment.centerLeft,
-              child: _categoryTabs(),
+              alignment: Alignment.center,
+              child: _categoryCircles(),
             ),
           ),
         ),
@@ -210,6 +203,13 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _menuSortRow(),
+              ),
+              const SizedBox(height: 10),
+              _categoryTabs(),
               const SizedBox(height: 16),
               _featuredRail(filteredDishes),
               const SizedBox(height: 26),
@@ -1017,7 +1017,7 @@ class _PinnedCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.96),
+        color: AppColors.background,
         border: overlapsContent
             ? Border(
                 bottom: BorderSide(

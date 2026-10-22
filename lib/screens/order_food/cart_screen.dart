@@ -125,7 +125,8 @@ class _CartScreenState extends State<CartScreen> {
           final takeawayRest = TakeawayController.instance.activeRestaurant;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: EdgeInsets.fromLTRB(
+                20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
             children: [
               // ── Global Cart Fulfillment Selector (Delivery vs Take Away) ──
               // Rendered ONLY in Global Cart, NEVER in inside food or takeaway carts

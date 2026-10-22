@@ -115,8 +115,6 @@ class ModeTheme {
     activeIcon: Color(0xFFFFB84D),
     dividerColor: Color(0x24A14F67),
     pageWashColors: [
-      Color(0xFF1E020B),
-      Color(0xFF1E020B),
       Color(0xFF4A001B),
       Color(0xFF4A001B),
       Color(0xFF380014),
@@ -124,7 +122,7 @@ class ModeTheme {
       Color(0xFF140007),
       Colors.transparent,
     ],
-    pageWashStops: [0.0, 0.10, 0.18, 0.32, 0.48, 0.66, 0.84, 1.0],
+    pageWashStops: [0.0, 0.15, 0.35, 0.55, 0.78, 1.0],
     pageBloomColor: Color(0xFF7A0E2B),
   );
 
@@ -153,8 +151,6 @@ class ModeTheme {
     activeIcon: Colors.white,
     dividerColor: Color(0x28E58726),
     pageWashColors: [
-      Color(0xFF1C0D02),
-      Color(0xFF1C0D02),
       Color(0xFF462004),
       Color(0xFF462004),
       Color(0xFF331703),
@@ -162,7 +158,7 @@ class ModeTheme {
       Color(0xFF140901),
       Colors.transparent,
     ],
-    pageWashStops: [0.0, 0.10, 0.18, 0.32, 0.48, 0.66, 0.84, 1.0],
+    pageWashStops: [0.0, 0.15, 0.35, 0.55, 0.78, 1.0],
     pageBloomColor: Color(0xFFFF9500),
   );
 
@@ -191,8 +187,6 @@ class ModeTheme {
     activeIcon: Colors.white,
     dividerColor: Color(0x24D6A522),
     pageWashColors: [
-      Color(0xFF171201),
-      Color(0xFF171201),
       Color(0xFF3D2E04),
       Color(0xFF3D2E04),
       Color(0xFF2C2103),
@@ -200,7 +194,7 @@ class ModeTheme {
       Color(0xFF100C01),
       Colors.transparent,
     ],
-    pageWashStops: [0.0, 0.10, 0.18, 0.32, 0.48, 0.66, 0.84, 1.0],
+    pageWashStops: [0.0, 0.15, 0.35, 0.55, 0.78, 1.0],
     pageBloomColor: Color(0xFFFFC107),
   );
 
@@ -229,8 +223,6 @@ class ModeTheme {
     activeIcon: Colors.white,
     dividerColor: Color(0x2410B981),
     pageWashColors: [
-      Color(0xFF02160F),
-      Color(0xFF02160F),
       Color(0xFF063B29),
       Color(0xFF063B29),
       Color(0xFF04291D),
@@ -238,7 +230,7 @@ class ModeTheme {
       Color(0xFF02100B),
       Colors.transparent,
     ],
-    pageWashStops: [0.0, 0.10, 0.18, 0.32, 0.48, 0.66, 0.84, 1.0],
+    pageWashStops: [0.0, 0.15, 0.35, 0.55, 0.78, 1.0],
     pageBloomColor: Color(0xFF10B981),
   );
 
@@ -267,8 +259,6 @@ class ModeTheme {
     activeIcon: Colors.white,
     dividerColor: Color(0x24A855F7),
     pageWashColors: [
-      Color(0xFF140320),
-      Color(0xFF140320),
       Color(0xFF380C56),
       Color(0xFF380C56),
       Color(0xFF28093E),
@@ -276,7 +266,7 @@ class ModeTheme {
       Color(0xFF100319),
       Colors.transparent,
     ],
-    pageWashStops: [0.0, 0.10, 0.18, 0.32, 0.48, 0.66, 0.84, 1.0],
+    pageWashStops: [0.0, 0.15, 0.35, 0.55, 0.78, 1.0],
     pageBloomColor: Color(0xFFA855F7),
   );
 

@@ -77,7 +77,7 @@ class _OrderFoodIntroScreenState extends State<OrderFoodIntroScreen>
             Positioned(
               left: 28,
               right: 28,
-              bottom: 60,
+              bottom: 60 + MediaQuery.paddingOf(context).bottom,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

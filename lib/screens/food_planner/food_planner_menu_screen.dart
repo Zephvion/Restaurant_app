@@ -661,7 +661,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                     Positioned(
                       left: 20,
                       right: 20,
-                      bottom: 24,
+                      bottom: 24 + MediaQuery.paddingOf(context).bottom,
                       child: _floatingCartBar(context, ctrl),
                     ),
                 ],

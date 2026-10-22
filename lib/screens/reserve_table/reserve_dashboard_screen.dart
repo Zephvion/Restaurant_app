@@ -153,7 +153,8 @@ class _ReservationList extends StatelessWidget {
         : 'Valued Guest';
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      padding: EdgeInsets.fromLTRB(
+          20, 20, 20, 32 + MediaQuery.paddingOf(context).bottom),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

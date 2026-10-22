@@ -78,7 +78,7 @@ class _ReserveTableIntroScreenState extends State<ReserveTableIntroScreen>
             Positioned(
               left: 28,
               right: 28,
-              bottom: 60,
+              bottom: 60 + MediaQuery.paddingOf(context).bottom,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

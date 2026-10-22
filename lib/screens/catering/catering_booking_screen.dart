@@ -122,7 +122,8 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
       body: Stack(
         children: [
           ListView(
-            padding: const EdgeInsets.only(bottom: 100),
+            padding: EdgeInsets.only(
+                bottom: 100 + MediaQuery.paddingOf(context).bottom),
             children: [
               // ── Hero Image ─────────────────────────────────────────────
               SizedBox(
@@ -389,7 +390,7 @@ class _CateringBookingScreenState extends State<CateringBookingScreen> {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 20,
+            bottom: 20 + MediaQuery.paddingOf(context).bottom,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _canProceed
