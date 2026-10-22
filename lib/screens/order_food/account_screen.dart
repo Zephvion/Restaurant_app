@@ -5,6 +5,7 @@ import '../../models/address.dart';
 import '../../models/user_profile.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/code_push_service.dart';
 import '../../state/catering_controller.dart';
 import '../../state/reservation_controller.dart';
 import '../../theme/app_colors.dart';
@@ -198,6 +199,28 @@ class AccountScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+
+                // ── App Updates & Version ─────────────────────────────────────
+                _AccountLink(
+                  icon: Icons.system_update_alt_outlined,
+                  title: 'Check for Updates',
+                  onTap: () async {
+                    AppBanner.showInfo(
+                      context,
+                      'Checking for latest over-the-air updates...',
+                      title: 'Shorebird Code Push',
+                    );
+                    final message =
+                        await CodePushService.instance.checkForUpdatesExplicitly();
+                    if (context.mounted) {
+                      AppBanner.showInfo(
+                        context,
+                        message,
+                        title: 'App Updates',
+                      );
+                    }
+                  },
                 ),
 
                 // ── Logout ───────────────────────────────────────────────────

@@ -26,6 +26,7 @@ dependencies:
   geolocator: ^13.0.2
   google_sign_in: ^6.2.2
   firebase_messaging: ^15.2.10
+  shorebird_code_push: ^2.0.7
 
 dev_dependencies:
   flutter_test:
@@ -41,3 +42,4 @@ flutter:
     - assets/images/foodplanner/extracted/
     - assets/images/order/extracted/
     - assets/icons/modes/
+    - shorebird.yaml

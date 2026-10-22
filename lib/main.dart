@@ -55,6 +55,7 @@ import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
 import 'services/auth_service.dart';
+import 'services/code_push_service.dart';
 import 'services/firebase_initializer.dart';
 import 'services/menu_service.dart';
 import 'services/notification_service.dart';
@@ -108,6 +109,7 @@ Future<void> main() async {
       await MenuService.instance.init();
       await OrderService.instance.init();
       await NotificationService.instance.init();
+      await CodePushService.instance.checkForUpdatesInBackground();
     } catch (e) {
       debugPrint('Background service init note: $e');
     }
