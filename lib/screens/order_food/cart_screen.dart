@@ -88,6 +88,7 @@ class _CartScreenState extends State<CartScreen> {
             onPressed: () {
               Navigator.of(ctx).pop();
               CartController.instance.clear();
+              TakeawayController.instance.clearCart();
               AppBanner.showInfo(context, 'Cart has been cleared');
             },
             child: const Text('YES, CLEAR', style: TextStyle(color: Colors.white)),

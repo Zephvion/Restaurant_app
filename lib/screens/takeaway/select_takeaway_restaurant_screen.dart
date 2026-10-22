@@ -348,8 +348,10 @@ class _SelectTakeawayRestaurantScreenState
                         onTap: () => setState(() {
                           if (_selectedRestaurant?.id == r.id) {
                             _selectedRestaurant = null;
+                            TakeawayController.instance.deselectRestaurant();
                           } else {
                             _selectedRestaurant = r;
+                            TakeawayController.instance.selectRestaurant(r);
                           }
                         }),
                       );

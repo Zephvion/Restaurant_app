@@ -51,19 +51,32 @@ class TakeawayService {
     return order;
   }
 
+  /// Registers an order placed outside this service (e.g. from global cart checkout)
+  void registerOrder(TakeawayOrder order) {
+    final idx = _localTakeaways.indexWhere((o) => o.id == order.id);
+    if (idx == -1) {
+      _localTakeaways.insert(0, order);
+    } else {
+      _localTakeaways[idx] = order;
+    }
+  }
+
   Future<TakeawayOrder?> cancelTakeawayOrder(
     String orderId, {
     required String reason,
   }) async {
-    final idx = _localTakeaways.indexWhere((o) => o.id == orderId);
-    if (idx == -1) return null;
+    final now = DateTime.now();
+    TakeawayOrder? updated;
 
-    final updated = _localTakeaways[idx].copyWith(
-      status: TakeawayStatus.cancelled,
-      cancellationReason: reason,
-      cancelledAt: DateTime.now(),
-    );
-    _localTakeaways[idx] = updated;
+    final idx = _localTakeaways.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      updated = _localTakeaways[idx].copyWith(
+        status: TakeawayStatus.cancelled,
+        cancellationReason: reason,
+        cancelledAt: now,
+      );
+      _localTakeaways[idx] = updated;
+    }
 
     if (FirebaseInitializer.isFirebaseReady) {
       try {
@@ -73,7 +86,7 @@ class TakeawayService {
             .update({
               'status': TakeawayStatus.cancelled.name,
               'cancellationReason': reason,
-              'cancelledAt': DateTime.now().toIso8601String(),
+              'cancelledAt': now.toIso8601String(),
             })
             .timeout(const Duration(seconds: 2));
       } catch (e) {

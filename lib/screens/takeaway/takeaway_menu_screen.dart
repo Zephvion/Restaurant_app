@@ -213,7 +213,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                   Positioned(
                     left: 16,
                     right: 16,
-                    bottom: 24,
+                    bottom: MediaQuery.of(context).padding.bottom + 16,
                     child: _TakeawayBasketBar(
                       itemCount: _ctrl.totalQuantity,
                       onNext: _onNext,
@@ -1467,67 +1467,71 @@ class _TakeawayBasketBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E2127),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.shopping_cart_outlined,
-              color: AppColors.textPrimary, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added',
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+        onTap: isSubmitting ? null : onNext,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E2127),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-            ),
+            ],
           ),
-          GestureDetector(
-            onTap: isSubmitting ? null : onNext,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
+          child: Row(
+            children: [
+              const Icon(Icons.shopping_cart_outlined,
+                  color: AppColors.textPrimary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '$itemCount ${itemCount == 1 ? 'Item' : 'Items'} added',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+                        ),
+                      )
+                    : const Text(
+                        'NEXT',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                    )
-                  : const Text(
-                      'NEXT',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

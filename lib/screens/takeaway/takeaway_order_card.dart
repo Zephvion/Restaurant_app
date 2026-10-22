@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/takeaway_order.dart';
 import '../../state/takeaway_controller.dart';
@@ -137,14 +138,19 @@ class TakeawayOrderCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Paid via ${order.paymentMethod}',
-                  style: const TextStyle(
-                    color: Color(0xFF9A9AA5),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    'Paid via ${order.paymentMethod}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF9A9AA5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '₹${order.grandTotal.toStringAsFixed(2)}',
                   style: const TextStyle(
@@ -259,34 +265,55 @@ class TakeawayOrderCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'ORDER ID : ${order.id}',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+              Expanded(
+                child: Text(
+                  'ORDER ID : ${order.id}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  AppBanner.show(
-                    context,
-                    message: 'Calling ${order.restaurant.name}...',
-                  );
+              const SizedBox(width: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () async {
+                  const phone = '+919876543210';
+                  final uri = Uri(scheme: 'tel', path: phone);
+                  try {
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                      return;
+                    }
+                  } catch (_) {}
+                  if (context.mounted) {
+                    AppBanner.show(
+                      context,
+                      message: 'Calling ${order.restaurant.name} ($phone)...',
+                    );
+                  }
                 },
-                child: const Row(
-                  children: [
-                    Text(
-                      'Call restaurant',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Call restaurant',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 6),
-                    Icon(Icons.phone, color: AppColors.accentRed, size: 16),
-                  ],
+                      SizedBox(width: 6),
+                      Icon(Icons.phone, color: AppColors.accentRed, size: 16),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -298,6 +325,7 @@ class TakeawayOrderCard extends StatelessWidget {
           if (order.canBeCancelled)
             SizedBox(
               width: double.infinity,
+              height: 44,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined, size: 16),
                 label: const Text(
@@ -309,6 +337,7 @@ class TakeawayOrderCard extends StatelessWidget {
                   side: BorderSide(
                     color: AppColors.accentRed.withValues(alpha: 0.5),
                   ),
+                  minimumSize: const Size.fromHeight(44),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -341,6 +370,7 @@ class TakeawayOrderCard extends StatelessWidget {
           else if (isCancelled)
             SizedBox(
               width: double.infinity,
+              height: 44,
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.refresh, size: 16),
                 label: const Text(
@@ -350,6 +380,7 @@ class TakeawayOrderCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.surfaceLight,
                   foregroundColor: AppColors.textPrimary,
+                  minimumSize: const Size.fromHeight(44),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

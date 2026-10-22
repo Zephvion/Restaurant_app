@@ -7,8 +7,10 @@ import '../models/takeaway_order.dart';
 import '../services/auth_service.dart';
 import '../services/gps_detection_service.dart';
 import '../services/location_service.dart';
+import '../services/order_service.dart';
 import '../services/session_manager.dart';
 import '../services/takeaway_service.dart';
+import 'cart_controller.dart';
 
 /// Singleton [ChangeNotifier] for managing the Take Away flow:
 /// - Selecting a branch
@@ -177,6 +179,7 @@ class TakeawayController extends ChangeNotifier {
   /// Adds an externally created takeaway order (e.g. from global cart checkout)
   void addDirectOrder(TakeawayOrder order) {
     _orders.insert(0, order);
+    TakeawayService.instance.registerOrder(order);
     notifyListeners();
   }
 
@@ -184,17 +187,39 @@ class TakeawayController extends ChangeNotifier {
     String orderId, {
     required String reason,
   }) async {
-    final updated = await TakeawayService.instance.cancelTakeawayOrder(
-      orderId,
-      reason: reason,
-    );
-    if (updated != null) {
-      final idx = _orders.indexWhere((o) => o.id == orderId);
-      if (idx != -1) {
-        _orders[idx] = updated;
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    final now = DateTime.now();
+
+    TakeawayOrder? updated;
+    if (idx != -1) {
+      updated = _orders[idx].copyWith(
+        status: TakeawayStatus.cancelled,
+        cancellationReason: reason,
+        cancelledAt: now,
+      );
+      _orders[idx] = updated;
+      notifyListeners();
+    }
+
+    // Sync in background to TakeawayService
+    try {
+      final serviceResult = await TakeawayService.instance.cancelTakeawayOrder(
+        orderId,
+        reason: reason,
+      );
+      if (serviceResult != null && updated == null) {
+        updated = serviceResult;
         notifyListeners();
       }
+    } catch (e) {
+      debugPrint('Error syncing cancellation with TakeawayService: $e');
     }
+
+    // Also sync cancellation with OrderService if order was created from global cart
+    try {
+      await OrderService.instance.cancelOrder(orderId, reason: reason);
+    } catch (_) {}
+
     return updated;
   }
 
@@ -206,6 +231,7 @@ class TakeawayController extends ChangeNotifier {
       } else {
         _cart[item.dish.id] = CartItem(dish: item.dish, quantity: item.quantity);
       }
+      CartController.instance.add(item.dish, qty: item.quantity);
     }
     notifyListeners();
   }

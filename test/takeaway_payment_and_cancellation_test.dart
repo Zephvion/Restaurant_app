@@ -1,11 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restaurant_app/data/mock_data.dart';
 import 'package:restaurant_app/models/address.dart';
 import 'package:restaurant_app/models/cart_item.dart';
 import 'package:restaurant_app/models/order_model.dart';
 import 'package:restaurant_app/models/takeaway_order.dart';
+import 'package:restaurant_app/screens/takeaway/takeaway_order_card.dart';
 import 'package:restaurant_app/state/food_planner_controller.dart';
 import 'package:restaurant_app/state/takeaway_controller.dart';
+import 'package:restaurant_app/widgets/order_cancellation_sheet.dart';
 
 void main() {
   group('Takeaway Order Cancellation and Payment Details', () {
@@ -92,6 +95,76 @@ void main() {
       expect(ctrl.totalQuantity, equals(2));
       expect(ctrl.cartItems.any((i) => i.dish.id == MockData.plainDosa.id), isTrue);
       expect(ctrl.cartItems.any((i) => i.dish.id == MockData.meals.id), isTrue);
+      ctrl.clearCart();
+    });
+
+    testWidgets('TakeawayOrderCard Cancel button opens sheet, cancels order, and flips to Reorder Items', (tester) async {
+      tester.view.physicalSize = const Size(412, 915);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final ctrl = TakeawayController.instance;
+      ctrl.clearCart();
+
+      final testOrder = TakeawayOrder(
+        id: 'TKO-UI-CANCEL-1',
+        restaurant: MockData.restaurants.first,
+        items: [
+          CartItem(dish: MockData.plainDosa, quantity: 2),
+        ],
+        status: TakeawayStatus.preparing,
+        paymentMethod: 'UPI - Google Pay',
+      );
+      ctrl.addDirectOrder(testOrder);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AnimatedBuilder(
+              animation: ctrl,
+              builder: (context, _) {
+                final currentOrder = ctrl.orders.firstWhere((o) => o.id == 'TKO-UI-CANCEL-1');
+                return TakeawayOrderCard(order: currentOrder);
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Cancel Order button is rendered
+      final cancelBtn = find.text('Cancel Order (Free Refund)');
+      expect(cancelBtn, findsOneWidget);
+
+      // Tap Cancel Order button
+      await tester.tap(cancelBtn);
+      await tester.pumpAndSettle();
+
+      // Cancellation sheet should be open
+      expect(find.byType(OrderCancellationSheet), findsOneWidget);
+      expect(find.text('Confirm Cancel'), findsOneWidget);
+
+      // Tap Confirm Cancel
+      await tester.tap(find.text('Confirm Cancel'));
+      await tester.pumpAndSettle();
+
+      // Cancellation sheet should be closed
+      expect(find.byType(OrderCancellationSheet), findsNothing);
+
+      // Card should now display cancelled state
+      expect(find.textContaining('Order Cancelled'), findsWidgets);
+      expect(find.textContaining('Reason: Placed order by mistake'), findsOneWidget);
+
+      // Reorder Items button is now visible
+      final reorderBtn = find.text('Reorder Items');
+      expect(reorderBtn, findsOneWidget);
+
+      // Tap Reorder Items
+      await tester.tap(reorderBtn);
+      await tester.pumpAndSettle();
+
+      // Cart now has reordered items
+      expect(ctrl.totalQuantity, equals(2));
       ctrl.clearCart();
     });
   });
