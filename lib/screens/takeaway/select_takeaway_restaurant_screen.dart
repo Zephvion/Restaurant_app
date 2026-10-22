@@ -369,6 +369,9 @@ class _SelectTakeawayRestaurantScreenState
                 label: _selectedRestaurant != null
                     ? 'Confirm ${_selectedRestaurant!.name} & View Menu'
                     : 'Select an Outlet to Continue',
+                icon: _selectedRestaurant != null
+                    ? Icons.restaurant_menu_rounded
+                    : Icons.storefront_outlined,
                 backgroundColor: _selectedRestaurant != null
                     ? const Color(0xFFFF9500)
                     : AppColors.surfaceLight,

@@ -484,7 +484,9 @@ class _NearbyStoreCard extends StatelessWidget {
           PrimaryButton(
             label: hasSelection
                 ? 'Order Takeaway from this Outlet'
-                : 'Order from Nearest (${restaurant.name})',
+                : 'Order from Nearest Restaurant',
+            icon: hasSelection ? Icons.shopping_bag_rounded : Icons.storefront_rounded,
+            uppercase: false,
             backgroundColor: const Color(0xFFFF9500),
             foregroundColor: Colors.black,
             onPressed: onOrderNow,
