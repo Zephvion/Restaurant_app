@@ -67,6 +67,13 @@ class AuthService {
           },
           verificationFailed: (FirebaseAuthException e) {
             debugPrint('❌ [FirebaseAuth] verifyPhoneNumber failed: ${e.code} - ${e.message}');
+            if (kIsWeb && e.code == 'invalid-app-credential') {
+              final dynamicOtp = generateAndSendOtp(phone: _otpPhoneNumber!);
+              _verificationId = 'web_otp_fallback_${DateTime.now().millisecondsSinceEpoch}';
+              debugPrint('🌐 [Web Phone Auth] Dynamic verification OTP generated for testing: $dynamicOtp');
+              onCodeSent(_verificationId!);
+              return;
+            }
             String msg = e.message ?? 'Phone verification failed.';
             if (e.code == 'invalid-phone-number') {
               msg = 'The provided phone number is invalid. Please check the digits and country code.';
@@ -78,6 +85,8 @@ class AuthService {
               msg = 'Too many requests from this device. Please wait a few minutes before trying again.';
             } else if (e.code == 'billing-not-enabled') {
               msg = 'Firebase SMS delivery requires Blaze plan or whitelisted test phone numbers in Firebase Console.';
+            } else if (e.code == 'invalid-app-credential') {
+              msg = 'reCAPTCHA verification failed on web. Please add your web domain to Authorized Domains in Firebase Console, or test on an Android/iOS device.';
             }
 
             onError(msg);

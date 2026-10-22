@@ -1406,100 +1406,73 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => showWriteCalorieTargetSheet(context),
-                  borderRadius: BorderRadius.circular(12),
+          // ── Row 1: Primary Calorie Numbers with Flame Icon (Full Width - Never Hidden) ──
+          InkWell(
+            onTap: () => showWriteCalorieTargetSheet(context),
+            borderRadius: BorderRadius.circular(10),
+            child: Row(
+              children: [
+                const Icon(Icons.local_fire_department,
+                    color: AppColors.accentRed, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_fire_department,
-                          color: AppColors.accentRed, size: 24),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    '$plannedKcal / $targetKcal kcal',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.edit_outlined,
-                                  size: 14,
-                                  color: Color(0xFFA855F7),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              remainingKcal > 0
-                                  ? '$remainingKcal kcal remaining'
-                                  : 'Daily goal achieved! 🎉',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                              ),
-                            ),
-                            if (FoodPlannerController.instance.userBmiStats != null) ...[
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF22C55E),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      'BMI: ${FoodPlannerController.instance.userBmiStats!['bmi']} • ${FoodPlannerController.instance.userBmiStats!['bmiCategory']}',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFF22C55E),
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
+                      Flexible(
+                        child: Text(
+                          '$plannedKcal / $targetKcal kcal',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            letterSpacing: -0.2,
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: Color(0xFFA855F7),
                       ),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // ── Row 2: Remaining Calories on Left, BMI & Macros Action Pills on Right ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  remainingKcal > 0
+                      ? '$remainingKcal kcal remaining'
+                      : 'Daily goal achieved! 🎉',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
               ),
               const SizedBox(width: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                alignment: WrapAlignment.end,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   GestureDetector(
                     onTap: onOpenCalculator,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFA855F7).withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: const Color(0xFFA855F7).withValues(alpha: 0.4),
                         ),
@@ -1508,13 +1481,13 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.calculate_outlined,
-                              size: 13, color: Color(0xFFA855F7)),
+                              size: 12, color: Color(0xFFA855F7)),
                           SizedBox(width: 3),
                           Text(
                             'BMI',
                             style: TextStyle(
                               color: Color(0xFFA855F7),
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -1522,14 +1495,15 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 5),
                   GestureDetector(
                     onTap: onViewDetails,
                     child: Container(
                       padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: AppColors.copper.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1538,13 +1512,13 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
                             'Macros',
                             style: TextStyle(
                               color: AppColors.copper,
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          SizedBox(width: 3),
+                          SizedBox(width: 2),
                           Icon(Icons.arrow_forward_ios,
-                              color: AppColors.copper, size: 8),
+                              color: AppColors.copper, size: 7.5),
                         ],
                       ),
                     ),
@@ -1553,6 +1527,34 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
               ),
             ],
           ),
+
+          if (FoodPlannerController.instance.userBmiStats != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    'BMI: ${FoodPlannerController.instance.userBmiStats!['bmi']} • ${FoodPlannerController.instance.userBmiStats!['bmiCategory']}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF22C55E),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),

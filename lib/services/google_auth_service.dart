@@ -38,9 +38,10 @@ class GoogleAuthService extends ChangeNotifier {
   static const String _webClientId =
       '854555269860-h745rnb425f905rksiet7q94plt432ue.apps.googleusercontent.com';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: _webClientId,
+    clientId: kIsWeb ? _webClientId : null,
+    serverClientId: kIsWeb ? null : _webClientId,
   );
 
   GoogleUserProfile? _currentUser;
