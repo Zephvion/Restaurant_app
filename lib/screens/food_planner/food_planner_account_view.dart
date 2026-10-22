@@ -33,7 +33,11 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
           },
         ),
       ),
-      body: ListView(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
         children: [
           // ── Profile Header ──────────────────────────────────────────
@@ -70,12 +74,15 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              displayName,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
+                            Flexible(
+                              child: Text(
+                                displayName,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -102,10 +109,13 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                phone,
-                                style: const TextStyle(
-                                    color: AppColors.textSecondary, fontSize: 13),
+                              Flexible(
+                                child: Text(
+                                  phone,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary, fontSize: 13),
+                                ),
                               ),
                               const SizedBox(width: 6),
                               const Icon(Icons.edit_outlined,
@@ -119,10 +129,13 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                email,
-                                style: const TextStyle(
-                                    color: AppColors.textSecondary, fontSize: 13),
+                              Flexible(
+                                child: Text(
+                                  email,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary, fontSize: 13),
+                                ),
                               ),
                               const SizedBox(width: 6),
                               const Icon(Icons.edit_outlined,
@@ -180,6 +193,8 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
           ),
         ],
       ),
+        ),
+      ),
     );
   }
 
@@ -224,19 +239,23 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
           Row(
             children: [
               const Icon(Icons.tune, color: AppColors.textSecondary, size: 20),
-              const SizedBox(width: 10),
-              const Text(
-                'Nutrition & Calorie Goals',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Nutrition & Calorie Goals',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => ctrl.setActiveTab(2),
                 child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Recalculate',
@@ -255,10 +274,28 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
             ],
           ),
           const SizedBox(height: 16),
+          if (ctrl.userBmiStats != null) ...[
+            _goalRow(
+              label: 'Your BMI Score',
+              value: '${ctrl.userBmiStats!['bmi']} kg/m²',
+              subtitle:
+                  '${ctrl.userBmiStats!['bmiCategory']} (Healthy: 18.5 – 24.9)',
+            ),
+            const SizedBox(height: 12),
+            _goalRow(
+              label: 'Healthy Weight Target',
+              value:
+                  '${ctrl.userBmiStats!['minHealthyWeight']} – ${ctrl.userBmiStats!['maxHealthyWeight']} kg',
+              subtitle: 'Current: ${ctrl.userBmiStats!['weightKg']} kg',
+            ),
+            const SizedBox(height: 12),
+          ],
           _goalRow(
             label: 'Daily Target',
             value: '${ctrl.targetKcal} kcal / day',
-            subtitle: 'Calculated baseline intake',
+            subtitle: ctrl.userBmiStats != null
+                ? 'BMR: ${ctrl.userBmiStats!['bmr']} kcal • TDEE: ${ctrl.userBmiStats!['tdee']} kcal'
+                : 'Calculated baseline intake',
           ),
           const SizedBox(height: 12),
           _goalRow(
@@ -298,20 +335,27 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      value,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -473,9 +517,16 @@ class _FoodPlannerAccountViewState extends State<FoodPlannerAccountView> {
                 children: [
                   Icon(Icons.add, color: AppColors.textSecondary, size: 18),
                   SizedBox(width: 8),
-                  Text("Plan next week's menu",
+                  Flexible(
+                    child: Text(
+                      "Plan next week's menu",
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13)),
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -21,6 +21,18 @@ class FoodPlannerShellScreen extends StatelessWidget {
       builder: (context, _) {
         final ctrl = FoodPlannerController.instance;
 
+        // If user is opening food planner for the first time without having completed
+        // their personal stats assessment, direct them through the BMI setup first.
+        if (!ctrl.hasCompletedBmiSetup) {
+          return FoodPlannerCalculatorScreen(
+            isFirstTimeOnboarding: true,
+            isEmbedded: isEmbedded,
+            onSetupComplete: () {
+              ctrl.setActiveTab(0);
+            },
+          );
+        }
+
         return Scaffold(
           backgroundColor:
               isEmbedded ? Colors.transparent : AppColors.background,

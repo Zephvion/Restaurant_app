@@ -22,6 +22,8 @@ class SessionManager {
   static const String _keyCustomLocation = 'custom_location_area';
   static const String _keyCachedMealPlans = 'cached_meal_plans_json';
   static const String _keyIsAccountActive = 'is_account_active';
+  static const String _keyHasCompletedBmiSetup = 'has_completed_bmi_setup';
+  static const String _keyUserBmiStats = 'user_bmi_stats_json';
 
   SharedPreferences? _prefs;
 
@@ -175,6 +177,32 @@ class SessionManager {
       return list.map((item) => Map<String, dynamic>.from(item as Map)).toList();
     } catch (e) {
       debugPrint('Error decoding cached meal plans: $e');
+      return null;
+    }
+  }
+
+  /// Whether the user has completed their initial BMI and stats assessment.
+  bool get hasCompletedBmiSetup =>
+      _prefs?.getBool(_keyHasCompletedBmiSetup) ?? false;
+
+  Future<void> setHasCompletedBmiSetup(bool value) async {
+    await _prefs?.setBool(_keyHasCompletedBmiSetup, value);
+  }
+
+  Future<void> saveBmiStats(Map<String, dynamic> stats) async {
+    try {
+      await _prefs?.setString(_keyUserBmiStats, jsonEncode(stats));
+    } catch (e) {
+      debugPrint('Error saving BMI stats: $e');
+    }
+  }
+
+  Map<String, dynamic>? getBmiStats() {
+    final str = _prefs?.getString(_keyUserBmiStats);
+    if (str == null || str.isEmpty) return null;
+    try {
+      return jsonDecode(str) as Map<String, dynamic>;
+    } catch (_) {
       return null;
     }
   }

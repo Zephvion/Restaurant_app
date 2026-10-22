@@ -50,16 +50,19 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                 icon: const Icon(Icons.calculate_outlined,
                     color: AppColors.textPrimary, size: 24),
                 onPressed: () {
-                  Navigator.of(context)
-                      .pushNamed(AppRoutes.foodPlannerCalculator);
+                  FoodPlannerController.instance.setActiveTab(2);
                 },
               ),
               const SizedBox(width: 8),
             ],
           ),
-          body: Stack(
-            children: [
-              ListView(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Stack(
+                children: [
+                  ListView(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 200),
                 children: [
                   // ── Date Tabs ─────────────────────────────────────────
@@ -123,12 +126,15 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
-                                    'Todays food calorie intake',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                                  const Flexible(
+                                    child: Text(
+                                      'Todays food calorie intake',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -193,7 +199,9 @@ class _FoodPlannerCalorieViewState extends State<FoodPlannerCalorieView> {
               ),
             ],
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }

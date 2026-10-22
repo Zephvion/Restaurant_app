@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../data/food_planner_assets.dart';
+import '../../models/dish.dart';
 import '../../models/meal_plan.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../services/favorites_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/smart_recommendation_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
 import '../../widgets/dashboard_tab_bar.dart';
+import '../../widgets/dish_card.dart';
 import '../../widgets/main_top_header.dart';
+import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/themed_page_background.dart';
 
 /// Tab 0: "My week" category-driven meal planner dashboard.
@@ -67,6 +72,7 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1B24),
+      constraints: const BoxConstraints(maxWidth: 430),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -353,6 +359,478 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
     }
   }
 
+  void _showQuickAddToPlanSheet(
+    BuildContext context,
+    Dish dish,
+    FoodPlannerController ctrl,
+  ) {
+    MealType selectedMeal = MealType.lunch;
+    final hour = DateTime.now().hour;
+    if (hour < 11) {
+      selectedMeal = MealType.breakfast;
+    } else if (hour < 16) {
+      selectedMeal = MealType.lunch;
+    } else if (hour < 19) {
+      selectedMeal = MealType.snacks;
+    } else {
+      selectedMeal = MealType.dinner;
+    }
+
+    int quantity = 1;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1B24),
+      constraints: const BoxConstraints(maxWidth: 430),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final totalKcal = dish.kcal * quantity;
+            final totalProtein = dish.protein * quantity;
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                20,
+                24,
+                MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: NetworkImageWithFallback(url: dish.imageUrl),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dish.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '₹${dish.price.toStringAsFixed(0)} • $totalKcal kcal • ${totalProtein}g Protein',
+                              style: const TextStyle(
+                                color: Color(0xFFA855F7),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Select Meal Slot',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: MealType.values.map((type) {
+                      final isSelected = selectedMeal == type;
+                      return ChoiceChip(
+                        label: Text(type.displayName),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFFA855F7),
+                        backgroundColor: AppColors.surface,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 12,
+                        ),
+                        onSelected: (val) {
+                          if (val) setSheetState(() => selectedMeal = type);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Servings',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: quantity > 1
+                                ? () => setSheetState(() => quantity--)
+                                : null,
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.white70),
+                          ),
+                          Text(
+                            '$quantity',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => setSheetState(() => quantity++),
+                            icon: const Icon(Icons.add_circle_outline, color: Color(0xFFA855F7)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFA855F7),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ctrl.confirmPlannedMeal(
+                          dish: dish,
+                          dayOffset: ctrl.selectedDayOffset,
+                          mealType: selectedMeal,
+                          quantity: quantity,
+                        );
+                        AppToast.showSuccess(
+                          context,
+                          'Added ${dish.name} ($quantity×) to ${selectedMeal.displayName}',
+                          title: 'Added to Meal Plan',
+                        );
+                      },
+                      child: Text(
+                        'Add to ${selectedMeal.displayName} • $totalKcal kcal',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSmartCalorieSuggestionsSection(
+    BuildContext context,
+    FoodPlannerController ctrl,
+  ) {
+    return AnimatedBuilder(
+      animation: FavoritesService.instance,
+      builder: (context, _) {
+        final planned = ctrl.getPlannedCaloriesForDay();
+        final remaining = ctrl.targetKcal - planned;
+        final suggestions = SmartRecommendationService.instance.getSuggestionsForDay(
+          targetDailyKcal: ctrl.targetKcal,
+          plannedTodayKcal: planned,
+          dayOffset: ctrl.selectedDayOffset,
+        );
+
+        if (suggestions.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 16,
+                            color: Color(0xFFA855F7),
+                          ),
+                          SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Smart Suggestions',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        remaining > 0
+                            ? '$remaining kcal left to budget • Daily rotating picks'
+                            : 'Daily goal hit! • Healthy light discoveries',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFA855F7).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFA855F7).withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Text(
+                    'Calorie-Fit',
+                    style: TextStyle(
+                      color: Color(0xFFA855F7),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 224,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                itemCount: suggestions.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                itemBuilder: (context, i) {
+                  final suggestion = suggestions[i];
+                  final dish = suggestion.dish;
+
+                  return Container(
+                    width: 172,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.7),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        FavoritesService.instance.trackViewed(dish.id);
+                        _showQuickAddToPlanSheet(context, dish, ctrl);
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              SizedBox(
+                                height: 102,
+                                width: double.infinity,
+                                child: NetworkImageWithFallback(url: dish.imageUrl),
+                              ),
+                              // Tag badge
+                              Positioned(
+                                top: 6,
+                                left: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: suggestion.tagColor.withValues(alpha: 0.92),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    suggestion.tagLabel,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Heart favorite button
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: DishFavoriteButton(
+                                  dishId: dish.id,
+                                  size: 26,
+                                  iconSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  dish.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.local_fire_department_rounded,
+                                      size: 13,
+                                      color: Color(0xFFA855F7),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        '${dish.kcal} kcal • ${dish.protein}g P',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFFA855F7),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '₹${dish.price.toInt()}',
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () {
+                                        FavoritesService.instance.trackViewed(dish.id);
+                                        _showQuickAddToPlanSheet(context, dish, ctrl);
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFA855F7),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.add_rounded,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                            SizedBox(width: 2),
+                                            Text(
+                                              'Plan',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -429,36 +907,37 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                rangeStr,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Text(
+                                  rangeStr,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => Navigator.of(context)
-                                        .pushNamed(AppRoutes.foodPlannerCalculator),
-                                    child: const Row(
-                                      children: [
-                                        Text(
-                                          'BMR Calculator',
-                                          style: TextStyle(
-                                            color: AppColors.copper,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.arrow_forward_ios,
-                                            size: 10, color: AppColors.copper),
-                                      ],
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => Navigator.of(context)
+                                    .pushNamed(AppRoutes.foodPlannerCalculator),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'BMR Calculator',
+                                      style: TextStyle(
+                                        color: AppColors.copper,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_forward_ios,
+                                        size: 10, color: AppColors.copper),
+                                  ],
+                                ),
                               ),
                             ],
                           );
@@ -478,16 +957,26 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
                         plannedKcal: ctrl.getPlannedCaloriesForDay(),
                         targetKcal: ctrl.targetKcal,
                         onViewDetails: () => ctrl.setActiveTab(1),
-                        onOpenCalculator: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.foodPlannerCalculator),
+                        onOpenCalculator: () {
+                          if (widget.isEmbedded) {
+                            ctrl.setActiveTab(2);
+                          } else {
+                            Navigator.of(context)
+                                .pushNamed(AppRoutes.foodPlannerCalculator);
+                          }
+                        },
                       ),
                       const SizedBox(height: 18),
 
                       // ── Smart Contextual Planner Reminder ────────────────
                       if (!_dismissedReminder) ...[
                         _buildContextualReminderCard(context, ctrl),
+                        const SizedBox(height: 16),
                       ],
-                      const SizedBox(height: 8),
+
+                      // ── Smart Calorie & Health-Aware Suggestions Carousel ──
+                      _buildSmartCalorieSuggestionsSection(context, ctrl),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
@@ -546,15 +1035,23 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
               ],
             );
 
+        final centeredContent = Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: listContent,
+          ),
+        );
+
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: ThemedPageBackground(
             accentColor: const Color(0xFFA855F7),
             child: widget.isEmbedded
-                ? listContent
+                ? centeredContent
                 : SafeArea(
                     bottom: false,
-                    child: listContent,
+                    child: centeredContent,
                   ),
           ),
         );
@@ -911,63 +1408,146 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    const Icon(Icons.local_fire_department,
-                        color: AppColors.accentRed, size: 24),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$plannedKcal / $targetKcal kcal',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 17,
+                child: InkWell(
+                  onTap: () => showWriteCalorieTargetSheet(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_fire_department,
+                          color: AppColors.accentRed, size: 24),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    '$plannedKcal / $targetKcal kcal',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: Color(0xFFA855F7),
+                                ),
+                              ],
                             ),
-                          ),
+                            Text(
+                              remainingKcal > 0
+                                  ? '$remainingKcal kcal remaining'
+                                  : 'Daily goal achieved! 🎉',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (FoodPlannerController.instance.userBmiStats != null) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF22C55E),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      'BMI: ${FoodPlannerController.instance.userBmiStats!['bmi']} • ${FoodPlannerController.instance.userBmiStats!['bmiCategory']}',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFF22C55E),
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: onOpenCalculator,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA855F7).withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFA855F7).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.calculate_outlined,
+                              size: 13, color: Color(0xFFA855F7)),
+                          SizedBox(width: 3),
                           Text(
-                            remainingKcal > 0
-                                ? '$remainingKcal kcal budget remaining'
-                                : 'Daily caloric goal achieved!',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            'BMI',
+                            style: TextStyle(
+                              color: Color(0xFFA855F7),
                               fontSize: 11,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: onViewDetails,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.copper.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
-                    children: [
-                      Text(
-                        'Macro Stats',
-                        style: TextStyle(
-                          color: AppColors.copper,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  GestureDetector(
+                    onTap: onViewDetails,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.copper.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios,
-                          color: AppColors.copper, size: 9),
-                    ],
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Macros',
+                            style: TextStyle(
+                              color: AppColors.copper,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(width: 3),
+                          Icon(Icons.arrow_forward_ios,
+                              color: AppColors.copper, size: 8),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -1017,7 +1597,7 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
       String label, String value, double progress, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
         decoration: BoxDecoration(
           color: const Color(0xFF26232D),
           borderRadius: BorderRadius.circular(12),
@@ -1028,19 +1608,23 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 2),
                 Text(
                   value,
                   style: TextStyle(
                     color: color,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1059,6 +1643,155 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  static void showWriteCalorieTargetSheet(BuildContext context) {
+    final textController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1B24),
+      constraints: const BoxConstraints(maxWidth: 430),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Write Daily Calorie Target',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Type your daily calorie goal below to adjust your budget and smart food recommendations.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.5,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFA855F7).withValues(alpha: 0.5),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: textController,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Write target kcal (e.g. 2100)',
+                          hintStyle: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 15,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA855F7).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'kcal',
+                        style: TextStyle(
+                          color: Color(0xFFA855F7),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFA855F7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    final written = int.tryParse(textController.text.trim());
+                    if (written != null && written >= 800 && written <= 6000) {
+                      FoodPlannerController.instance.setCalorieTarget(written);
+                      Navigator.of(ctx).pop();
+                      AppToast.showSuccess(
+                        context,
+                        'Daily target updated to $written kcal!',
+                        title: 'Target Updated',
+                      );
+                    } else {
+                      AppBanner.showWarning(
+                        context,
+                        'Please enter a valid calorie target between 800 and 6000 kcal.',
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Save Calorie Target',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

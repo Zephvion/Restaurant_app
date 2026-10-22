@@ -6,7 +6,9 @@ import '../../models/dish.dart';
 import '../../models/menu_category.dart';
 import '../../models/promo_banner.dart';
 import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/menu_service.dart';
+import '../../services/smart_recommendation_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/basket_bar.dart';
@@ -92,6 +94,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
   }
 
   void _openProduct(Dish dish) {
+    FavoritesService.instance.trackViewed(dish.id);
     Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
   }
 
@@ -199,22 +202,57 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
               const SizedBox(height: 26),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _sectionHeader('Recommended Breakfast'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _sectionHeader('Recommended for You'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentRed.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.auto_awesome, size: 12, color: AppColors.accentRed),
+                          SizedBox(width: 4),
+                          Text(
+                            'Personalized',
+                            style: TextStyle(
+                              color: AppColors.accentRed,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               _recommendedRail(),
             ],
           );
 
+    final centeredContent = Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: listContent,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: widget.isEmbedded
-          ? listContent
+          ? centeredContent
           : ThemedPageBackground(
               accentColor: const Color(0xFFFF4B4B),
               child: SafeArea(
                 bottom: false,
-                child: listContent,
+                child: centeredContent,
               ),
             ),
       bottomNavigationBar: AnimatedBuilder(
@@ -462,17 +500,18 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
 
   Widget _recommendedRail() {
     return AnimatedBuilder(
-      animation: _cart,
+      animation: Listenable.merge([_cart, FavoritesService.instance]),
       builder: (context, _) {
+        final dishes = SmartRecommendationService.instance.getCuratedFeedDishes(limit: 8);
         return SizedBox(
           height: 216,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: MockData.recommendedBreakfast.length,
+            itemCount: dishes.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, i) {
-              final dish = MockData.recommendedBreakfast[i];
+              final dish = dishes[i];
               return RecommendedDishCard(
                 dish: dish,
                 quantity: _cart.quantityOf(dish),

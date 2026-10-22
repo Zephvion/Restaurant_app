@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/dish.dart';
+import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
 import 'add_button.dart';
+import 'app_banner.dart';
 import 'network_image_with_fallback.dart';
 import 'nutrition_badge.dart';
 
@@ -45,10 +47,19 @@ class FeaturedDishCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: 120,
-                width: double.infinity,
-                child: NetworkImageWithFallback(url: dish.imageUrl),
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 120,
+                    width: double.infinity,
+                    child: NetworkImageWithFallback(url: dish.imageUrl),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: DishFavoriteButton(dishId: dish.id),
+                  ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -134,10 +145,23 @@ class RecommendedDishCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: 104,
-                width: double.infinity,
-                child: NetworkImageWithFallback(url: dish.imageUrl),
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 104,
+                    width: double.infinity,
+                    child: NetworkImageWithFallback(url: dish.imageUrl),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: DishFavoriteButton(
+                      dishId: dish.id,
+                      size: 26,
+                      iconSize: 15,
+                    ),
+                  ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
@@ -180,6 +204,64 @@ class RecommendedDishCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Floating circular Heart / Favorite button with animated state feedback.
+class DishFavoriteButton extends StatelessWidget {
+  const DishFavoriteButton({
+    super.key,
+    required this.dishId,
+    this.size = 28,
+    this.iconSize = 16,
+  });
+
+  final String dishId;
+  final double size;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: FavoritesService.instance,
+      builder: (context, _) {
+        final isFav = FavoritesService.instance.isFavorite(dishId);
+        return GestureDetector(
+          onTap: () async {
+            final nowFav =
+                await FavoritesService.instance.toggleFavorite(dishId);
+            if (context.mounted) {
+              AppToast.showSuccess(
+                context,
+                nowFav
+                    ? 'Saved to your favorites ❤️'
+                    : 'Removed from favorites',
+                title: nowFav ? 'Favorite Added' : 'Favorite Removed',
+              );
+            }
+          },
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isFav
+                    ? AppColors.accentRed.withValues(alpha: 0.8)
+                    : Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: isFav ? AppColors.accentRed : Colors.white,
+              size: iconSize,
+            ),
+          ),
+        );
+      },
     );
   }
 }

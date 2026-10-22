@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/dish.dart';
 import '../theme/app_colors.dart';
 import 'add_button.dart';
+import 'dish_card.dart';
 import 'network_image_with_fallback.dart';
 import 'nutrition_badge.dart';
 import 'price_text.dart';
@@ -45,13 +46,26 @@ class MenuListTile extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  width: 70,
-                  height: 70,
-                  child: NetworkImageWithFallback(url: dish.imageUrl),
-                ),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 70,
+                      height: 70,
+                      child: NetworkImageWithFallback(url: dish.imageUrl),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: DishFavoriteButton(
+                      dishId: dish.id,
+                      size: 22,
+                      iconSize: 13,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 14),
               Expanded(

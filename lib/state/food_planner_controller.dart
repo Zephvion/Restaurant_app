@@ -6,6 +6,7 @@ import '../data/mock_data.dart';
 import '../models/dish.dart';
 import '../models/meal_plan.dart';
 import '../services/food_planner_service.dart';
+import '../services/session_manager.dart';
 
 /// Singleton [ChangeNotifier] for managing the entire Food Planner workflow,
 /// including meal plans, calorie targets, tracking, and cart.
@@ -48,6 +49,36 @@ class FoodPlannerController extends ChangeNotifier {
 
   CalorieStats get calorieStats => getCalorieStatsForDay(_selectedDayOffset);
 
+  /// Whether the user has completed their initial BMI / calorie onboarding assessment.
+  bool get hasCompletedBmiSetup =>
+      SessionManager.instance.hasCompletedBmiSetup;
+
+  Future<void> markBmiSetupCompleted() async {
+    await SessionManager.instance.setHasCompletedBmiSetup(true);
+    notifyListeners();
+  }
+
+  Map<String, dynamic>? get userBmiStats =>
+      SessionManager.instance.getBmiStats();
+
+  Future<void> saveUserBmiStats(Map<String, dynamic> stats) async {
+    // Strip non-encodable objects like Color or Widget before json serialization
+    final encodableStats = <String, dynamic>{};
+    stats.forEach((key, value) {
+      if (value is num || value is String || value is bool || value == null) {
+        encodableStats[key] = value;
+      }
+    });
+
+    await SessionManager.instance.saveBmiStats(encodableStats);
+    await SessionManager.instance.setHasCompletedBmiSetup(true);
+    if (stats.containsKey('targetKcal')) {
+      final target = (stats['targetKcal'] as num).toInt();
+      if (target > 0) setCalorieTarget(target);
+    }
+    notifyListeners();
+  }
+
   final List<PlannedMeal> _plannedMeals = [];
   List<PlannedMeal> get plannedMeals => List.unmodifiable(_plannedMeals);
 
@@ -88,7 +119,12 @@ class FoodPlannerController extends ChangeNotifier {
   }
 
   void _initDefaults() {
-    _targetKcal = 2000;
+    final savedStats = SessionManager.instance.getBmiStats();
+    if (savedStats != null && savedStats.containsKey('targetKcal')) {
+      _targetKcal = (savedStats['targetKcal'] as num).toInt();
+    } else {
+      _targetKcal = 2000;
+    }
 
     // Populate default planned meals across the week
     final defaultDayPlans = [
