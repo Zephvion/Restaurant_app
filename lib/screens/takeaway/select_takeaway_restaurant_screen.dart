@@ -25,14 +25,28 @@ class SelectTakeawayRestaurantScreen extends StatefulWidget {
 
 class _SelectTakeawayRestaurantScreenState
     extends State<SelectTakeawayRestaurantScreen> {
-  final List<String> _cities = ['Bengaluru', 'Calicut', 'Kochi', 'Trivandrum'];
+  final List<String> _cities = [
+    'All Cities',
+    'Bengaluru',
+    'Calicut',
+    'Kochi',
+    'Trivandrum',
+  ];
   String _selectedCity = 'Bengaluru';
   Restaurant? _selectedRestaurant;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _detectInitialCityAndStore();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _detectInitialCityAndStore() {
@@ -52,23 +66,31 @@ class _SelectTakeawayRestaurantScreenState
       _selectedCity = 'Bengaluru';
     }
 
-    final active = TakeawayController.instance.activeRestaurant;
-    _selectedRestaurant = active.city.toLowerCase() == _selectedCity.toLowerCase()
-        ? active
-        : _filtered.firstOrNull;
+    // Initialize with controller's selection if present
+    _selectedRestaurant = TakeawayController.instance.selectedRestaurant;
+    if (_selectedRestaurant != null) {
+      _selectedCity = _selectedRestaurant!.city;
+    }
   }
 
   List<Restaurant> get _filtered {
-    final list = MockData.restaurants
-        .where((r) => r.city.toLowerCase() == _selectedCity.toLowerCase())
-        .toList();
+    final list = MockData.restaurants.where((r) {
+      final matchesCity = _selectedCity == 'All Cities' ||
+          r.city.toLowerCase() == _selectedCity.toLowerCase();
+      if (!matchesCity) return false;
+      if (_searchQuery.trim().isEmpty) return true;
+      final q = _searchQuery.toLowerCase().trim();
+      return r.name.toLowerCase().contains(q) ||
+          r.address.toLowerCase().contains(q) ||
+          r.city.toLowerCase().contains(q);
+    }).toList();
 
     final userAddr = SessionManager.instance.getSelectedAddress() ??
         GpsDetectionService.instance.lastDetectedAddress;
     final uLat = userAddr?.lat ?? 12.9753;
     final uLng = userAddr?.lng ?? 77.5910;
 
-    // Sort by proximity to customer
+    // Sort by proximity to customer (Nearest is always first)
     list.sort((a, b) {
       final dA = LocationService.instance.calculateDistanceKm(
         startLat: uLat,
@@ -176,11 +198,43 @@ class _SelectTakeawayRestaurantScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // Search Bar for Outlets
+                Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13.5),
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Search branches by name, locality...',
+                      hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 18),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: AppColors.textSecondary, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 // ── City chips ───────────────────────────────────────────
                 const Text(
-                  'Select City',
+                  'Select City / Branch Area',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
@@ -196,20 +250,19 @@ class _SelectTakeawayRestaurantScreenState
                     return GestureDetector(
                       onTap: () => setState(() {
                         _selectedCity = city;
-                        _selectedRestaurant = _filtered.firstOrNull;
                       }),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 11),
+                            horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
                           color: selected
-                              ? AppColors.accentRed
+                              ? AppColors.copper
                               : AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: selected
-                                ? AppColors.accentRed
+                                ? AppColors.copper
                                 : AppColors.border,
                             width: 1,
                           ),
@@ -221,27 +274,32 @@ class _SelectTakeawayRestaurantScreenState
                                 ? Colors.white
                                 : AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 13.5,
+                            fontSize: 13,
                           ),
                         ),
                       ),
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // ── Restaurant list ─────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Outlets in $_selectedCity',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        _selectedCity == 'All Cities'
+                            ? 'All Outlets (Nearest First)'
+                            : 'Outlets in $_selectedCity (Nearest First)',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '${filtered.length} available',
                       style: const TextStyle(
@@ -252,33 +310,51 @@ class _SelectTakeawayRestaurantScreenState
                   ],
                 ),
                 const SizedBox(height: 14),
-                for (int i = 0; i < filtered.length; i++) ...[
-                  () {
-                    final r = filtered[i];
-                    final dist = LocationService.instance.calculateDistanceKm(
-                      startLat: uLat,
-                      startLng: uLng,
-                      endLat: r.lat,
-                      endLng: r.lng,
-                    );
-                    final isNearest = (i == 0 && dist < 50);
+                if (filtered.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _searchQuery.isNotEmpty
+                            ? 'No branches matching "$_searchQuery" in $_selectedCity.'
+                            : 'No outlets found in $_selectedCity.',
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      ),
+                    ),
+                  )
+                else
+                  for (int i = 0; i < filtered.length; i++) ...[
+                    () {
+                      final r = filtered[i];
+                      final dist = LocationService.instance.calculateDistanceKm(
+                        startLat: uLat,
+                        startLng: uLng,
+                        endLat: r.lat,
+                        endLng: r.lng,
+                      );
+                      final isNearest = (i == 0 && dist < 50);
+                      final isSelected = _selectedRestaurant?.id == r.id;
 
-                    return _RestaurantTile(
-                      restaurant: r,
-                      distanceKm: dist,
-                      isNearest: isNearest,
-                      selected: (_selectedRestaurant?.id == r.id) ||
-                          (_selectedRestaurant == null && i == 0),
-                      onTap: () => setState(() {
-                        if (_selectedRestaurant?.id == r.id) {
-                          _selectedRestaurant = null;
-                        } else {
-                          _selectedRestaurant = r;
-                        }
-                      }),
-                    );
-                  }(),
-                ],
+                      return _RestaurantTile(
+                        restaurant: r,
+                        distanceKm: dist,
+                        isNearest: isNearest,
+                        selected: isSelected,
+                        onTap: () => setState(() {
+                          if (_selectedRestaurant?.id == r.id) {
+                            _selectedRestaurant = null;
+                          } else {
+                            _selectedRestaurant = r;
+                          }
+                        }),
+                      );
+                    }(),
+                  ],
               ],
             ),
 
@@ -288,8 +364,16 @@ class _SelectTakeawayRestaurantScreenState
               right: 20,
               bottom: 20,
               child: PrimaryButton(
-                label: 'Confirm Store & View Menu',
-                onPressed: _next,
+                label: _selectedRestaurant != null
+                    ? 'Confirm ${_selectedRestaurant!.name} & View Menu'
+                    : 'Select an Outlet to Continue',
+                backgroundColor: _selectedRestaurant != null
+                    ? const Color(0xFFFF9500)
+                    : AppColors.surfaceLight,
+                foregroundColor: _selectedRestaurant != null
+                    ? Colors.black
+                    : AppColors.textSecondary,
+                onPressed: _selectedRestaurant != null ? _next : null,
               ),
             ),
           ],
@@ -335,14 +419,14 @@ class _RestaurantTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected
-                ? AppColors.copper
+                ? const Color(0xFF10B981)
                 : AppColors.border.withValues(alpha: 0.6),
             width: selected ? 1.8 : 1,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.copper.withValues(alpha: 0.25),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.22),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -352,77 +436,76 @@ class _RestaurantTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top Row: Icon + Name/Address + Rating Badge
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
                     color: selected
-                        ? AppColors.copper.withValues(alpha: 0.18)
+                        ? const Color(0xFF10B981).withValues(alpha: 0.18)
                         : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.restaurant_rounded,
-                    color: selected ? AppColors.copper : AppColors.textSecondary,
+                    Icons.storefront_rounded,
+                    color: selected
+                        ? const Color(0xFF10B981)
+                        : AppColors.textSecondary,
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              restaurant.name,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2E7D32),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${restaurant.rating}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 2),
-                                const Icon(Icons.star,
-                                    color: Colors.white, size: 10),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
                       Text(
-                        '${restaurant.address}, ${restaurant.city}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12.5,
-                          height: 1.3,
+                        restaurant.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: selected ? Colors.white : AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
                         ),
                       ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${restaurant.address}, ${restaurant.city}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${restaurant.rating}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.star, color: Colors.white, size: 10),
                     ],
                   ),
                 ),
@@ -430,69 +513,104 @@ class _RestaurantTile extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Telemetry Badges Row
+            // Bottom Row: Telemetry (Nearest / Distance) + Select/Deselect Button
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                if (isNearest) ...[
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.copper.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: AppColors.copper.withValues(alpha: 0.5),
-                        width: 0.7,
-                      ),
-                    ),
-                    child: const Text(
-                      'NEAREST OUTLET',
-                      style: TextStyle(
-                        color: AppColors.copper,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
-                      const Icon(Icons.near_me_rounded,
-                          color: Color(0xFF81C784), size: 11),
-                      const SizedBox(width: 3),
-                      Text(
-                        distText,
-                        style: const TextStyle(
-                          color: Color(0xFF81C784),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                      if (isNearest)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500)
+                                .withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: const Color(0xFFFF9500)
+                                  .withValues(alpha: 0.6),
+                              width: 0.6,
+                            ),
+                          ),
+                          child: const Text(
+                            'NEAREST',
+                            style: TextStyle(
+                              color: Color(0xFFFF9500),
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
                         ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.near_me_rounded,
+                              color: Color(0xFF81C784), size: 11),
+                          const SizedBox(width: 3),
+                          Text(
+                            distText,
+                            style: const TextStyle(
+                              color: Color(0xFF81C784),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Open till ${restaurant.closeTime}',
-                    textAlign: TextAlign.end,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11.5,
+
+                // Interactive Select / Deselect Button
+                if (selected)
+                  OutlinedButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.check_circle_rounded,
+                        size: 14, color: Color(0xFF10B981)),
+                    label: const Text('Deselect'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF10B981),
+                      backgroundColor:
+                          const Color(0xFF10B981).withValues(alpha: 0.12),
+                      side: const BorderSide(
+                        color: Color(0xFF10B981),
+                        width: 1.2,
+                      ),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.radio_button_unchecked,
+                        size: 13, color: Colors.white),
+                    label: const Text('Select'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.copper,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
                     ),
                   ),
-                ),
               ],
             ),
           ],

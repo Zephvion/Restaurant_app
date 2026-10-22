@@ -28,17 +28,23 @@ class TakeawayController extends ChangeNotifier {
   bool get hasNoOrders => _orders.isEmpty;
 
   Restaurant? get selectedRestaurant => _selectedRestaurant;
+  bool get hasExplicitSelection => _selectedRestaurant != null;
 
-  /// Returns the selected restaurant or dynamically resolves the nearest one.
-  Restaurant get activeRestaurant {
-    if (_selectedRestaurant != null) return _selectedRestaurant!;
+  bool isSelected(Restaurant restaurant) =>
+      _selectedRestaurant?.id == restaurant.id;
+
+  /// Returns the nearest restaurant according to user location
+  Restaurant get nearestRestaurant {
     final userAddr = SessionManager.instance.getSelectedAddress() ??
         GpsDetectionService.instance.lastDetectedAddress;
     final lat = userAddr?.lat ?? 12.9753;
     final lng = userAddr?.lng ?? 77.5910;
-    final nearest = LocationService.instance.getNearestRestaurant(lat: lat, lng: lng);
-    _selectedRestaurant = nearest;
-    return nearest;
+    return LocationService.instance.getNearestRestaurant(lat: lat, lng: lng);
+  }
+
+  /// Returns the selected restaurant or falls back to the nearest one dynamically.
+  Restaurant get activeRestaurant {
+    return _selectedRestaurant ?? nearestRestaurant;
   }
 
   /// Calculates straight-line distance to the active restaurant in km.
@@ -67,6 +73,20 @@ class TakeawayController extends ChangeNotifier {
 
   void selectRestaurant(Restaurant restaurant) {
     _selectedRestaurant = restaurant;
+    notifyListeners();
+  }
+
+  void deselectRestaurant() {
+    _selectedRestaurant = null;
+    notifyListeners();
+  }
+
+  void toggleRestaurant(Restaurant restaurant) {
+    if (_selectedRestaurant?.id == restaurant.id) {
+      _selectedRestaurant = null;
+    } else {
+      _selectedRestaurant = restaurant;
+    }
     notifyListeners();
   }
 

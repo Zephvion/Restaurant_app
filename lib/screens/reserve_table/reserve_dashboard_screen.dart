@@ -423,7 +423,9 @@ class _ReservationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Testing quick actions for Owner Dashboard simulation
+            // NOTE: Table lock/unlock actions and food billing belong strictly to the
+            // Owner CMS / Admin Dashboard. Hidden from user mode as requested.
+            /*
             Row(
               children: [
                 Expanded(
@@ -462,6 +464,7 @@ class _ReservationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
+            */
           ],
           if (canCancel)
             SizedBox(
@@ -588,6 +591,9 @@ class _ReservationCard extends StatelessWidget {
     }
   }
 
+  // NOTE: Owner actions for attaching food bill and manual table unlock
+  // are reserved for the Owner/Staff CMS Dashboard and not exposed in user mode.
+  /*
   /// Endpoint: Owner simulates adding food ordered at the table
   Future<void> _simulateOwnerAddFoodBill(BuildContext context) async {
     final sampleItems = [
@@ -623,6 +629,7 @@ class _ReservationCard extends StatelessWidget {
       );
     }
   }
+  */
 
   Future<void> _handleCancelReservation(BuildContext context) async {
     const reasons = [

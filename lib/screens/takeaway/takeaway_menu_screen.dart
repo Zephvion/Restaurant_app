@@ -301,6 +301,11 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
               ),
             ),
             const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.receipt_long_outlined, color: AppColors.textPrimary),
+              tooltip: 'Orders & Basket',
+              onPressed: () => _openTakeawayCartModal(context),
+            ),
             _cartIconWithBadge(),
           ],
         ),

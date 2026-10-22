@@ -15,8 +15,9 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: TakeawayMenuScreen(),
+      MaterialApp(
+        routes: {'/cart': (_) => const SizedBox()},
+        home: const TakeawayMenuScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -63,10 +64,10 @@ void main() {
     TakeawayController.instance.add(MockData.plainDosa);
     await tester.pumpAndSettle();
 
-    // 4. Test Cart Icon at Top Right Corner
-    final cartIcon = find.byIcon(Icons.shopping_cart_outlined);
-    expect(cartIcon, findsWidgets);
-    await tester.tap(cartIcon.first);
+    // 4. Test Orders & Basket Icon at Top Right Corner
+    final basketIcon = find.byIcon(Icons.receipt_long_outlined);
+    expect(basketIcon, findsWidgets);
+    await tester.tap(basketIcon.first);
     await tester.pumpAndSettle();
 
     // Verify Takeaway Basket & Orders modal sheet opened and displays the food item
