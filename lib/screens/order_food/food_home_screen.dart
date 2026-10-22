@@ -11,6 +11,7 @@ import '../../services/menu_service.dart';
 import '../../services/smart_recommendation_service.dart';
 import '../../state/cart_controller.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/mode_theme.dart';
 import '../../widgets/basket_bar.dart';
 import '../../widgets/coupon_sheet.dart';
 import '../../widgets/dashboard_tab_bar.dart';
@@ -193,6 +194,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
           pinned: true,
           delegate: _PinnedCategoryHeaderDelegate(
             height: 110,
+            backgroundColor: ModeTheme.orderFood.lowerBackgroundColor,
             child: Container(
               alignment: Alignment.center,
               child: _categoryCircles(),
@@ -997,10 +999,12 @@ class _PinnedCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   _PinnedCategoryHeaderDelegate({
     required this.child,
     this.height = 48.0,
+    this.backgroundColor,
   });
 
   final Widget child;
   final double height;
+  final Color? backgroundColor;
 
   @override
   double get minExtent => height;
@@ -1014,24 +1018,30 @@ class _PinnedCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    // When resting, remain transparent to show the natural page gradient color.
+    // When pinned, adopt the page color (lowerBackgroundColor) to seamlessly match the page.
+    final pageBg = backgroundColor ?? ModeTheme.orderFood.lowerBackgroundColor;
+    final isPinned = overlapsContent || shrinkOffset > 0;
+    final effectiveBg = isPinned ? pageBg : Colors.transparent;
+
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.background,
-        border: overlapsContent
+        color: effectiveBg,
+        border: isPinned
             ? Border(
                 bottom: BorderSide(
-                  color: AppColors.border.withValues(alpha: 0.5),
+                  color: Colors.white.withValues(alpha: 0.08),
                   width: 0.8,
                 ),
               )
             : null,
-        boxShadow: overlapsContent
+        boxShadow: isPinned
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ]
             : null,
@@ -1042,6 +1052,8 @@ class _PinnedCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _PinnedCategoryHeaderDelegate oldDelegate) {
-    return oldDelegate.height != height || oldDelegate.child != child;
+    return oldDelegate.height != height ||
+        oldDelegate.child != child ||
+        oldDelegate.backgroundColor != backgroundColor;
   }
 }
