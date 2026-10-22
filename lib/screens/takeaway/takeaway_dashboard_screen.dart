@@ -438,7 +438,7 @@ class _NearbyStoreCard extends StatelessWidget {
 
           // Timing & Pickup ETA Pills
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
@@ -446,34 +446,43 @@ class _NearbyStoreCard extends StatelessWidget {
             child: Row(
               children: [
                 const Icon(Icons.access_time_filled_rounded,
-                    color: Color(0xFF4CAF50), size: 16),
-                const SizedBox(width: 7),
+                    color: Color(0xFF4CAF50), size: 14),
+                const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     'Open • Closes ${restaurant.closeTime}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 16,
-                  color: AppColors.border,
-                ),
-                const SizedBox(width: 12),
-                const Icon(Icons.electric_bolt_rounded,
-                    color: AppColors.copper, size: 16),
-                const SizedBox(width: 5),
-                const Text(
-                  'Ready in 15 mins',
-                  style: TextStyle(
-                    color: AppColors.copper,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Container(
+                    width: 1,
+                    height: 14,
+                    color: AppColors.border,
                   ),
+                ),
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.electric_bolt_rounded,
+                        color: AppColors.copper, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'Ready in 15m',
+                      style: TextStyle(
+                        color: AppColors.copper,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

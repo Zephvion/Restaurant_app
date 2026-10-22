@@ -115,15 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
           AppBanner.showError(
             context,
             err,
-            title: 'SMS Delivery Notice',
-          );
-          // Navigate to OTP screen with fallback test verification ID
-          Navigator.of(context).pushNamed(
-            AppRoutes.otp,
-            arguments: {
-              'phone': formatted,
-              'verificationId': AuthService.instance.verificationId ?? 'fallback_vid',
-            },
+            title: 'SMS Delivery Failed',
           );
         }
       },
@@ -227,8 +219,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         (v == null || v.isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       // Toggle to OTP mode
                       GestureDetector(
@@ -249,14 +244,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       GestureDetector(
                         onTap: () =>
                             Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
                           child: Text(
                             'Forgot Password?',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.copper,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: TextStyle(
+                              color: AppColors.copper,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -322,8 +318,9 @@ class _SignUpPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           "Don't have an account? ",

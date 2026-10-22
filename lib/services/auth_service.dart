@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../data/mock_data.dart';
+import '../firebase_options.dart';
 import '../models/address.dart';
 import '../models/user_profile.dart';
 import 'firebase_initializer.dart';
@@ -35,7 +36,7 @@ class AuthService {
   int? _resendToken;
   int? get resendToken => _resendToken;
 
-  static const String _firebaseApiKey = 'AIzaSyAqO_CvNkfEp-pqsRQKoDDa-pZbdOVPb80';
+  String get _firebaseApiKey => DefaultFirebaseOptions.currentPlatform.apiKey;
 
   /// Dispatches real SMS OTP via Firebase Phone Auth to [phoneNumber].
   Future<void> sendFirebasePhoneOtp({
@@ -68,21 +69,17 @@ class AuthService {
             debugPrint('❌ [FirebaseAuth] verifyPhoneNumber failed: ${e.code} - ${e.message}');
             String msg = e.message ?? 'Phone verification failed.';
             if (e.code == 'invalid-phone-number') {
-              msg = 'The provided phone number is invalid. Please check the digits.';
+              msg = 'The provided phone number is invalid. Please check the digits and country code.';
             } else if (e.code == 'quota-exceeded') {
               msg = 'SMS quota for this project has been exceeded. Please try again later.';
             } else if (e.code == 'app-not-authorized') {
-              msg = 'App not authorized. Ensure SHA-1 and SHA-256 fingerprints are added in Firebase Console.';
+              msg = 'App not authorized. Ensure SHA-1/SHA-256 fingerprints are added in Firebase Console.';
             } else if (e.code == 'too-many-requests') {
               msg = 'Too many requests from this device. Please wait a few minutes before trying again.';
             } else if (e.code == 'billing-not-enabled') {
-              msg = 'Firebase SMS requires Blaze plan. Auto-generating test OTP.';
+              msg = 'Firebase SMS delivery requires Blaze plan or whitelisted test phone numbers in Firebase Console.';
             }
 
-            // Fallback test OTP so verification is never blocked
-            generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
-            _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
-            onCodeSent(_verificationId!);
             onError(msg);
           },
           codeSent: (String verificationId, int? resendToken) {
@@ -97,15 +94,11 @@ class AuthService {
         );
       } catch (e) {
         debugPrint('verifyPhoneNumber error: $e');
-        generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
-        _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
-        onCodeSent(_verificationId!);
-        onError(e.toString());
+        onError(e.toString().replaceAll('Exception: ', ''));
       }
     } else {
-      // Graceful fallback for offline testing / development
-      generateAndSendOtp(phone: _otpPhoneNumber!, length: 6);
-      _verificationId = 'fallback_vid_${DateTime.now().millisecondsSinceEpoch}';
+      // Offline fallback: provide verification session for testing without mock card UI
+      _verificationId = 'offline_vid_${DateTime.now().millisecondsSinceEpoch}';
       onCodeSent(_verificationId!);
     }
   }

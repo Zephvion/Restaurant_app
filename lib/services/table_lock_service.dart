@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+import 'auth_service.dart';
+
 enum TableLockStatus {
   available,
   held,
@@ -97,12 +99,20 @@ class TableLockService extends ChangeNotifier {
   String _activeUserName = 'Alex (Person 1)';
 
   String get activeUserId {
-    // If real auth session exists, use real user ID
-    // Otherwise fallback to simulated persona for testing
+    final user = AuthService.instance.currentUser;
+    if (user != null && user.uid.isNotEmpty && _activeUserId == 'usr_alex') {
+      return user.uid;
+    }
     return _activeUserId;
   }
 
-  String get activeUserName => _activeUserName;
+  String get activeUserName {
+    final user = AuthService.instance.currentUser;
+    if (user != null && user.displayName.isNotEmpty && _activeUserName == 'Alex (Person 1)') {
+      return user.displayName;
+    }
+    return _activeUserName;
+  }
 
   void switchSimulatedUser({required String userId, required String userName}) {
     _activeUserId = userId;

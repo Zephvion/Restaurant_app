@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -125,8 +126,11 @@ class CateringService {
         final query = await FirebaseFirestore.instance
             .collection('catering_requests')
             .where('userId', isEqualTo: userId)
-            .get()
-            .timeout(const Duration(seconds: 2));
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => throw TimeoutException('Catering query timeout'),
+            );
         final items = query.docs
             .map((doc) => CateringOrder.fromMap(doc.data(), id: doc.id))
             .toList();
@@ -135,7 +139,7 @@ class CateringService {
           ..addAll(items);
         return items;
       } catch (e) {
-        debugPrint('Error fetching catering orders from Firestore: $e');
+        debugPrint('Catering orders using persistent cache: $e');
       }
     }
     return _localOrders.where((o) => o.userId == userId).toList();

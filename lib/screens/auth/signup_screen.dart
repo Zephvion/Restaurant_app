@@ -179,17 +179,7 @@ class _SignupScreenState extends State<SignupScreen> {
             AppBanner.showError(
               context,
               errorMsg,
-              title: 'SMS Delivery Notice',
-            );
-            // Allow navigation with fallback verification if offline
-            Navigator.of(context).pushNamed(
-              AppRoutes.otp,
-              arguments: {
-                'phone': phone,
-                'verificationId': AuthService.instance.verificationId ?? 'fallback_vid',
-                'name': _nameController.text.trim(),
-                'email': _emailController.text.trim(),
-              },
+              title: 'SMS Delivery Failed',
             );
           }
         },
@@ -524,8 +514,9 @@ class _LoginPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           'Already have an account? ',
