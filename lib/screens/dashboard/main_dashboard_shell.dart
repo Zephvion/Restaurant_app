@@ -122,7 +122,7 @@ class _MainDashboardShellState extends State<MainDashboardShell>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Swiggy-Style Cascading Vertical Ambient Color Wash ───────
+          // ── Cascading Vertical Ambient Color Wash ────────────────────────
           // Starts from behind the top status bar / header / mode tabs, flows down
           // through the upper half of the screen (~680px), and gracefully fades out.
           Positioned(

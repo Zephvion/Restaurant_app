@@ -59,7 +59,7 @@ class ThemedPageBackground extends StatelessWidget {
         // ── Deep Base Canvas ───────────────────────────────────────────
         Container(color: AppColors.background),
 
-        // ── Swiggy-Style Cascading Vertical Ambient Color Wash ─────────
+        // ── Cascading Vertical Ambient Color Wash ───────────────────────
         // Starts rich at the top and seamlessly fades out at the half of the screen
         Positioned(
           top: 0,

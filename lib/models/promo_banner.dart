@@ -6,7 +6,7 @@ enum PromoBannerStyle {
   palace,
 }
 
-/// A promotional card in the home-screen carousel styled after Swiggy offer cards,
+/// A promotional card in the home-screen carousel showcasing restaurant offers,
 /// blending seamlessly into the dark page background.
 @immutable
 class PromoBanner {
@@ -46,7 +46,7 @@ class PromoBanner {
   /// Custom background gradient colors blending into the app background.
   final List<Color>? gradientColors;
 
-  /// Visual presentation style matching the Swiggy cards.
+  /// Visual presentation style for promotional offer cards.
   final PromoBannerStyle style;
 
   String get title => headline;

@@ -90,7 +90,7 @@ class ModeTheme {
 
   // ── Pre-configured Mode Themes ──────────────────────────────────────────
 
-  /// 1. Order Food (Swiggy Wine / Burgundy)
+  /// 1. Order Food (Deep Burgundy / Wine)
   static const ModeTheme orderFood = ModeTheme(
     mode: AppMode.orderFood,
     id: 'order_food',

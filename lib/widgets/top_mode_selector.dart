@@ -36,7 +36,7 @@ const List<ModeConfig> kAppModes = [
     label: 'Order Food',
     icon: Icons.lunch_dining_rounded,
     assetPath: 'assets/icons/modes/mode_order_food.png',
-    accentColor: Color(0xFF5A001E), // Dark Wine / Deep Burgundy (Swiggy)
+    accentColor: Color(0xFF5A001E), // Dark Wine / Deep Burgundy
     microTag: 'DELIVERY',
     route: AppRoutes.foodHome,
     theme: ModeTheme.orderFood,
@@ -109,7 +109,7 @@ ModeTheme getModeTheme(String id) {
 /// adapts its background, fill, outline, and glow to the selected mode's theme.
 ///
 /// Features:
-/// - Both selected and unselected tabs reproduce Swiggy's custom-shaped navigation tabs.
+/// - Both selected and unselected tabs feature custom-sculpted navigation geometry.
 /// - Unselected tabs are custom-shaped panels with gently crowned tops, rounded corners,
 ///   sculpted side boundaries, and curved lower transitions into the shared background.
 /// - Selected mode is an elevated arched tab with concave flaring shoulders that
@@ -342,7 +342,7 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                     final animRight = animLeft + tabWidth;
 
                     return CustomPaint(
-                      painter: _SwiggyModeBarPainter(
+                      painter: _OrganicModeBarPainter(
                         left: animLeft,
                         right: animRight,
                         top: _tabTop,
@@ -398,7 +398,7 @@ class _TopModeSelectorState extends State<TopModeSelector> {
   }
 }
 
-/// Swiggy-identical custom painter that renders:
+/// Precision custom painter that renders:
 /// 1. The continuous navigation background dynamically adapted to the active mode theme
 /// 2. Individually custom-shaped unselected tabs with:
 ///    - Gently curved, raised upper edge with rounded top corners ($R \approx 10.5$)
@@ -410,8 +410,8 @@ class _TopModeSelectorState extends State<TopModeSelector> {
 /// 4. Custom curved lower transitions with concave fillets ($R \approx 12$) connecting flush to the shelf
 /// 5. A thin, subtle highlight outline around the selected tab and shelf line in the mode's accent palette
 /// 6. A slightly brighter translucent fill and halo glow on the active tab
-class _SwiggyModeBarPainter extends CustomPainter {
-  const _SwiggyModeBarPainter({
+class _OrganicModeBarPainter extends CustomPainter {
+  const _OrganicModeBarPainter({
     required this.left,
     required this.right,
     required this.top,
@@ -780,7 +780,7 @@ class _SwiggyModeBarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SwiggyModeBarPainter oldDelegate) {
+  bool shouldRepaint(covariant _OrganicModeBarPainter oldDelegate) {
     return oldDelegate.left != left ||
         oldDelegate.right != right ||
         oldDelegate.top != top ||
@@ -793,7 +793,7 @@ class _SwiggyModeBarPainter extends CustomPainter {
   }
 }
 
-/// Renders the Swiggy-styled tab icon, badge, and label with theme-tinted colors.
+/// Renders the mode tab icon, badge, and label with theme-tinted colors.
 class _ModeTabContent extends StatelessWidget {
   const _ModeTabContent({
     required this.mode,
@@ -850,7 +850,7 @@ class _ModeTabContent extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
               decoration: BoxDecoration(
-                color: const Color(0xFF0066FF), // Swiggy Instamart Blue pill badge preserved
+                color: const Color(0xFF0066FF), // Express Delivery Blue pill badge
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: [
                   BoxShadow(

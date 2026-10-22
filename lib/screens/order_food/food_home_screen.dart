@@ -159,18 +159,22 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
     super.build(context);
     final filteredDishes = _applyFiltersAndSort(_dishes);
 
-    final listContent = ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        if (!widget.isEmbedded) ...[
-          const MainTopHeader(accentColor: Color(0xFFFF4B4B)),
-          const SizedBox(height: 10),
-          const DashboardTabBar(activeId: 'order_food'),
-          const SizedBox(height: 12),
-        ] else ...[
-          const SizedBox(height: 12),
-        ],
-        Padding(
+    final listContent = CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!widget.isEmbedded) ...[
+                const MainTopHeader(accentColor: Color(0xFFFF4B4B)),
+                const SizedBox(height: 10),
+                const DashboardTabBar(activeId: 'order_food'),
+                const SizedBox(height: 12),
+              ] else ...[
+                const SizedBox(height: 12),
+              ],
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _searchBar(),
               ),
@@ -179,19 +183,35 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
               const SizedBox(height: 22),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _menuSortRow(),
-              ),
-              const SizedBox(height: 14),
-              _categoryTabs(),
-              const SizedBox(height: 18),
-              _featuredRail(filteredDishes),
-              const SizedBox(height: 28),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _sectionHeader('Explore by Category'),
               ),
               const SizedBox(height: 14),
               _categoryCircles(),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _menuSortRow(),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _PinnedCategoryHeaderDelegate(
+            height: 48,
+            child: Container(
+              alignment: Alignment.centerLeft,
+              child: _categoryTabs(),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              _featuredRail(filteredDishes),
               const SizedBox(height: 26),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -233,8 +253,12 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
               ),
               const SizedBox(height: 14),
               _recommendedRail(),
+              const SizedBox(height: 32),
             ],
-          );
+          ),
+        ),
+      ],
+    );
 
     final centeredContent = Align(
       alignment: Alignment.topCenter,
@@ -958,5 +982,61 @@ class _CategoryCircle extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A pinned persistent header delegate for the horizontal category rail.
+/// When pinned during scrolling, it adopts a subtle backdrop tint and elevation
+/// so users can filter categories anytime without scrolling back to top.
+class _PinnedCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedCategoryHeaderDelegate({
+    required this.child,
+    this.height = 48.0,
+  });
+
+  final Widget child;
+  final double height;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.background.withValues(alpha: 0.96),
+        border: overlapsContent
+            ? Border(
+                bottom: BorderSide(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                  width: 0.8,
+                ),
+              )
+            : null,
+        boxShadow: overlapsContent
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedCategoryHeaderDelegate oldDelegate) {
+    return oldDelegate.height != height || oldDelegate.child != child;
   }
 }
