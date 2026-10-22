@@ -8,6 +8,7 @@ import '../../services/menu_service.dart';
 import '../../state/food_planner_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_banner.dart';
+import '../../widgets/dish_card.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
 /// Meal Menu selection screen for the Food Planner matching the Home Page Food Order layout.
@@ -843,131 +844,30 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardWidth = screenWidth < 460
+        ? ((screenWidth - 40 - 14) / 2).floorToDouble()
+        : 180.0;
+
     return SizedBox(
-      height: 275,
+      height: 242,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: dishes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, index) {
           final dish = dishes[index];
           final qty = ctrl.getQuantity(dish.id);
 
-          return GestureDetector(
+          return TacoBellProductCard(
+            dish: dish,
+            width: cardWidth,
+            quantity: qty,
             onTap: () => _openProduct(dish),
-            child: Container(
-              width: 185,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: SizedBox(
-                      height: 110,
-                      width: double.infinity,
-                      child: NetworkImageWithFallback(
-                        url: dish.imageUrl,
-                        fallbackIcon: Icons.restaurant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Title & Veg indicator
-                  Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: dish.isVeg
-                              ? const Color(0xFF22C55E)
-                              : AppColors.accentRed,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          dish.name,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Price & Rating
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '₹ ${dish.price.toInt()}',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 14),
-                          const SizedBox(width: 2),
-                          Text(
-                            dish.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Macro badges
-                  Text(
-                    '🔥 ${dish.kcal} kcal · ⚖️ ${dish.grams} gm',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-
-                  // Stepper Add Button
-                  _QuantityButton(
-                    quantity: qty,
-                    onAdd: () => ctrl.addToBasket(dish.id),
-                    onIncrement: () => ctrl.addToBasket(dish.id),
-                    onDecrement: () => ctrl.removeFromBasket(dish.id),
-                  ),
-                ],
-              ),
-            ),
+            onAdd: () => ctrl.addToBasket(dish.id),
+            onIncrement: () => ctrl.addToBasket(dish.id),
+            onDecrement: () => ctrl.removeFromBasket(dish.id),
           );
         },
       ),
@@ -1162,8 +1062,9 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: const Color(0xFF1E1E23),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF303036), width: 1),
             ),
             child: Row(
               children: [
@@ -1186,9 +1087,9 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                       Text(
                         title,
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: Color(0xFFF5F5F5),
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1197,7 +1098,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
                       Text(
                         '₹ $price',
                         style: const TextStyle(
-                          color: AppColors.copper,
+                          color: Color(0xFFFFC72C),
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1293,8 +1194,10 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         break;
     }
 
+    final cardWidth = ((MediaQuery.of(context).size.width - 40 - 14) / 2).clamp(160.0, 220.0);
+
     return SizedBox(
-      height: 250,
+      height: 242,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
@@ -1309,56 +1212,65 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
           final qty = ctrl.getQuantity(id);
 
           return Container(
-            width: 165,
-            padding: const EdgeInsets.all(12),
+            width: cardWidth,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFF1E1E23),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF303036), width: 1),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipOval(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
                   child: SizedBox(
-                    width: 90,
-                    height: 90,
+                    width: double.infinity,
+                    height: 110,
                     child: NetworkImageWithFallback(
                       url: imageUrl,
                       fallbackIcon: Icons.restaurant,
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   title,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: Color(0xFFF5F5F5),
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹ $price',
-                  style: const TextStyle(
-                    color: AppColors.copper,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   '🔥 320 kcal · ⚖️ 300 gm',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                  style: TextStyle(color: Color(0xFF9A9AA5), fontSize: 10),
                 ),
                 const Spacer(),
-                _QuantityButton(
-                  quantity: qty,
-                  onAdd: () => ctrl.addToBasket(id),
-                  onIncrement: () => ctrl.addToBasket(id),
-                  onDecrement: () => ctrl.removeFromBasket(id),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '₹ $price',
+                      style: const TextStyle(
+                        color: Color(0xFFFFC72C),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 76,
+                      child: _QuantityButton(
+                        quantity: qty,
+                        onAdd: () => ctrl.addToBasket(id),
+                        onIncrement: () => ctrl.addToBasket(id),
+                        onDecrement: () => ctrl.removeFromBasket(id),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1470,12 +1382,12 @@ class _QuantityButton extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         height: 32,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentRed,
-            foregroundColor: Colors.white,
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF10B981),
+            side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
             ),
             elevation: 0,
             padding: EdgeInsets.zero,
@@ -1493,8 +1405,8 @@ class _QuantityButton extends StatelessWidget {
       width: double.infinity,
       height: 32,
       decoration: BoxDecoration(
-        color: AppColors.accentRed,
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF10B981),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

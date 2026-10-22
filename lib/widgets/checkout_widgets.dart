@@ -11,7 +11,7 @@ class RoundedPanel extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(18),
-    this.color = AppColors.backgroundElevated,
+    this.color = const Color(0xFF1E1E23),
   });
 
   final Widget child;
@@ -25,7 +25,8 @@ class RoundedPanel extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF303036), width: 1),
       ),
       child: child,
     );
@@ -106,11 +107,11 @@ class OrderSummaryRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Price: ${price.toInt()}',
+              '₹${price.toInt()}',
               style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                color: Color(0xFFFFC72C),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
               ),
             ),
             if (unitPrice != null && quantity > 1) ...[

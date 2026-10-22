@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/mode_theme.dart';
 
 /// Renders a luxurious atmospheric ambient color wash behind page content,
-/// dynamically tinted based on the colour chosen for the top bar button navigation.
+/// dynamically tinted based on the colour/theme chosen for the top bar button navigation.
 ///
 /// Features:
 /// - Base deep theme background (`AppColors.background`).
@@ -13,33 +14,53 @@ class ThemedPageBackground extends StatelessWidget {
   const ThemedPageBackground({
     super.key,
     required this.accentColor,
+    this.theme,
     required this.child,
-    this.ambientHeight = 340,
-    this.intensity = 0.18,
+    this.ambientHeight = 680,
+    this.intensity = 0.55,
   });
 
   /// The active section's chosen accent color (e.g. Coral Crimson, Golden Amber,
   /// Warm Gold, Emerald Mint, Royal Amethyst).
   final Color accentColor;
 
+  /// Optional explicit [ModeTheme]. If omitted, resolved from [accentColor].
+  final ModeTheme? theme;
+
   /// The inner page content/body.
   final Widget child;
 
-  /// Height of the vertical gradient ambient wash.
+  /// Height of the vertical gradient ambient wash (flows through the upper half).
   final double ambientHeight;
 
   /// Base opacity multiplier for the ambient glow.
   final double intensity;
 
+  ModeTheme get _resolvedTheme {
+    if (theme != null) return theme!;
+    for (final t in ModeTheme.all) {
+      if (t.primaryAccent.value == accentColor.value) {
+        return t;
+      }
+    }
+    return ModeTheme.orderFood;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = _resolvedTheme;
+    final effectiveWashColors = t.pageWashColors;
+    final effectiveWashStops = t.pageWashStops;
+    final effectiveBloomColor = t.pageBloomColor;
+
     return Stack(
       fit: StackFit.expand,
       children: [
         // ── Deep Base Canvas ───────────────────────────────────────────
         Container(color: AppColors.background),
 
-        // ── Cascading Vertical Ambient Color Mesh ──────────────────────
+        // ── Swiggy-Style Cascading Vertical Ambient Color Wash ─────────
+        // Starts rich at the top and seamlessly fades out at the half of the screen
         Positioned(
           top: 0,
           left: 0,
@@ -51,13 +72,8 @@ class ThemedPageBackground extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    accentColor.withValues(alpha: intensity * 1.15),
-                    accentColor.withValues(alpha: intensity * 0.55),
-                    accentColor.withValues(alpha: intensity * 0.15),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.35, 0.70, 1.0],
+                  colors: effectiveWashColors,
+                  stops: effectiveWashStops,
                 ),
               ),
             ),
@@ -66,19 +82,19 @@ class ThemedPageBackground extends StatelessWidget {
 
         // ── Top Radial Ambient Bloom ───────────────────────────────────
         Positioned(
-          top: -60,
+          top: -50,
           left: -40,
           right: -40,
-          height: 240,
+          height: 280,
           child: IgnorePointer(
             child: Container(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0.0, -0.6),
-                  radius: 1.1,
+                  center: const Alignment(0.0, -0.4),
+                  radius: 1.15,
                   colors: [
-                    accentColor.withValues(alpha: intensity * 0.95),
-                    accentColor.withValues(alpha: intensity * 0.30),
+                    effectiveBloomColor.withValues(alpha: 0.35 * (intensity / 0.55)),
+                    effectiveBloomColor.withValues(alpha: 0.12 * (intensity / 0.55)),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.55, 1.0],
@@ -94,4 +110,3 @@ class ThemedPageBackground extends StatelessWidget {
     );
   }
 }
-

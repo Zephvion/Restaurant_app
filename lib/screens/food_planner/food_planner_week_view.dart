@@ -838,7 +838,6 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
       animation: FoodPlannerController.instance,
       builder: (context, _) {
         final ctrl = FoodPlannerController.instance;
-        final hasSelectedDay = ctrl.selectedDayOffset >= 0;
 
         final listContent = ListView(
           padding: EdgeInsets.zero,
@@ -1045,15 +1044,15 @@ class _FoodPlannerWeekViewState extends State<FoodPlannerWeekView>
 
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: ThemedPageBackground(
-            accentColor: const Color(0xFFA855F7),
-            child: widget.isEmbedded
-                ? centeredContent
-                : SafeArea(
+          body: widget.isEmbedded
+              ? centeredContent
+              : ThemedPageBackground(
+                  accentColor: const Color(0xFFA855F7),
+                  child: SafeArea(
                     bottom: false,
                     child: centeredContent,
                   ),
-          ),
+                ),
         );
       },
     );
@@ -1112,9 +1111,9 @@ class _CategoryMealSection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF1E1E23),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1390,14 +1389,17 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF1E1E23),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF303036),
+          width: 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -1796,86 +1798,7 @@ class _DailyCalorieSummaryBar extends StatelessWidget {
   }
 }
 
-// ── Plain Header (for Landing screen.png) ────────────────────────────────────
 
-class _PlainHeader extends StatelessWidget {
-  const _PlainHeader({required this.onBack, required this.onNotify});
-  final VoidCallback onBack;
-  final VoidCallback onNotify;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 20),
-              onPressed: onBack,
-            ),
-            const Spacer(),
-            _NotificationBellButton(onTap: onNotify),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Banner Header (for Date.png) ──────────────────────────────────────────────
-
-class _BannerHeader extends StatelessWidget {
-  const _BannerHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 240,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            FoodPlannerAssets.dateHeader,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Image.asset(
-              FoodPlannerAssets.date,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        Navigator.of(context)
-                            .pushReplacementNamed(AppRoutes.home);
-                      }
-                    },
-                  ),
-                  const Spacer(),
-                  _NotificationBellButton(
-                    onTap: () => Navigator.of(context)
-                        .pushNamed(AppRoutes.notifications),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Date Strip ────────────────────────────────────────────────────────────────
 
@@ -1908,8 +1831,25 @@ class _DateStrip extends StatelessWidget {
               width: 52,
               height: 64,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFA855F7) : AppColors.surface,
+                color: isSelected
+                    ? const Color(0xFFA855F7)
+                    : const Color(0xFF1E142E).withValues(alpha: 0.70),
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFFA855F7)
+                      : Colors.white.withValues(alpha: 0.08),
+                  width: 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFA855F7).withValues(alpha: 0.45),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -2023,11 +1963,11 @@ class _SmartPlannerReminderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.copper.withValues(alpha: 0.35),
-          width: 1.2,
+          color: const Color(0xFF303036),
+          width: 1.0,
         ),
       ),
       child: Row(

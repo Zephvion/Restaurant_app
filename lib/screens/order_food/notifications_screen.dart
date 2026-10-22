@@ -240,14 +240,12 @@ class _FoodPlannerNotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isUnread
-            ? AppColors.surface
-            : AppColors.backgroundElevated.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFF1E1E23),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnread
-              ? catColor.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.05),
+              ? catColor.withValues(alpha: 0.5)
+              : const Color(0xFF303036),
           width: isUnread ? 1.4 : 1,
         ),
       ),

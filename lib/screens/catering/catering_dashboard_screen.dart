@@ -68,15 +68,15 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: ThemedPageBackground(
-        accentColor: modeAccent,
-        child: widget.isEmbedded
-            ? content
-            : SafeArea(
+      body: widget.isEmbedded
+          ? content
+          : ThemedPageBackground(
+              accentColor: modeAccent,
+              child: SafeArea(
                 bottom: false,
                 child: content,
               ),
-      ),
+            ),
     );
   }
 
@@ -496,12 +496,12 @@ class _CateringOrderCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFF1E1E23),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isConfirmed
-              ? const Color(0xFF2E7D32).withValues(alpha: 0.5)
-              : AppColors.border,
+              ? const Color(0xFF10B981)
+              : const Color(0xFF303036),
           width: isConfirmed ? 1.5 : 1,
         ),
         boxShadow: [

@@ -237,9 +237,12 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
                       curve: Curves.easeInOutCubic,
                       height: sheetHeight,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: const Color(0xFF1E1E23),
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(28),
+                        ),
+                        border: const Border(
+                          top: BorderSide(color: Color(0xFF303036), width: 1),
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -860,9 +863,9 @@ class _DeliveryPartnerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       child: Row(
         children: [
@@ -1059,9 +1062,9 @@ class _OrderLine extends StatelessWidget {
         Text(
           '₹$price',
           style: const TextStyle(
-            color: AppColors.textPrimary,
+            color: Color(0xFFFFC72C),
             fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -1083,9 +1086,9 @@ class _TotalLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = TextStyle(
-      color: bold ? AppColors.textPrimary : AppColors.textSecondary,
-      fontSize: bold ? 15 : 13,
-      fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+      color: bold ? const Color(0xFFFFC72C) : AppColors.textSecondary,
+      fontSize: bold ? 16 : 13,
+      fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
     );
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

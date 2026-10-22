@@ -29,9 +29,9 @@ class QuantityStepper extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(size),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFF303036)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -47,7 +47,7 @@ class QuantityStepper extends StatelessWidget {
             child: Text(
               '$quantity',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: const Color(0xFFF5F5F5),
                 fontSize: fontSize ?? (size <= 28 ? 13 : 16),
                 fontWeight: FontWeight.w700,
               ),
@@ -80,7 +80,7 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: enabled ? AppColors.copper : AppColors.surfaceLight,
+      color: enabled ? const Color(0xFF10B981) : const Color(0xFF26262C),
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

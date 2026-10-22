@@ -422,17 +422,23 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
             ),
           );
         }
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final cardWidth = screenWidth < 460
+            ? ((screenWidth - 40 - 14) / 2).floorToDouble()
+            : 180.0;
+
         return SizedBox(
-          height: 260,
+          height: 242,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: dishes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
             itemBuilder: (context, i) {
               final dish = dishes[i];
               return FeaturedDishCard(
                 dish: dish,
+                width: cardWidth,
                 quantity: _cart.quantityOf(dish),
                 inCart: _cart.contains(dish),
                 onTap: () => _openProduct(dish),
@@ -503,17 +509,23 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
       animation: Listenable.merge([_cart, FavoritesService.instance]),
       builder: (context, _) {
         final dishes = SmartRecommendationService.instance.getCuratedFeedDishes(limit: 8);
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final cardWidth = screenWidth < 460
+            ? ((screenWidth - 40 - 14) / 2).floorToDouble()
+            : 180.0;
+
         return SizedBox(
-          height: 216,
+          height: 242,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: dishes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
             itemBuilder: (context, i) {
               final dish = dishes[i];
               return RecommendedDishCard(
                 dish: dish,
+                width: cardWidth,
                 quantity: _cart.quantityOf(dish),
                 inCart: _cart.contains(dish),
                 onTap: () => _openProduct(dish),

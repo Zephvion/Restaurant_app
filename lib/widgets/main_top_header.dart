@@ -19,10 +19,12 @@ class MainTopHeader extends StatefulWidget {
     super.key,
     this.padding = const EdgeInsets.fromLTRB(8, 4, 12, 0),
     this.accentColor,
+    this.showProfile = false,
   });
 
   final EdgeInsetsGeometry padding;
   final Color? accentColor;
+  final bool showProfile;
 
   @override
   State<MainTopHeader> createState() => _MainTopHeaderState();
@@ -64,38 +66,41 @@ class _MainTopHeaderState extends State<MainTopHeader> {
               }
             },
           ),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.account),
-            child: ClipOval(
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.maroon,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: effectiveAccent.withValues(alpha: 0.85),
-                    width: 1.8,
+          if (widget.showProfile) ...[
+            GestureDetector(
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.account),
+              child: ClipOval(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.maroon,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: effectiveAccent.withValues(alpha: 0.85),
+                      width: 1.8,
+                    ),
                   ),
-                ),
-                alignment: Alignment.center,
-                child: (user?.photoUrl.trim().isNotEmpty == true)
-                    ? NetworkImageWithFallback(
-                        url: user!.photoUrl.trim(),
-                        fallbackIcon: Icons.person,
-                      )
-                    : Text(
-                        userInitial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
+                  alignment: Alignment.center,
+                  child: (user?.photoUrl.trim().isNotEmpty == true)
+                      ? NetworkImageWithFallback(
+                          url: user!.photoUrl.trim(),
+                          fallbackIcon: Icons.person,
+                        )
+                      : Text(
+                          userInitial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
+            const SizedBox(width: 10),
+          ] else
+            const SizedBox(width: 4),
           Expanded(
             child: GestureDetector(
               onTap: _openAddressPicker,

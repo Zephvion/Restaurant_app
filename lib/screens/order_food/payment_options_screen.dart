@@ -259,7 +259,7 @@ class _PaymentOptionsScreenState extends State<PaymentOptionsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               border: selected
-                  ? Border.all(color: AppColors.accentRed, width: 1.4)
+                  ? Border.all(color: const Color(0xFF10B981), width: 1.4)
                   : null,
               borderRadius: BorderRadius.circular(16),
             ),
@@ -751,7 +751,7 @@ class _RadioDot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected ? AppColors.accentRed : AppColors.hint,
+          color: selected ? const Color(0xFF10B981) : AppColors.hint,
           width: 2,
         ),
       ),
@@ -761,7 +761,7 @@ class _RadioDot extends StatelessWidget {
                 width: 11,
                 height: 11,
                 decoration: const BoxDecoration(
-                  color: AppColors.accentRed,
+                  color: Color(0xFF10B981),
                   shape: BoxShape.circle,
                 ),
               ),

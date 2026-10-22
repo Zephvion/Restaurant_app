@@ -24,51 +24,20 @@ class DashboardTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = getModeAccentColor(activeId);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TopModeSelector(
-          activeId: activeId,
-          padding: padding,
-          onModeChanged: (mode) {
-            if (onModeChanged != null) {
-              onModeChanged!(mode);
-              return;
-            }
-            final target = kAppModes.firstWhere((m) => m.mode == mode);
-            if (target.id != activeId) {
-              Navigator.of(context).pushReplacementNamed(target.route);
-            }
-          },
-        ),
-        const SizedBox(height: 3),
-        // Luminous subtle horizontal color accent glow line beneath active mode
-        Container(
-          height: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(1),
-            gradient: LinearGradient(
-              colors: [
-                Colors.transparent,
-                accentColor.withValues(alpha: 0.45),
-                accentColor.withValues(alpha: 0.95),
-                accentColor.withValues(alpha: 0.45),
-                Colors.transparent,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withValues(alpha: 0.35),
-                blurRadius: 6,
-                spreadRadius: 0.5,
-              ),
-            ],
-          ),
-        ),
-      ],
+    return TopModeSelector(
+      activeId: activeId,
+      theme: getModeTheme(activeId),
+      padding: padding,
+      onModeChanged: (mode) {
+        if (onModeChanged != null) {
+          onModeChanged!(mode);
+          return;
+        }
+        final target = kAppModes.firstWhere((m) => m.mode == mode);
+        if (target.id != activeId) {
+          Navigator.of(context).pushReplacementNamed(target.route);
+        }
+      },
     );
   }
 }
