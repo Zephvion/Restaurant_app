@@ -76,7 +76,10 @@ class PaymentBrandMark extends StatelessWidget {
       ),
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
-      child: _mark(kind),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: _mark(kind),
+      ),
     );
   }
 

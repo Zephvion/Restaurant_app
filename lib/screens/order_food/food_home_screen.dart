@@ -225,7 +225,8 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _sectionHeader('Recommended for You'),
+                    Expanded(child: _sectionHeader('Recommended for You')),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -764,30 +765,34 @@ class _PromoCard extends StatelessWidget {
   Widget _buildTopHeader(PromoBanner promo) {
     switch (promo.style) {
       case PromoBannerStyle.gourmet:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text(
-              'gourmet',
-              style: TextStyle(
-                fontFamily: 'serif',
-                fontStyle: FontStyle.italic,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFE5C580),
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text(
+                'gourmet',
+                style: TextStyle(
+                  fontFamily: 'serif',
+                  fontStyle: FontStyle.italic,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFE5C580),
+                ),
               ),
-            ),
-            SizedBox(width: 5),
-            Text(
-              'FOOD FESTIVAL',
-              style: TextStyle(
-                fontSize: 8.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
-                color: Color(0xFFE5C580),
+              SizedBox(width: 5),
+              Text(
+                'FOOD FESTIVAL',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: Color(0xFFE5C580),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       case PromoBannerStyle.healthy:
         return Container(
