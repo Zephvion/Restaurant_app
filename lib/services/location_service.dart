@@ -23,6 +23,49 @@ class LocationService {
     await SessionManager.instance.setDeliveryArea(area);
   }
 
+  /// Returns the detected city based on user's active address or live GPS proximity.
+  String get detectedCity {
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    final text = '${userAddr?.label} ${userAddr?.details}'.toLowerCase();
+
+    if (text.contains('bengaluru') ||
+        text.contains('bangalore') ||
+        text.contains('karnataka')) {
+      return 'Bengaluru';
+    } else if (text.contains('kochi') ||
+        text.contains('cochin') ||
+        text.contains('ernakulam')) {
+      return 'Kochi';
+    } else if (text.contains('trivandrum') ||
+        text.contains('thiruvananthapuram')) {
+      return 'Trivandrum';
+    } else if (text.contains('calicut') || text.contains('kozhikode')) {
+      return 'Calicut';
+    }
+
+    final lat = userAddr?.lat ?? defaultLat;
+    final lng = userAddr?.lng ?? defaultLng;
+    return getNearestRestaurant(lat: lat, lng: lng).city;
+  }
+
+  /// Returns the detected state for the detected city.
+  String get detectedState {
+    final city = detectedCity;
+    if (city.toLowerCase() == 'bengaluru') return 'Karnataka';
+    return 'Kerala';
+  }
+
+  /// Returns user coordinates (lat, lng)
+  Map<String, double> get userCoordinates {
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    return {
+      'lat': userAddr?.lat ?? defaultLat,
+      'lng': userAddr?.lng ?? defaultLng,
+    };
+  }
+
   /// Finds the closest Paragon restaurant outlet to the given coordinates.
   Restaurant getNearestRestaurant({
     required double lat,
@@ -43,11 +86,15 @@ class LocationService {
 
     // If preferred city is specified, prioritize outlets in that city
     if (preferredCity != null && preferredCity.isNotEmpty) {
-      final inCity = list.where((r) => r.city.toLowerCase() == preferredCity.toLowerCase()).toList();
+      final inCity = list
+          .where((r) => r.city.toLowerCase() == preferredCity.toLowerCase())
+          .toList();
       if (inCity.isNotEmpty) {
         inCity.sort((a, b) {
-          final distA = calculateDistanceKm(startLat: lat, startLng: lng, endLat: a.lat, endLng: a.lng);
-          final distB = calculateDistanceKm(startLat: lat, startLng: lng, endLat: b.lat, endLng: b.lng);
+          final distA = calculateDistanceKm(
+              startLat: lat, startLng: lng, endLat: a.lat, endLng: a.lng);
+          final distB = calculateDistanceKm(
+              startLat: lat, startLng: lng, endLat: b.lat, endLng: b.lng);
           return distA.compareTo(distB);
         });
         return inCity.first;
@@ -110,7 +157,8 @@ class LocationService {
 
   /// Estimates delivery fee dynamically based on distance from the closest outlet
   double calculateDeliveryFee(Address destination) {
-    final nearest = getNearestRestaurant(lat: destination.lat, lng: destination.lng);
+    final nearest =
+        getNearestRestaurant(lat: destination.lat, lng: destination.lng);
     final dist = calculateDistanceKm(
       startLat: nearest.lat,
       startLng: nearest.lng,

@@ -46,6 +46,10 @@ class GpsDetectionService {
   static LiveLocationResult? _lastDetected;
   LiveLocationResult? get lastDetected => _lastDetected;
   Address? get lastDetectedAddress => _lastDetected?.toAddress();
+  static void resetForTesting() {
+    _lastDetected = null;
+  }
+
 
   /// Detects the user's real live coordinates and reverse-geocodes their address.
   Future<LiveLocationResult> detectLiveLocation() async {

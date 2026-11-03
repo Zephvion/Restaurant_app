@@ -153,6 +153,10 @@ class SessionManager {
     await _prefs?.setString(_keySelectedAddress, jsonEncode(address.toMap()));
   }
 
+  Future<void> clearSelectedAddress() async {
+    await _prefs?.remove(_keySelectedAddress);
+  }
+
   Address? getSelectedAddress() {
     final jsonStr = _prefs?.getString(_keySelectedAddress);
     if (jsonStr == null || jsonStr.isEmpty) return null;

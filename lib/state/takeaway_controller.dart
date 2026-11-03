@@ -65,46 +65,14 @@ class TakeawayController extends ChangeNotifier {
   }
 
   /// Returns the detected city based on user's active address or live GPS proximity.
-  String get detectedCity {
-    final userAddr = SessionManager.instance.getSelectedAddress() ??
-        GpsDetectionService.instance.lastDetectedAddress;
-    final text = '${userAddr?.label} ${userAddr?.details}'.toLowerCase();
-
-    if (text.contains('bengaluru') ||
-        text.contains('bangalore') ||
-        text.contains('karnataka')) {
-      return 'Bengaluru';
-    } else if (text.contains('kochi') ||
-        text.contains('cochin') ||
-        text.contains('ernakulam')) {
-      return 'Kochi';
-    } else if (text.contains('trivandrum') ||
-        text.contains('thiruvananthapuram')) {
-      return 'Trivandrum';
-    } else if (text.contains('calicut') ||
-        text.contains('kozhikode')) {
-      return 'Calicut';
-    }
-
-    return nearestRestaurant.city;
-  }
+  String get detectedCity => LocationService.instance.detectedCity;
 
   /// Returns the detected state for the detected city.
-  String get detectedState {
-    final city = detectedCity;
-    if (city.toLowerCase() == 'bengaluru') return 'Karnataka';
-    return 'Kerala';
-  }
+  String get detectedState => LocationService.instance.detectedState;
 
   /// Returns user coordinates (lat, lng)
-  Map<String, double> get userCoordinates {
-    final userAddr = SessionManager.instance.getSelectedAddress() ??
-        GpsDetectionService.instance.lastDetectedAddress;
-    return {
-      'lat': userAddr?.lat ?? 12.9753,
-      'lng': userAddr?.lng ?? 77.5910,
-    };
-  }
+  Map<String, double> get userCoordinates =>
+      LocationService.instance.userCoordinates;
 
   Future<void> _init() async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
@@ -271,7 +239,8 @@ class TakeawayController extends ChangeNotifier {
       if (_cart.containsKey(item.dish.id)) {
         _cart[item.dish.id]!.quantity += item.quantity;
       } else {
-        _cart[item.dish.id] = CartItem(dish: item.dish, quantity: item.quantity);
+        _cart[item.dish.id] =
+            CartItem(dish: item.dish, quantity: item.quantity);
       }
       CartController.instance.add(item.dish, qty: item.quantity);
     }
