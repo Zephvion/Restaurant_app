@@ -27,15 +27,6 @@ class TakeawayDashboardScreen extends StatefulWidget {
 
 class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
     with AutomaticKeepAliveClientMixin {
-  final List<String> _cities = const [
-    'All Branches',
-    'Bengaluru',
-    'Calicut',
-    'Kochi',
-    'Trivandrum',
-  ];
-  String _selectedCity = 'All Branches';
-
   @override
   bool get wantKeepAlive => true;
 
@@ -50,6 +41,34 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
         final distKm = ctrl.distanceToSelectedKm;
         final hasSelection = ctrl.hasExplicitSelection;
 
+        // Automatically detect active state and city
+        final activeCity = ctrl.selectedRestaurant?.city ?? ctrl.detectedCity;
+        final coords = ctrl.userCoordinates;
+        final uLat = coords['lat']!;
+        final uLng = coords['lng']!;
+
+        // Show ONLY branches of the detected/selected state & city
+        final outlets = MockData.restaurants.where((r) {
+          return r.city.toLowerCase() == activeCity.toLowerCase();
+        }).toList();
+
+        // Strict Nearest-to-Farthest sort using active user coordinates
+        outlets.sort((a, b) {
+          final distA = LocationService.instance.calculateDistanceKm(
+            startLat: uLat,
+            startLng: uLng,
+            endLat: a.lat,
+            endLng: a.lng,
+          );
+          final distB = LocationService.instance.calculateDistanceKm(
+            startLat: uLat,
+            startLng: uLng,
+            endLat: b.lat,
+            endLng: b.lng,
+          );
+          return distA.compareTo(distB);
+        });
+
         return Column(
           children: [
             if (!widget.isEmbedded) ...[
@@ -62,171 +81,183 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                 padding: EdgeInsets.fromLTRB(
                     20, 16, 20, 32 + MediaQuery.paddingOf(context).bottom),
                 children: [
-                    // Domino's Style Store Card
-                    _NearbyStoreCard(
-                      restaurant: currentRest,
-                      distanceKm: distKm,
-                      hasSelection: hasSelection,
-                      onChangeStore: () => _goSelectRestaurant(context),
-                      onDeselectStore: () => ctrl.deselectRestaurant(),
-                      onOrderNow: () {
-                        ctrl.selectRestaurant(currentRest);
-                        Navigator.of(context).pushNamed(AppRoutes.takeawayMenu);
-                      },
-                    ),
-                    // Active Orders
-                    if (ctrl.orders.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Your Takeaway Orders',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${ctrl.orders.length} active',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      ...ctrl.orders.map((order) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: TakeawayOrderCard(order: order),
-                          )),
-                    ],
-
-                    // Nearby Paragon Outlets
-                    const SizedBox(height: 28),
+                  // Domino's Style Store Card
+                  _NearbyStoreCard(
+                    restaurant: currentRest,
+                    distanceKm: distKm,
+                    hasSelection: hasSelection,
+                    onChangeStore: () => _goSelectRestaurant(context),
+                    onDeselectStore: () => ctrl.deselectRestaurant(),
+                    onOrderNow: () {
+                      ctrl.selectRestaurant(currentRest);
+                      Navigator.of(context).pushNamed(AppRoutes.takeawayMenu);
+                    },
+                  ),
+                  // Active Orders
+                  if (ctrl.orders.isNotEmpty) ...[
+                    const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Expanded(
                           child: Text(
-                            'Choose Branch for Takeaway',
+                            'Your Takeaway Orders',
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () => _goSelectRestaurant(context),
-                          icon: const Icon(Icons.tune_rounded, size: 14, color: AppColors.copper),
-                          label: const Text(
-                            'All Outlets',
-                            style: TextStyle(
-                              color: AppColors.copper,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
+                        Text(
+                          '${ctrl.orders.length} active',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 14),
+                    ...ctrl.orders.map((order) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: TakeawayOrderCard(order: order),
+                        )),
+                  ],
 
-                    // City Filter Tabs (Bengaluru, Calicut, Kochi, Trivandrum, All)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: _cities.map((city) {
-                          final isSel = city == _selectedCity;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _selectedCity = city),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: isSel ? AppColors.copper : AppColors.surface,
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: isSel ? AppColors.copper : AppColors.border,
-                                    width: isSel ? 1.4 : 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isSel) ...[
-                                      const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      city,
-                                      style: TextStyle(
-                                        color: isSel ? Colors.white : AppColors.textSecondary,
-                                        fontSize: 12,
-                                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
+                  // Outlets header for detected location
+                  const SizedBox(height: 28),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Choose Branch in $activeCity, ${ctrl.detectedState}',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _goSelectRestaurant(context),
+                        icon: const Icon(Icons.tune_rounded, size: 14, color: AppColors.copper),
+                        label: const Text(
+                          'All Outlets',
+                          style: TextStyle(
+                            color: AppColors.copper,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Detected Location Badge (shows detected state/city and nearest-to-farthest sort)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.5),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.my_location_rounded, size: 13, color: Color(0xFFFF9500)),
+                              const SizedBox(width: 5),
+                              Text(
+                                activeCity,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Outlets list with Nearest first & Select/Deselect buttons
-                    ...(() {
-                      final outlets = MockData.restaurants.where((r) {
-                        if (_selectedCity == 'All Branches') return true;
-                        return r.city.toLowerCase() == _selectedCity.toLowerCase();
-                      }).toList();
-
-                      // Ensure nearest is always first
-                      outlets.sort((a, b) {
-                        final distA = LocationService.instance.getDistanceToRestaurant(a);
-                        final distB = LocationService.instance.getDistanceToRestaurant(b);
-                        return distA.compareTo(distB);
-                      });
-
-                      final displayList = outlets.take(6).toList();
-
-                      return displayList.asMap().entries.map((entry) {
-                        final idx = entry.key;
-                        final outlet = entry.value;
-                        final isSelected = ctrl.isSelected(outlet);
-                        final dist = LocationService.instance.getDistanceToRestaurant(outlet);
-                        final isNearest = (idx == 0 && dist < 50);
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _NearbyOutletTile(
-                            outlet: outlet,
-                            distanceKm: dist,
-                            isNearest: isNearest,
-                            isSelected: isSelected,
-                            onToggle: () {
-                              ctrl.toggleRestaurant(outlet);
-                            },
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF9500),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${outlets.length} Branches',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        );
-                      });
-                    })(),
-                  ],
-                ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.swap_vert_rounded, size: 14, color: Color(0xFF81C784)),
+                            SizedBox(width: 3),
+                            Text(
+                              'Nearest to Farthest',
+                              style: TextStyle(
+                                color: Color(0xFF81C784),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Outlets list with Nearest first & Select/Deselect buttons
+                  ...outlets.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final outlet = entry.value;
+                    final isSelected = ctrl.isSelected(outlet);
+                    final dist = LocationService.instance.calculateDistanceKm(
+                      startLat: uLat,
+                      startLng: uLng,
+                      endLat: outlet.lat,
+                      endLng: outlet.lng,
+                    );
+                    final isNearest = (idx == 0);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _NearbyOutletTile(
+                        outlet: outlet,
+                        distanceKm: dist,
+                        isNearest: isNearest,
+                        isSelected: isSelected,
+                        onToggle: () {
+                          ctrl.toggleRestaurant(outlet);
+                        },
+                      ),
+                    );
+                  }),
+                ],
               ),
-            ],
-          );
-        },
-      );
+            ),
+          ],
+        );
+      },
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -743,4 +774,3 @@ class _NearbyOutletTile extends StatelessWidget {
     );
   }
 }
-

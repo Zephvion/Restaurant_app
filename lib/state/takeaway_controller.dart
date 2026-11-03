@@ -64,6 +64,48 @@ class TakeawayController extends ChangeNotifier {
     );
   }
 
+  /// Returns the detected city based on user's active address or live GPS proximity.
+  String get detectedCity {
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    final text = '${userAddr?.label} ${userAddr?.details}'.toLowerCase();
+
+    if (text.contains('bengaluru') ||
+        text.contains('bangalore') ||
+        text.contains('karnataka')) {
+      return 'Bengaluru';
+    } else if (text.contains('kochi') ||
+        text.contains('cochin') ||
+        text.contains('ernakulam')) {
+      return 'Kochi';
+    } else if (text.contains('trivandrum') ||
+        text.contains('thiruvananthapuram')) {
+      return 'Trivandrum';
+    } else if (text.contains('calicut') ||
+        text.contains('kozhikode')) {
+      return 'Calicut';
+    }
+
+    return nearestRestaurant.city;
+  }
+
+  /// Returns the detected state for the detected city.
+  String get detectedState {
+    final city = detectedCity;
+    if (city.toLowerCase() == 'bengaluru') return 'Karnataka';
+    return 'Kerala';
+  }
+
+  /// Returns user coordinates (lat, lng)
+  Map<String, double> get userCoordinates {
+    final userAddr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    return {
+      'lat': userAddr?.lat ?? 12.9753,
+      'lng': userAddr?.lng ?? 77.5910,
+    };
+  }
+
   Future<void> _init() async {
     final uid = AuthService.instance.currentUser?.uid ?? 'usr_demo';
     final items = await TakeawayService.instance.getUserTakeaways(uid);

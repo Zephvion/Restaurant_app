@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:restaurant_app/data/mock_data.dart';
+import 'package:restaurant_app/models/address.dart';
 import 'package:restaurant_app/screens/takeaway/select_takeaway_restaurant_screen.dart';
 import 'package:restaurant_app/screens/takeaway/takeaway_dashboard_screen.dart';
 import 'package:restaurant_app/services/session_manager.dart';
@@ -17,7 +17,7 @@ void main() {
   });
 
   group('Takeaway Outlet Select & Deselect Tests', () {
-    testWidgets('Dashboard renders Nearest branch first, City tabs, and Select/Deselect buttons', (tester) async {
+    testWidgets('Dashboard renders detected state/city, Nearest branch first, and Select/Deselect buttons', (tester) async {
       tester.view.physicalSize = const Size(412, 915);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -32,12 +32,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify City Filter tabs exist
-      expect(find.text('All Branches'), findsOneWidget);
-      expect(find.text('Bengaluru'), findsOneWidget);
-      expect(find.text('Calicut'), findsOneWidget);
-      expect(find.text('Kochi'), findsOneWidget);
-      expect(find.text('Trivandrum'), findsOneWidget);
+      // Verify detected location badge exists
+      expect(find.textContaining('Bengaluru'), findsWidgets);
+      expect(find.text('Nearest to Farthest'), findsOneWidget);
 
       // Verify nearest branch badge is displayed
       expect(find.textContaining('NEAREST'), findsWidgets);
@@ -65,10 +62,19 @@ void main() {
       expect(ctrl.hasExplicitSelection, isFalse);
     });
 
-    testWidgets('City switching updates visible branches', (tester) async {
+    testWidgets('Dashboard shows only branches of detected state/city sorted nearest to farthest', (tester) async {
       tester.view.physicalSize = const Size(412, 915);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
+
+      // Set user address to Calicut, Kerala
+      await SessionManager.instance.saveSelectedAddress(const Address(
+        id: 'calicut_test',
+        label: 'Calicut Home',
+        details: 'Kannur Road, Calicut, Kerala - 673011',
+        lat: 11.2588,
+        lng: 75.7804,
+      ));
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -77,14 +83,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap 'Kochi' tab
-      await tester.ensureVisible(find.text('Kochi'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Kochi'));
-      await tester.pumpAndSettle();
-
-      // Should display Kochi outlets
-      expect(find.textContaining('Kochi'), findsWidgets);
+      // Should automatically detect Calicut, Kerala
+      expect(find.textContaining('Calicut'), findsWidgets);
+      expect(find.textContaining('Kerala'), findsWidgets);
+      expect(find.text('Nearest to Farthest'), findsOneWidget);
     });
 
     testWidgets('SelectTakeawayRestaurantScreen supports Select, Deselect and Search', (tester) async {
@@ -123,4 +125,3 @@ void main() {
     });
   });
 }
-

@@ -2,13 +2,18 @@ import 'dart:math';
 import '../data/mock_data.dart';
 import '../models/address.dart';
 import '../models/restaurant.dart';
+import 'gps_detection_service.dart';
 import 'session_manager.dart';
 
 class LocationService {
   LocationService._();
   static final LocationService instance = LocationService._();
 
-  // Default fallback restaurant coordinates (Calicut, Kerala)
+  // Default fallback coordinates (Bengaluru active city default)
+  static const double defaultLat = 12.9753;
+  static const double defaultLng = 77.5910;
+
+  // Calicut legacy coordinates
   static const double restaurantLat = 11.2588;
   static const double restaurantLng = 75.7804;
 
@@ -91,8 +96,10 @@ class LocationService {
     double? userLat,
     double? userLng,
   }) {
-    final activeLat = userLat ?? SessionManager.instance.getSelectedAddress()?.lat ?? restaurantLat;
-    final activeLng = userLng ?? SessionManager.instance.getSelectedAddress()?.lng ?? restaurantLng;
+    final addr = SessionManager.instance.getSelectedAddress() ??
+        GpsDetectionService.instance.lastDetectedAddress;
+    final activeLat = userLat ?? addr?.lat ?? defaultLat;
+    final activeLng = userLng ?? addr?.lng ?? defaultLng;
     return calculateDistanceKm(
       startLat: activeLat,
       startLng: activeLng,
@@ -115,4 +122,3 @@ class LocationService {
     return (30.0 + (dist - 8.0) * 5.0).roundToDouble();
   }
 }
-
