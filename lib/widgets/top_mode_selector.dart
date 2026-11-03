@@ -372,7 +372,8 @@ class _TopModeSelectorState extends State<TopModeSelector> {
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () => _handleTabTap(i),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 2.0),
                                   child: Center(
                                     child: _ModeTabContent(
                                       mode: mode,
@@ -548,7 +549,8 @@ class _OrganicModeBarPainter extends CustomPainter {
     // 3. Ambient top crest halo glow on selected tab
     final glowRect = Rect.fromLTRB(left + 2, top - 2, right - 2, top + 16);
     final glowPath = Path()
-      ..addRRect(RRect.fromRectAndRadius(glowRect, Radius.circular(effectiveRTop)));
+      ..addRRect(
+          RRect.fromRectAndRadius(glowRect, Radius.circular(effectiveRTop)));
     final glowPaint = Paint()
       ..color = theme.glowColor
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
@@ -636,43 +638,6 @@ class _ModeTabContent extends StatelessWidget {
         mode.icon,
         size: 24,
         color: isSelected ? theme.activeIcon : inactiveColor,
-      );
-    }
-
-    if (mode.id == 'take_away') {
-      return Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          buildAssetOrFallback(),
-          Positioned(
-            bottom: -5,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0066FF), // Express Delivery Blue pill badge
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: const Text(
-                '15 Mins',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 7.5,
-                  fontWeight: FontWeight.w900,
-                  height: 1.0,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ),
-          ),
-        ],
       );
     }
 
