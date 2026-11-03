@@ -52,7 +52,7 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
           return r.city.toLowerCase() == activeCity.toLowerCase();
         }).toList();
 
-        // Strict Nearest-to-Farthest sort using active user coordinates
+        // Strict Nearest-to-Farthest sort automatically applied
         outlets.sort((a, b) {
           final distA = LocationService.instance.calculateDistanceKm(
             startLat: uLat,
@@ -156,71 +156,50 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                   ),
                   const SizedBox(height: 10),
 
-                  // Detected Location Badge (shows detected state/city and nearest-to-farthest sort)
+                  // Detected Location Badge (shows detected state/city and branch count)
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFFF9500).withValues(alpha: 0.5),
-                              width: 1.0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFFF9500).withValues(alpha: 0.5),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.my_location_rounded, size: 13, color: Color(0xFFFF9500)),
+                          const SizedBox(width: 5),
+                          Text(
+                            '$activeCity (${ctrl.detectedState})',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.my_location_rounded, size: 13, color: Color(0xFFFF9500)),
-                              const SizedBox(width: 5),
-                              Text(
-                                activeCity,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF9500),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${outlets.length} Branches',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.swap_vert_rounded, size: 14, color: Color(0xFF81C784)),
-                            SizedBox(width: 3),
-                            Text(
-                              'Nearest to Farthest',
-                              style: TextStyle(
-                                color: Color(0xFF81C784),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9500),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${outlets.length} Branches',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),

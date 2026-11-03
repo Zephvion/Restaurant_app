@@ -34,7 +34,6 @@ void main() {
 
       // Verify detected location badge exists
       expect(find.textContaining('Bengaluru'), findsWidgets);
-      expect(find.text('Nearest to Farthest'), findsOneWidget);
 
       // Verify nearest branch badge is displayed
       expect(find.textContaining('NEAREST'), findsWidgets);
@@ -62,7 +61,7 @@ void main() {
       expect(ctrl.hasExplicitSelection, isFalse);
     });
 
-    testWidgets('Dashboard shows only branches of detected state/city sorted nearest to farthest', (tester) async {
+    testWidgets('Dashboard shows only branches of detected state/city automatically sorted nearest to farthest', (tester) async {
       tester.view.physicalSize = const Size(412, 915);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -86,7 +85,7 @@ void main() {
       // Should automatically detect Calicut, Kerala
       expect(find.textContaining('Calicut'), findsWidgets);
       expect(find.textContaining('Kerala'), findsWidgets);
-      expect(find.text('Nearest to Farthest'), findsOneWidget);
+      expect(find.textContaining('NEAREST'), findsWidgets);
     });
 
     testWidgets('SelectTakeawayRestaurantScreen supports Select, Deselect and Search', (tester) async {
