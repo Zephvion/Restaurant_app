@@ -10,12 +10,16 @@ class NetworkImageWithFallback extends StatelessWidget {
     required this.url,
     this.fit = BoxFit.cover,
     this.fallbackIcon = Icons.restaurant_menu,
+    this.fallbackIconSize = 28,
+    this.showSpinner = true,
     this.filterQuality = FilterQuality.medium,
   });
 
   final String url;
   final BoxFit fit;
   final IconData fallbackIcon;
+  final double fallbackIconSize;
+  final bool showSpinner;
   final FilterQuality filterQuality;
 
   @override
@@ -26,7 +30,11 @@ class NetworkImageWithFallback extends StatelessWidget {
         fit: fit,
         filterQuality: filterQuality,
         errorBuilder: (context, error, stackTrace) {
-          return _Placeholder(icon: fallbackIcon, showSpinner: false);
+          return _Placeholder(
+            icon: fallbackIcon,
+            iconSize: fallbackIconSize,
+            showSpinner: false,
+          );
         },
       );
     }
@@ -38,20 +46,33 @@ class NetworkImageWithFallback extends StatelessWidget {
       gaplessPlayback: true,
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
-        return _Placeholder(icon: fallbackIcon, showSpinner: true);
+        return _Placeholder(
+          icon: fallbackIcon,
+          iconSize: fallbackIconSize,
+          showSpinner: showSpinner,
+        );
       },
       errorBuilder: (context, error, stackTrace) {
-        return _Placeholder(icon: fallbackIcon, showSpinner: false);
+        return _Placeholder(
+          icon: fallbackIcon,
+          iconSize: fallbackIconSize,
+          showSpinner: false,
+        );
       },
     );
   }
 }
 
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.icon, required this.showSpinner});
+  const _Placeholder({
+    required this.icon,
+    required this.showSpinner,
+    this.iconSize = 28,
+  });
 
   final IconData icon;
   final bool showSpinner;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -65,15 +86,15 @@ class _Placeholder extends StatelessWidget {
       ),
       child: Center(
         child: showSpinner
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
+            ? SizedBox(
+                width: (iconSize * 0.8).clamp(14.0, 22.0),
+                height: (iconSize * 0.8).clamp(14.0, 22.0),
+                child: const CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
                 ),
               )
-            : Icon(icon, color: AppColors.textSecondary, size: 28),
+            : Icon(icon, color: AppColors.textSecondary, size: iconSize),
       ),
     );
   }

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/mock_data.dart';
+import '../models/user_profile.dart';
 import '../routes/app_routes.dart';
+import '../services/auth_service.dart';
 import '../state/cart_controller.dart';
 import '../theme/app_colors.dart';
 import 'address_picker_sheet.dart';
 import 'app_banner.dart';
+import 'network_image_with_fallback.dart';
 
 /// Which tab is currently active in the floating bottom navigation bar.
 enum ParagonTab { home, location, cart, account }
@@ -75,7 +79,9 @@ class ParagonBottomNav extends StatelessWidget {
                   onTap: () => _go(context, ParagonTab.cart),
                 ),
                 _NavItem(
-                  icon: Icons.settings_outlined,
+                  customIcon: _ProfileAvatar(
+                    active: current == ParagonTab.account,
+                  ),
                   label: current == ParagonTab.account ? 'Account' : null,
                   active: current == ParagonTab.account,
                   onTap: () => _go(context, ParagonTab.account),
@@ -91,13 +97,15 @@ class ParagonBottomNav extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
+    this.icon,
+    this.customIcon,
     required this.active,
     required this.onTap,
     this.label,
-  });
+  }) : assert(icon != null || customIcon != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? customIcon;
   final bool active;
   final VoidCallback onTap;
   final String? label;
@@ -130,11 +138,58 @@ class _NavItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
-              Icon(icon, color: color, size: 24),
+              customIcon ?? Icon(icon!, color: color, size: 24),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<UserProfile?>(
+      stream: AuthService.instance.authStateChanges,
+      initialData: AuthService.instance.currentUser,
+      builder: (context, snapshot) {
+        final profile = snapshot.data ?? AuthService.instance.currentUser;
+        final photoUrl = (profile != null && profile.photoUrl.trim().isNotEmpty)
+            ? profile.photoUrl.trim()
+            : MockData.userAvatar;
+
+        return Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surfaceLight,
+            border: Border.all(
+              color: active
+                  ? AppColors.textPrimary
+                  : AppColors.hint.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+          ),
+          child: ClipOval(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: NetworkImageWithFallback(
+                url: photoUrl,
+                fallbackIcon: Icons.person,
+                fallbackIconSize: 14,
+                showSpinner: false,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
