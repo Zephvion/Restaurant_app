@@ -142,7 +142,8 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                       ),
                       TextButton.icon(
                         onPressed: () => _goSelectRestaurant(context),
-                        icon: const Icon(Icons.tune_rounded, size: 14, color: AppColors.copper),
+                        icon: const Icon(Icons.tune_rounded,
+                            size: 14, color: AppColors.copper),
                         label: const Text(
                           'All Outlets',
                           style: TextStyle(
@@ -160,7 +161,8 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFF9500).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
@@ -172,7 +174,8 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.my_location_rounded, size: 13, color: Color(0xFFFF9500)),
+                          const Icon(Icons.my_location_rounded,
+                              size: 13, color: Color(0xFFFF9500)),
                           const SizedBox(width: 5),
                           Text(
                             '$activeCity (${ctrl.detectedState})',
@@ -180,22 +183,6 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF9500),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${outlets.length} Branches',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
                             ),
                           ),
                         ],
@@ -256,7 +243,6 @@ class _TakeawayDashboardScreenState extends State<TakeawayDashboardScreen>
       Navigator.of(context).pushNamed(AppRoutes.takeawaySelectRestaurant);
 }
 
-
 // ── Domino's Style Store Card ────────────────────────────────────────────────
 
 class _NearbyStoreCard extends StatelessWidget {
@@ -287,7 +273,8 @@ class _NearbyStoreCard extends StatelessWidget {
         color: const Color(0xFF1E1E23),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: hasSelection ? const Color(0xFF10B981) : const Color(0xFF303036),
+          color:
+              hasSelection ? const Color(0xFF10B981) : const Color(0xFF303036),
           width: hasSelection ? 1.5 : 1.2,
         ),
         boxShadow: [
@@ -310,13 +297,18 @@ class _NearbyStoreCard extends StatelessWidget {
             children: [
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                   decoration: BoxDecoration(
-                    color: (hasSelection ? const Color(0xFF10B981) : const Color(0xFFFF9500))
+                    color: (hasSelection
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFFF9500))
                         .withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: (hasSelection ? const Color(0xFF10B981) : const Color(0xFFFF9500))
+                      color: (hasSelection
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFFF9500))
                           .withValues(alpha: 0.5),
                       width: 0.8,
                     ),
@@ -325,8 +317,12 @@ class _NearbyStoreCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        hasSelection ? Icons.check_circle_rounded : Icons.storefront_rounded,
-                        color: hasSelection ? const Color(0xFF10B981) : const Color(0xFFFF9500),
+                        hasSelection
+                            ? Icons.check_circle_rounded
+                            : Icons.storefront_rounded,
+                        color: hasSelection
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFFF9500),
                         size: 13,
                       ),
                       const SizedBox(width: 4),
@@ -336,7 +332,9 @@ class _NearbyStoreCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: hasSelection ? const Color(0xFF10B981) : const Color(0xFFFF9500),
+                            color: hasSelection
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFFF9500),
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.6,
@@ -349,7 +347,8 @@ class _NearbyStoreCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1B5E20).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
@@ -416,9 +415,12 @@ class _NearbyStoreCard extends StatelessWidget {
                       onPressed: onDeselectStore,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
-                        side: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                        side: BorderSide(
+                            color: AppColors.border.withValues(alpha: 0.8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 7),
+                        textStyle: const TextStyle(
+                            fontSize: 11.5, fontWeight: FontWeight.w600),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -433,9 +435,12 @@ class _NearbyStoreCard extends StatelessWidget {
                     label: const Text('Change'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.copper,
-                      side: BorderSide(color: AppColors.copper.withValues(alpha: 0.6)),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                      side: BorderSide(
+                          color: AppColors.copper.withValues(alpha: 0.6)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 7),
+                      textStyle: const TextStyle(
+                          fontSize: 11.5, fontWeight: FontWeight.w600),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -505,7 +510,9 @@ class _NearbyStoreCard extends StatelessWidget {
             label: hasSelection
                 ? 'Order Takeaway from this Outlet'
                 : 'Order from Nearest Restaurant',
-            icon: hasSelection ? Icons.shopping_bag_rounded : Icons.storefront_rounded,
+            icon: hasSelection
+                ? Icons.shopping_bag_rounded
+                : Icons.storefront_rounded,
             uppercase: false,
             backgroundColor: const Color(0xFFFF9500),
             foregroundColor: Colors.black,
@@ -552,9 +559,8 @@ class _NearbyOutletTile extends StatelessWidget {
               : const Color(0xFF1E1E23),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF10B981)
-                : const Color(0xFF303036),
+            color:
+                isSelected ? const Color(0xFF10B981) : const Color(0xFF303036),
             width: isSelected ? 1.6 : 1.0,
           ),
           boxShadow: isSelected
@@ -584,7 +590,9 @@ class _NearbyOutletTile extends StatelessWidget {
                   ),
                   child: Icon(
                     Icons.storefront_rounded,
-                    color: isSelected ? const Color(0xFF10B981) : const Color(0xFF9A9AA5),
+                    color: isSelected
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFF9A9AA5),
                     size: 20,
                   ),
                 ),
@@ -598,7 +606,8 @@ class _NearbyOutletTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                          color:
+                              isSelected ? Colors.white : AppColors.textPrimary,
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                         ),
@@ -618,7 +627,8 @@ class _NearbyOutletTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2E7D32),
                     borderRadius: BorderRadius.circular(4),
@@ -655,12 +665,15 @@ class _NearbyOutletTile extends StatelessWidget {
                     children: [
                       if (isNearest)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF9500).withValues(alpha: 0.18),
+                            color:
+                                const Color(0xFFFF9500).withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: const Color(0xFFFF9500).withValues(alpha: 0.6),
+                              color: const Color(0xFFFF9500)
+                                  .withValues(alpha: 0.6),
                               width: 0.6,
                             ),
                           ),
@@ -717,8 +730,8 @@ class _NearbyOutletTile extends StatelessWidget {
                         color: Color(0xFF10B981),
                         width: 1.2,
                       ),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
@@ -735,8 +748,8 @@ class _NearbyOutletTile extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: AppColors.copper,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
