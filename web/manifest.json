@@ -1,11 +1,11 @@
 {
-    "name": "restaurant_app",
-    "short_name": "restaurant_app",
+    "name": "PARAGON",
+    "short_name": "PARAGON",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0E0E11",
+    "theme_color": "#0E0E11",
+    "description": "PARAGON — Authentic Flavours Since 1939",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
