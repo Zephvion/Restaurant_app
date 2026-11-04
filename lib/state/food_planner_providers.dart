@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/food_planner/food_planner_repository.dart';
+import '../features/food_planner/food_planner_service.dart';
 import '../models/meal_plan.dart';
 import 'food_planner_controller.dart';
 
@@ -7,6 +9,26 @@ import 'food_planner_controller.dart';
 final foodPlannerControllerProvider =
     ChangeNotifierProvider<FoodPlannerController>((ref) {
   return FoodPlannerController.instance;
+});
+
+/// Provides the Food Planner repository.
+final foodPlannerRepositoryProvider = Provider<FoodPlannerRepository>((ref) {
+  return ControllerFoodPlannerRepository(
+    controller: ref.watch(foodPlannerControllerProvider),
+  );
+});
+
+/// Provides the Food Planner service.
+final foodPlannerServiceProvider = Provider<FoodPlannerService>((ref) {
+  return FoodPlannerService(
+    repository: ref.watch(foodPlannerRepositoryProvider),
+  );
+});
+
+/// Provides the active Food Planner order asynchronously.
+final foodPlannerActiveOrderAsyncProvider =
+    FutureProvider<PlannerTrackOrder?>((ref) {
+  return ref.watch(foodPlannerServiceProvider).getActiveOrder();
 });
 
 /// Provides the currently selected planner tab.

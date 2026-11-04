@@ -1,14 +1,18 @@
+import '../../core/repositories/app_repository.dart';
 import '../../models/reservation.dart';
 import '../../state/reservation_controller.dart';
-import '../../core/repositories/app_repository.dart';
 
-/// Repository for accessing reservation data.
-///
-/// Currently uses the existing in-memory ReservationController.
-/// It can later be replaced with a Firestore implementation without
-/// changing the feature's provider interface.
-class ReservationRepository implements AppRepository<Reservation> {
-  ReservationRepository({
+/// Reservation-specific data access contract.
+abstract interface class ReservationRepository
+    implements AppRepository<Reservation> {
+  Future<void> create(Reservation reservation);
+
+  Future<void> delete(String id);
+}
+
+/// Controller-backed implementation of the repository.
+class ControllerReservationRepository implements ReservationRepository {
+  ControllerReservationRepository({
     required ReservationController controller,
   }) : _controller = controller;
 
@@ -28,5 +32,15 @@ class ReservationRepository implements AppRepository<Reservation> {
     }
 
     return null;
+  }
+
+  @override
+  Future<void> create(Reservation reservation) async {
+    _controller.add(reservation);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _controller.remove(id);
   }
 }

@@ -1,12 +1,14 @@
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:restaurant_app/core/repositories/app_repository.dart';
 import 'package:restaurant_app/features/reservations/reservation_providers.dart';
+import 'package:restaurant_app/features/reservations/reservation_repository.dart';
 import 'package:restaurant_app/models/reservation.dart';
 
-class FakeReservationRepository implements AppRepository<Reservation> {
-  FakeReservationRepository(this.reservations);
+class FakeReservationRepository implements ReservationRepository {
+  FakeReservationRepository([List<Reservation>? initialReservations])
+      : reservations = List<Reservation>.from(initialReservations ?? []);
 
   final List<Reservation> reservations;
 
@@ -20,6 +22,16 @@ class FakeReservationRepository implements AppRepository<Reservation> {
     }
     return null;
   }
+
+  @override
+  Future<void> create(Reservation reservation) async {
+    reservations.add(reservation);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    reservations.removeWhere((reservation) => reservation.id == id);
+  }
 }
 
 void main() {
@@ -27,13 +39,14 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         reservationRepositoryProvider.overrideWithValue(
-          FakeReservationRepository([]),
+          FakeReservationRepository(),
         ),
       ],
     );
     addTearDown(container.dispose);
 
-    final reservations = await container.read(reservationsAsyncProvider.future);
+    final reservations =
+        await container.read(reservationsAsyncProvider.future);
 
     expect(reservations, isEmpty);
   });
@@ -42,7 +55,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         reservationRepositoryProvider.overrideWithValue(
-          FakeReservationRepository([]),
+          FakeReservationRepository(),
         ),
       ],
     );
