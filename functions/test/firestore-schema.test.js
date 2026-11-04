@@ -1,4 +1,3 @@
-
 "use strict";
 
 const test = require("node:test");
@@ -291,6 +290,55 @@ test("reservation with zero seats fails", () => {
         tableNumber: 12,
       }),
     /seats/
+  );
+});
+
+// ARCH-006: Reservation status contract tests
+
+test("valid reservation status passes", () => {
+  for (const status of ENUMS.reservationStatus) {
+    assert.equal(
+      validateDocument("reservations", {
+        userId: "USER001",
+        restaurantId: "REST001",
+        date: new Date(),
+        timeSlot: "19:00",
+        seats: 4,
+        tableNumber: 12,
+        status,
+      }),
+      true
+    );
+  }
+});
+
+test("invalid reservation status fails", () => {
+  assert.throws(
+    () =>
+      validateDocument("reservations", {
+        userId: "USER001",
+        restaurantId: "REST001",
+        date: new Date(),
+        timeSlot: "19:00",
+        seats: 4,
+        tableNumber: 12,
+        status: "unknown",
+      }),
+    /status/
+  );
+});
+
+test("reservation status is optional for legacy records", () => {
+  assert.equal(
+    validateDocument("reservations", {
+      userId: "USER001",
+      restaurantId: "REST001",
+      date: new Date(),
+      timeSlot: "19:00",
+      seats: 4,
+      tableNumber: 12,
+    }),
+    true
   );
 });
 
@@ -735,6 +783,13 @@ test("enum values match canonical schema", () => {
     "inactive",
   ]);
 
+  assert.deepEqual(ENUMS.reservationStatus, [
+    "pending",
+    "confirmed",
+    "cancelled",
+    "completed",
+  ]);
+
   assert.deepEqual(ENUMS.orderType, [
     "takeaway",
     "delivery",
@@ -759,11 +814,11 @@ test("enum values match canonical schema", () => {
     "expired",
   ]);
 
- assert.deepEqual(ENUMS.paymentStatus, [
-  "pending",
-  "authorized",
-  "captured",
-  "failed",
-  "refunded",
-]);
+  assert.deepEqual(ENUMS.paymentStatus, [
+    "pending",
+    "authorized",
+    "captured",
+    "failed",
+    "refunded",
+  ]);
 });

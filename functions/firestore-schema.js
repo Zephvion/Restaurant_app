@@ -1,8 +1,6 @@
-
 "use strict";
 
 const COLLECTIONS = Object.freeze({
-  // Existing application collections
   RESTAURANTS: "restaurants",
   DISHES: "dishes",
   MENU_CATEGORIES: "menuCategories",
@@ -14,8 +12,6 @@ const COLLECTIONS = Object.freeze({
   TAKEAWAY_ORDERS: "takeawayOrders",
   CATERING_ORDERS: "cateringOrders",
   PLANNER_ORDERS: "plannerOrders",
-
-  // Shared business collections
   BRANCHES: "branches",
   KITCHENS: "kitchens",
   PRODUCTS: "products",
@@ -38,9 +34,9 @@ const ENUMS = Object.freeze({
   paymentKind: ["card", "upi", "wallet", "netBanking", "cash"],
   takeawayStatus: ["preparing", "packing", "readyForTakeaway", "taken"],
   cateringStatus: ["notifiedParagon", "call", "bookingConfirmed"],
+  reservationStatus: ["pending", "confirmed", "cancelled", "completed"],
   mealType: ["breakfast", "lunch", "dinner"],
   plannerOrderStatus: ["orderAccepted", "taken", "done"],
-
   branchStatus: ["active", "inactive"],
   kitchenStatus: ["active", "inactive"],
   orderStatus: [
@@ -186,8 +182,6 @@ function orderItemsField(
     }
   });
 }
-
-// Existing application validators
 
 function validateRestaurant(data) {
   required(data, ["name", "address", "city"]);
@@ -340,6 +334,10 @@ function validateReservation(data) {
   positiveIntegerField(data, "seats");
   positiveIntegerField(data, "tableNumber");
 
+  if (data.status !== undefined) {
+    enumField(data, "status", ENUMS.reservationStatus);
+  }
+
   if (data.createdAt !== undefined) {
     dateField(data, "createdAt");
   }
@@ -443,8 +441,6 @@ function validateCalorieStats(data) {
     integerField(data, field);
   }
 }
-
-// New shared business validators
 
 function validateBranch(data) {
   required(data, ["restaurantId", "name", "address", "city"]);
@@ -607,8 +603,6 @@ function validatePayment(data) {
     dateField(data, "updatedAt");
   }
 }
-
-// Collection-to-validator mapping
 
 const VALIDATORS = Object.freeze({
   [COLLECTIONS.RESTAURANTS]: validateRestaurant,
