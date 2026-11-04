@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'routes/app_routes.dart';
 import 'screens/auth/login_screen.dart';
@@ -13,7 +15,6 @@ import 'screens/order_food/cart_screen.dart';
 import 'screens/order_food/category_listing_screen.dart';
 import 'screens/order_food/food_home_screen.dart';
 import 'screens/order_food/notifications_screen.dart';
-import 'screens/order_food/order_food_intro_screen.dart';
 import 'screens/order_food/order_success_screen.dart';
 import 'screens/order_food/payment_methods_screen.dart';
 import 'screens/order_food/payment_options_screen.dart';
@@ -24,18 +25,15 @@ import 'screens/order_food/track_order_screen.dart';
 import 'screens/reserve_table/reservation_booking_screen.dart';
 import 'screens/reserve_table/reservation_success_screen.dart';
 import 'screens/reserve_table/reserve_dashboard_screen.dart';
-import 'screens/reserve_table/reserve_table_intro_screen.dart';
 import 'screens/reserve_table/select_restaurant_screen.dart';
 import 'screens/catering/catering_booking_screen.dart';
 import 'screens/catering/catering_dashboard_screen.dart';
-import 'screens/catering/catering_intro_screen.dart';
 import 'screens/catering/catering_notice_screen.dart';
 import 'screens/catering/catering_notify_screen.dart';
 import 'screens/catering/catering_success_screen.dart';
 import 'screens/reserve_table/table_picker_screen.dart';
 import 'screens/food_planner/food_planner_calculator_screen.dart';
 import 'screens/food_planner/food_planner_cart_screen.dart';
-import 'screens/food_planner/food_planner_intro_screen.dart';
 import 'screens/food_planner/food_planner_manage_payments_screen.dart';
 import 'screens/food_planner/food_planner_menu_screen.dart';
 import 'screens/food_planner/food_planner_order_history_screen.dart';
@@ -46,7 +44,6 @@ import 'screens/food_planner/food_planner_slot_screen.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/takeaway/select_takeaway_restaurant_screen.dart';
 import 'screens/takeaway/takeaway_dashboard_screen.dart';
-import 'screens/takeaway/takeaway_intro_screen.dart';
 import 'screens/takeaway/takeaway_menu_screen.dart';
 import 'screens/takeaway/takeaway_success_screen.dart';
 import 'theme/app_colors.dart';
@@ -54,6 +51,7 @@ import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -62,7 +60,13 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const ParagonApp());
+
+  // ARCH-007: Initialize Riverpod for the entire application.
+  runApp(
+    const ProviderScope(
+      child: ParagonApp(),
+    ),
+  );
 }
 
 class ParagonApp extends StatelessWidget {
@@ -76,17 +80,17 @@ class ParagonApp extends StatelessWidget {
       theme: AppTheme.dark,
       initialRoute: AppRoutes.splash,
       routes: {
-        // ── Onboarding & Auth ──────────────────────────────────────────────
+        // Onboarding & Auth
         AppRoutes.splash: (_) => const SplashScreen(),
         AppRoutes.onboarding: (_) => const OnboardingScreen(),
         AppRoutes.login: (_) => const LoginScreen(),
         AppRoutes.signup: (_) => const SignupScreen(),
         AppRoutes.otp: (_) => const OtpScreen(),
 
-        // ── Home ──────────────────────────────────────────────────────────
+        // Home
         AppRoutes.home: (_) => const HomeScreen(),
 
-        // ── Order Food flow ───────────────────────────────────────────────
+        // Order Food flow
         AppRoutes.orderFood: (_) => const FoodHomeScreen(),
         AppRoutes.foodHome: (_) => const FoodHomeScreen(),
         AppRoutes.categoryListing: (_) => const CategoryListingScreen(),
@@ -102,7 +106,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.previousOrder: (_) => const PreviousOrderScreen(),
         AppRoutes.account: (_) => const AccountScreen(),
 
-        // ── Reserve Table flow ─────────────────────────────────────────────
+        // Reserve Table flow
         AppRoutes.reserveTable: (_) => const ReserveDashboardScreen(),
         AppRoutes.reserveDashboard: (_) => const ReserveDashboardScreen(),
         AppRoutes.selectRestaurant: (_) => const SelectRestaurantScreen(),
@@ -110,7 +114,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.tablePicker: (_) => const TablePickerScreen(),
         AppRoutes.reservationSuccess: (_) => const ReservationSuccessScreen(),
 
-        // ── Take Away flow ─────────────────────────────────────────────────
+        // Take Away flow
         AppRoutes.takeaway: (_) => const TakeawayDashboardScreen(),
         AppRoutes.takeawayDashboard: (_) => const TakeawayDashboardScreen(),
         AppRoutes.takeawaySelectRestaurant: (_) =>
@@ -118,7 +122,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.takeawayMenu: (_) => const TakeawayMenuScreen(),
         AppRoutes.takeawaySuccess: (_) => const TakeawaySuccessScreen(),
 
-        // ── Catering flow ──────────────────────────────────────────────────
+        // Catering flow
         AppRoutes.catering: (_) => const CateringDashboardScreen(),
         AppRoutes.cateringDashboard: (_) => const CateringDashboardScreen(),
         AppRoutes.cateringNotice: (_) => const CateringNoticeScreen(),
@@ -126,7 +130,7 @@ class ParagonApp extends StatelessWidget {
         AppRoutes.cateringNotify: (_) => const CateringNotifyScreen(),
         AppRoutes.cateringSuccess: (_) => const CateringSuccessScreen(),
 
-        // ── Food Planner flow ──────────────────────────────────────────────
+        // Food Planner flow
         AppRoutes.foodPlannerIntro: (_) => const FoodPlannerShellScreen(),
         AppRoutes.foodPlanner: (_) => const FoodPlannerShellScreen(),
         AppRoutes.foodPlannerSlot: (_) => const FoodPlannerSlotScreen(),
