@@ -484,7 +484,7 @@ class _CategoryListingScreenState extends State<CategoryListingScreen> {
     }
 
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final childAspectRatio = screenWidth < 380 ? 0.72 : 0.75;
+    final childAspectRatio = screenWidth < 380 ? 0.63 : 0.67;
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),

@@ -796,7 +796,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
 
   Widget _buildDishGrid(List<Dish> dishes, {EdgeInsetsGeometry? padding}) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final childAspectRatio = screenWidth < 380 ? 0.72 : 0.75;
+    final childAspectRatio = screenWidth < 380 ? 0.63 : 0.67;
 
     return GridView.builder(
       shrinkWrap: true,

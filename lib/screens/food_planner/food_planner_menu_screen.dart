@@ -488,7 +488,7 @@ class _FoodPlannerMenuScreenState extends State<FoodPlannerMenuScreen> {
         }
 
         final screenWidth = MediaQuery.sizeOf(context).width;
-        final childAspectRatio = screenWidth < 380 ? 0.68 : 0.72;
+        final childAspectRatio = screenWidth < 380 ? 0.63 : 0.67;
 
         return Scaffold(
           backgroundColor: AppColors.background,

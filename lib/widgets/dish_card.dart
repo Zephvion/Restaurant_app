@@ -122,7 +122,7 @@ class TacoBellProductCard extends StatelessWidget {
             child: Stack(
               children: [
                 SizedBox(
-                  height: 114,
+                  height: 106,
                   width: double.infinity,
                   child: NetworkImageWithFallback(
                     url: dish.imageUrl,
@@ -284,46 +284,50 @@ class TacoBellProductCard extends StatelessWidget {
           // 5. Bottom Row: Price on left, ADD button on right
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Price block
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (dish.hasDiscount) ...[
-                    Text(
-                      '₹${dish.oldPrice!.toInt()}',
-                      style: const TextStyle(
-                        color: Color(0xFF9A9AA5),
-                        fontSize: 10.5,
-                        decoration: TextDecoration.lineThrough,
-                        fontWeight: FontWeight.w500,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (dish.hasDiscount && dish.oldPrice != null) ...[
+                      Text(
+                        '₹${dish.oldPrice!.toInt()}',
+                        style: const TextStyle(
+                          color: Color(0xFF9A9AA5),
+                          fontSize: 10,
+                          decoration: TextDecoration.lineThrough,
+                          fontWeight: FontWeight.w500,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC72C),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '₹${dish.price.toInt()}',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 1),
                   ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFC72C),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '₹${dish.price.toInt()}',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(width: 4),
 
               // ADD button or Stepper
               if (effectiveQuantity == 0)
@@ -334,8 +338,8 @@ class TacoBellProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                     child: Container(
                       height: 28,
-                      constraints: const BoxConstraints(minWidth: 62),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      constraints: const BoxConstraints(minWidth: 58),
+                      padding: const EdgeInsets.symmetric(horizontal: 7),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(6),

@@ -455,7 +455,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
             : 180.0;
 
         return SizedBox(
-          height: 242,
+          height: 250,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -542,7 +542,7 @@ class _FoodHomeScreenState extends State<FoodHomeScreen>
             : 180.0;
 
         return SizedBox(
-          height: 242,
+          height: 250,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),

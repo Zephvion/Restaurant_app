@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../data/mock_data.dart';
 import '../firebase_options.dart';
 import '../models/address.dart';
 import '../models/user_profile.dart';
@@ -151,10 +150,10 @@ class AuthService {
               existing ??
               UserProfile(
                 uid: user.uid,
-                displayName: user.displayName ?? MockData.userName,
-                email: user.email ?? MockData.userEmail,
-                phone: user.phoneNumber ?? MockData.userPhone,
-                photoUrl: user.photoURL ?? MockData.userAvatar,
+                displayName: user.displayName ?? '',
+                email: user.email ?? '',
+                phone: user.phoneNumber ?? '',
+                photoUrl: user.photoURL ?? '',
               );
           _currentUser = profile;
 
@@ -343,9 +342,9 @@ class AuthService {
             existing ??
             UserProfile(
               uid: user.uid,
-              displayName: user.displayName ?? (email.contains('@') ? email.split('@').first : MockData.userName),
+              displayName: user.displayName ?? (email.contains('@') ? email.split('@').first : ''),
               email: user.email ?? email,
-              phone: user.phoneNumber ?? MockData.userPhone,
+              phone: user.phoneNumber ?? '',
             );
 
         _currentUser = profile;
@@ -793,7 +792,7 @@ class AuthService {
         : (_otpPhoneNumber ?? '');
 
     final List<Address> addresses = List.from(user?.savedAddresses ?? []);
-    String deliveryArea = user?.defaultDeliveryArea ?? 'Palazhi , Calicut';
+    String deliveryArea = user?.defaultDeliveryArea ?? '';
     if (cityArea != null && cityArea.trim().isNotEmpty) {
       deliveryArea = cityArea.trim();
     }

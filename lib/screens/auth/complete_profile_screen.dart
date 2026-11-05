@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/mock_data.dart';
 import '../../models/address.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
@@ -47,16 +48,27 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final user = AuthService.instance.currentUser;
     _phone = widget.initialPhone ?? user?.phone ?? AuthService.instance.otpPhoneNumber ?? '';
     if (user != null) {
-      if (user.displayName.isNotEmpty && user.displayName != 'Valued Guest' && user.displayName != 'User') {
+      if (user.displayName.isNotEmpty &&
+          user.displayName != 'Valued Guest' &&
+          user.displayName != 'User' &&
+          user.displayName != MockData.userName) {
         _nameController.text = user.displayName;
       }
-      if (user.email.isNotEmpty && !user.email.contains('@paragon.com')) {
+      if (user.email.isNotEmpty &&
+          !user.email.contains('@paragon.com') &&
+          user.email != MockData.userEmail) {
         _emailController.text = user.email;
       }
+      // Never prefill default or mock addresses into personal details
       if (user.savedAddresses.isNotEmpty) {
         final firstAddr = user.savedAddresses.first;
-        _addressController.text = firstAddr.details;
-        _landmarkController.text = firstAddr.label;
+        final isMockAddr = firstAddr.details.contains('Landmark World') ||
+            firstAddr.details.contains('UL Cyberpark') ||
+            (firstAddr.label == 'Home' && firstAddr.details.contains('Palazhi'));
+        if (!isMockAddr && firstAddr.details.trim().isNotEmpty) {
+          _addressController.text = firstAddr.details;
+          _landmarkController.text = firstAddr.label;
+        }
       }
     }
   }
@@ -178,7 +190,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         email: email,
         addressDetails: address,
         landmark: landmark,
-        cityArea: landmark.isNotEmpty ? landmark : 'Palazhi , Calicut',
+        cityArea: landmark.isNotEmpty ? landmark : '',
         lat: _detectedLat,
         lng: _detectedLng,
         password: password.isNotEmpty ? password : null,
@@ -208,13 +220,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   void _skipForNow() {
-    final user = AuthService.instance.currentUser;
-    final fallbackName = user?.displayName.isNotEmpty == true &&
-            user!.displayName != 'Valued Guest' &&
-            user.displayName != 'User'
-        ? user.displayName
-        : 'Guest User';
-
     AppBanner.showSuccess(
       context,
       'Welcome to PARAGON! You can update your profile anytime in Account.',
