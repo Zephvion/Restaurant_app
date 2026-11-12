@@ -15,6 +15,10 @@ dependencies:
   # Fonts are fetched on first run; see README if you need a fully offline build.
   google_fonts: ^6.2.1
 
+  # State management and dependency injection
+  flutter_riverpod: ^2.6.1
+  mapbox_maps_flutter: ^3.34.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
