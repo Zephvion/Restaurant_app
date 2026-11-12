@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
+import 'core/config/mapbox_config.dart';
 import 'routes/app_routes.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_screen.dart';
@@ -51,6 +53,11 @@ import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ARCH-011: Initialize the environment-specific Mapbox token.
+  if (MapboxConfig.isConfigured) {
+    MapboxOptions.setAccessToken(MapboxConfig.accessToken);
+  }
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
