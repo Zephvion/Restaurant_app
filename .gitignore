@@ -31,3 +31,5 @@ serviceAccountKey.json
 # Node.js dependencies
 node_modules/
 npm-debug.log*
+
+.firebaserc
