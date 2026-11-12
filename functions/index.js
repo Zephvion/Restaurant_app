@@ -1,3 +1,4 @@
+
 const { onRequest } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
@@ -21,5 +22,6 @@ exports.health = onRequest((request, response) => {
 const payments = require("./src/payments");
 const jobs = require("./src/jobs");
 const admin = require("./src/admin");
+const media = require("./src/media");
 
-Object.assign(exports, payments, jobs, admin);
+Object.assign(exports, payments, jobs, admin, media);
