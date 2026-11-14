@@ -1,14 +1,16 @@
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import '../../services/google_auth_service.dart';
+import '../../core/services/push_notification_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/primary_button.dart';
 
-/// "Welcome Back!" login screen. Frontend-only: any non-empty credentials
-/// pass and route to the home screen.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifier = TextEditingController();
   final _password = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void dispose() {
     _identifier.dispose();
@@ -28,17 +32,75 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState?.validate() ?? false) {
+  Future<void> _login() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final auth = GoogleAuthService.instance;
+
+    if (!auth.isFirebaseReady) {
+      _showMessage('Firebase is not configured yet.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await auth.signInWithEmailAndPassword(
+        email: _identifier.text.trim(),
+        password: _password.text,
+      );
+
+      try {
+        await PushNotificationService.initialize();
+      } catch (error) {
+        debugPrint('FCM registration pending configuration: $error');
+      }
+
+      if (!mounted) return;
+
       Navigator.of(context).pushNamedAndRemoveUntil(
         AppRoutes.home,
         (route) => false,
       );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      final message = switch (e.code) {
+        'user-not-found' => 'No account found for this email.',
+        'wrong-password' || 'invalid-credential' =>
+          'Invalid email or password.',
+        'invalid-email' => 'Please enter a valid email.',
+        'too-many-requests' => 'Too many attempts. Try again later.',
+        'network-request-failed' => 'Check your internet connection.',
+        _ => e.message ?? 'Login failed. Please try again.',
+      };
+
+      _showMessage(message);
+    } catch (error) {
+      if (mounted) {
+        _showMessage('Something went wrong. Please try again.');
+      }
+      debugPrint('Login error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _loginWithGoogle() {
+    if (!GoogleAuthService.instance.isFirebaseReady) {
+      _showMessage('Firebase is not configured yet.');
+      return;
+    }
+
     showGoogleAccountPickerSheet(context);
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -69,13 +131,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: h * 0.09),
                 AppTextField(
-                  hint: 'Email/Ph number',
+                  hint: 'Email',
                   controller: _identifier,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.username],
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  autofillHints: const [AutofillHints.email],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
@@ -88,11 +155,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       (v == null || v.isEmpty) ? 'Required' : null,
                 ),
                 SizedBox(height: h * 0.22),
-                PrimaryButton(label: 'Login', onPressed: _login),
+                PrimaryButton(
+                  label: _isLoading ? 'Logging in...' : 'Login',
+                  onPressed: _isLoading ? null : _login,
+                ),
                 const SizedBox(height: 20),
                 GoogleSignInButton(
                   label: 'Login with google',
-                  onPressed: _loginWithGoogle,
+                  onPressed: _isLoading ? () {} : _loginWithGoogle,
                 ),
                 SizedBox(height: h * 0.05),
                 _SignUpPrompt(

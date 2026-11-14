@@ -18,6 +18,10 @@ dependencies:
   # State management and dependency injection
   flutter_riverpod: ^2.6.1
   mapbox_maps_flutter: ^3.34.2
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
+  firebase_auth: ^7.0.1
+  cloud_functions: ^7.0.1
 
 dev_dependencies:
   flutter_test:

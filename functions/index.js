@@ -23,5 +23,6 @@ const payments = require("./src/payments");
 const jobs = require("./src/jobs");
 const admin = require("./src/admin");
 const media = require("./src/media");
+const notifications = require("./src/notifications");
 
-Object.assign(exports, payments, jobs, admin, media);
+Object.assign(exports, payments, jobs, admin, media, notifications);
