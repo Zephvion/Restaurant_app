@@ -1,24 +1,19 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 
-exports.runAdminOperation = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "Authentication is required."
-    );
-  }
+const {
+  ROLES,
+  requireRole,
+} = require("./rbac");
 
-  if (request.auth.token.admin !== true) {
-    throw new HttpsError(
-      "permission-denied",
-      "Administrator access is required."
-    );
-  }
+exports.runAdminOperation = onCall(async (request) => {
+  const user = requireRole(request, [ROLES.ADMIN]);
 
   const { operation } = request.data || {};
 
   if (typeof operation !== "string" || !operation.trim()) {
+    const { HttpsError } = require("firebase-functions/v2/https");
+
     throw new HttpsError(
       "invalid-argument",
       "A valid operation is required."
@@ -27,11 +22,9 @@ exports.runAdminOperation = onCall(async (request) => {
 
   logger.info("Authorized admin operation requested", {
     operation,
-    adminUid: request.auth.uid,
+    adminUid: user.uid,
+    role: user.role,
   });
-
-  // Add approved privileged operations here.
-  // Do not execute arbitrary client-supplied commands.
 
   return {
     success: true,
