@@ -1,15 +1,16 @@
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
+import '../../services/google_auth_service.dart';
+import '../../core/services/push_notification_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/google_account_picker_sheet.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/primary_button.dart';
 
-/// "Create a new account" sign-up screen. Frontend-only: valid input routes to
-/// the OTP verification screen.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -24,6 +25,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void dispose() {
     _name.dispose();
@@ -33,18 +36,75 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _register() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final phone = _phone.text.trim();
+  Future<void> _register() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final auth = GoogleAuthService.instance;
+
+    if (!auth.isFirebaseReady) {
+      _showMessage('Firebase is not configured yet.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final credential = await auth.createAccount(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+
+      await credential.user?.updateDisplayName(_name.text.trim());
+
+      try {
+        await PushNotificationService.initialize();
+      } catch (error) {
+        debugPrint('FCM registration pending configuration: $error');
+      }
+
+      if (!mounted) return;
+
       Navigator.of(context).pushNamed(
         AppRoutes.otp,
-        arguments: phone.isEmpty ? MockData.demoPhoneNumber : phone,
+        arguments: _phone.text.trim(),
       );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      final message = switch (e.code) {
+        'email-already-in-use' => 'This email is already registered.',
+        'invalid-email' => 'Please enter a valid email.',
+        'weak-password' => 'Choose a stronger password.',
+        'network-request-failed' => 'Check your internet connection.',
+        _ => e.message ?? 'Account creation failed.',
+      };
+
+      _showMessage(message);
+    } catch (error) {
+      if (mounted) {
+        _showMessage('Could not create account. Please try again.');
+      }
+      debugPrint('Signup error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _signInWithGoogle() {
+    if (!GoogleAuthService.instance.isFirebaseReady) {
+      _showMessage('Firebase is not configured yet.');
+      return;
+    }
+
     showGoogleAccountPickerSheet(context);
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -119,11 +179,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 SizedBox(height: h * 0.06),
-                PrimaryButton(label: 'Sign In', onPressed: _register),
+                PrimaryButton(
+                  label: _isLoading ? 'Creating account...' : 'Sign Up',
+                  onPressed: _isLoading ? null : _register,
+                ),
                 const SizedBox(height: 20),
                 GoogleSignInButton(
                   label: 'Sign in with google',
-                  onPressed: _signInWithGoogle,
+                  onPressed: _isLoading ? () {} : _signInWithGoogle,
                 ),
                 SizedBox(height: h * 0.04),
                 _LoginPrompt(onTap: () => Navigator.of(context).maybePop()),

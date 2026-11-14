@@ -1,0 +1,187 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        request.auth.token.admin == true;
+    }
+
+    function hasRole(role) {
+      return signedIn() &&
+        request.auth.token.role == role;
+    }
+
+    function isCustomer() {
+      return !signedIn() ||
+        (!isAdmin() &&
+         !('role' in request.auth.token));
+    }
+
+    function ownsResource() {
+      return signedIn() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    function createsOwnResource() {
+      return signedIn() &&
+        request.resource.data.userId == request.auth.uid;
+    }
+
+    function hasBranchAccess(branchId) {
+      return signedIn() &&
+        request.auth.token.branchIds is list &&
+        branchId in request.auth.token.branchIds;
+    }
+
+    function hasKitchenAccess(kitchenId) {
+      return signedIn() &&
+        request.auth.token.kitchenIds is list &&
+        kitchenId in request.auth.token.kitchenIds;
+    }
+
+    // User profiles: users can access only their own profile.
+    match /users/{userId} {
+      allow read: if signedIn() &&
+        request.auth.uid == userId;
+
+      allow create: if signedIn() &&
+        request.auth.uid == userId &&
+        !('role' in request.resource.data) &&
+        !('admin' in request.resource.data);
+
+      allow update: if signedIn() &&
+        request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data)
+          .affectedKeys().hasAny(['role', 'admin']);
+
+      allow delete: if isAdmin();
+
+      match /{subcollection}/{documentId} {
+        allow read, create, update, delete: if signedIn() &&
+          request.auth.uid == userId;
+      }
+
+      match /fcmTokens/{tokenId} {
+        allow read, create, update, delete: if signedIn() &&
+          request.auth.uid == userId;
+      }
+    }
+
+    // Customer-owned business records.
+    match /reservations/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if createsOwnResource();
+      allow update, delete: if ownsResource() || isAdmin();
+    }
+
+    match /takeawayOrders/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if createsOwnResource();
+      allow update, delete: if isAdmin();
+    }
+
+    match /cateringOrders/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if createsOwnResource();
+      allow update, delete: if isAdmin();
+    }
+
+    match /plannerOrders/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if createsOwnResource();
+      allow update, delete: if isAdmin();
+    }
+
+    match /orders/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow create: if createsOwnResource();
+      allow update, delete: if isAdmin();
+    }
+
+    match /payments/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /subscriptions/{documentId} {
+      allow read: if ownsResource() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Public catalogue: read-only for authenticated users.
+    match /restaurants/{documentId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /dishes/{documentId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /menuCategories/{documentId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /products/{documentId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Branch-scoped access.
+    match /branches/{branchId} {
+      allow read: if isAdmin() ||
+        hasBranchAccess(branchId);
+
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin() ||
+        (hasRole('branch_manager') &&
+         hasBranchAccess(branchId));
+    }
+
+    // Kitchen-scoped access.
+    match /kitchens/{kitchenId} {
+      allow read: if isAdmin() ||
+        hasKitchenAccess(kitchenId);
+
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin() ||
+        (hasRole('kitchen_staff') &&
+         hasKitchenAccess(kitchenId));
+    }
+
+    // Inventory is restricted to assigned operational staff.
+    match /inventory/{documentId} {
+      allow read: if isAdmin() ||
+        (resource.data.branchId != null &&
+         hasBranchAccess(resource.data.branchId));
+
+      allow create: if isAdmin() ||
+        (request.resource.data.branchId != null &&
+         hasBranchAccess(request.resource.data.branchId));
+
+      allow update: if isAdmin() ||
+        (resource.data.branchId != null &&
+         hasBranchAccess(resource.data.branchId) &&
+         request.resource.data.branchId ==
+           resource.data.branchId);
+
+      allow delete: if isAdmin();
+    }
+
+    // All unspecified collections remain denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
