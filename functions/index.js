@@ -10,7 +10,7 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-// Existing health endpoint
+// Health endpoint
 exports.health = onRequest((request, response) => {
   response.status(200).json({
     status: "healthy",
@@ -24,5 +24,14 @@ const jobs = require("./src/jobs");
 const admin = require("./src/admin");
 const media = require("./src/media");
 const notifications = require("./src/notifications");
+const serviceAreas = require("./src/service-areas");
 
-Object.assign(exports, payments, jobs, admin, media, notifications);
+Object.assign(
+  exports,
+  payments,
+  jobs,
+  admin,
+  media,
+  notifications,
+  serviceAreas
+);

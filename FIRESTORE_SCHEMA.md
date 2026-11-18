@@ -871,3 +871,70 @@ Never store card numbers, CVV, PINs, passwords, or payment-provider secrets in t
 - The new validators in `functions/firestore-schema.js` validate document shapes. They do not create collections, connect Flutter repositories, or deploy Firestore rules.
 - These proposed fields and enum values require business-owner review before production adoption.
 
+
+## 13. Delivery service areas
+
+**Collection:** `serviceAreas`
+
+**Path:** `serviceAreas/{serviceAreaId}`
+
+Each service-area document defines a delivery boundary owned by a restaurant branch.
+
+| Field | Firestore type | Required | Description |
+|---|---|---|---|
+| `branchId` | String | Yes | Owning branch ID |
+| `restaurantId` | String | Yes | Parent restaurant ID |
+| `name` | String | Yes | Service-area display name |
+| `polygon` | Map | Yes | GeoJSON Polygon defining the delivery boundary |
+| `deliveryFee` | Number | Yes | Delivery fee in INR |
+| `minimumOrderValue` | Number | Yes | Minimum order value in INR |
+| `maxDeliveryDistanceKm` | Number | Yes | Configured maximum delivery distance in kilometres |
+| `estimatedDeliveryMinutes` | Number | Yes | Estimated delivery time in minutes |
+| `status` | String | Yes | `active` or `inactive` |
+| `createdBy` | String | No | Firebase UID of the creator |
+| `updatedBy` | String | No | Firebase UID of the last editor |
+| `createdAt` | Timestamp | No | Creation time |
+| `updatedAt` | Timestamp | No | Last update time |
+
+### 13.1 Polygon format
+
+The `polygon` field uses GeoJSON Polygon coordinates.
+
+- Coordinates use `[longitude, latitude]` order.
+- Longitude must be between -180 and 180.
+- Latitude must be between -90 and 90.
+- Every ring must contain at least four positions.
+- Every ring must be closed: its first and last positions must match.
+- The first ring defines the outer boundary.
+- Additional rings represent excluded areas (holes).
+
+Example:
+
+```json
+{
+  "type": "Polygon",
+  "coordinates": [[
+    [76.0, 9.0],
+    [77.0, 9.0],
+    [77.0, 10.0],
+    [76.0, 10.0],
+    [76.0, 9.0]
+  ]]
+}
+```
+
+### 13.2 Ownership and operations
+
+- A branch manager can create and edit service areas only for assigned branches.
+- Administrators can manage service areas across branches.
+- Branch ownership and restaurant ownership cannot be changed through the update operation.
+- Only active service areas are considered by the delivery serviceability check.
+- A delivery location is checked against the configured polygon.
+- The serviceability response includes the delivery fee, minimum order value, whether the minimum is met, and estimated delivery time.
+- `maxDeliveryDistanceKm` is a configured threshold; polygon containment does not independently calculate road distance.
+
+### 13.3 Validation
+
+The backend validator in `functions/firestore-schema.js` and the service-area Cloud Functions validate required fields, numeric thresholds, polygon structure, and status values.
+
+The `serviceAreas` collection and its operations require appropriate Firestore access controls and business approval before production use.

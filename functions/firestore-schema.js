@@ -1,3 +1,4 @@
+
 "use strict";
 
 const COLLECTIONS = Object.freeze({
@@ -13,6 +14,7 @@ const COLLECTIONS = Object.freeze({
   CATERING_ORDERS: "cateringOrders",
   PLANNER_ORDERS: "plannerOrders",
   BRANCHES: "branches",
+  SERVICE_AREAS: "serviceAreas",
   KITCHENS: "kitchens",
   PRODUCTS: "products",
   INVENTORY: "inventory",
@@ -39,6 +41,7 @@ const ENUMS = Object.freeze({
   plannerOrderStatus: ["orderAccepted", "taken", "done"],
   branchStatus: ["active", "inactive"],
   kitchenStatus: ["active", "inactive"],
+  serviceAreaStatus: ["active", "inactive"],
   orderStatus: [
     "pending",
     "confirmed",
@@ -457,6 +460,69 @@ function validateBranch(data) {
   }
 }
 
+function validateServiceArea(data) {
+  required(data, [
+    "branchId",
+    "restaurantId",
+    "name",
+    "polygon",
+    "deliveryFee",
+    "minimumOrderValue",
+    "maxDeliveryDistanceKm",
+    "estimatedDeliveryMinutes",
+  ]);
+
+  for (const field of ["branchId", "restaurantId", "name"]) {
+    stringField(data, field);
+  }
+
+  numberField(data, "deliveryFee");
+  numberField(data, "minimumOrderValue");
+  numberField(data, "maxDeliveryDistanceKm");
+  positiveIntegerField(data, "estimatedDeliveryMinutes");
+
+  if (
+    !isObject(data.polygon) ||
+    data.polygon.type !== "Polygon" ||
+    !Array.isArray(data.polygon.coordinates) ||
+    data.polygon.coordinates.length === 0
+  ) {
+    throw new Error("polygon must be a valid GeoJSON Polygon");
+  }
+
+  for (const ring of data.polygon.coordinates) {
+    if (!Array.isArray(ring) || ring.length < 4) {
+      throw new Error("Polygon rings need at least four positions");
+    }
+
+    for (const position of ring) {
+      if (
+        !Array.isArray(position) ||
+        position.length < 2 ||
+        !isFiniteNumber(position[0]) ||
+        !isFiniteNumber(position[1]) ||
+        position[0] < -180 ||
+        position[0] > 180 ||
+        position[1] < -90 ||
+        position[1] > 90
+      ) {
+        throw new Error("Invalid polygon coordinates");
+      }
+    }
+
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      throw new Error("Polygon rings must be closed");
+    }
+  }
+
+  if (data.status !== undefined) {
+    enumField(data, "status", ENUMS.serviceAreaStatus);
+  }
+}
+
 function validateKitchen(data) {
   required(data, ["branchId", "name"]);
 
@@ -626,6 +692,7 @@ const VALIDATORS = Object.freeze({
   [COLLECTIONS.PLANNER_ORDERS]: validatePlannerOrder,
 
   [COLLECTIONS.BRANCHES]: validateBranch,
+  [COLLECTIONS.SERVICE_AREAS]: validateServiceArea,
   [COLLECTIONS.KITCHENS]: validateKitchen,
   [COLLECTIONS.PRODUCTS]: validateProduct,
   [COLLECTIONS.INVENTORY]: validateInventory,
