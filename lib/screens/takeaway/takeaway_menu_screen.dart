@@ -1,35 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_data.dart';
 import '../../models/dish.dart';
 import '../../routes/app_routes.dart';
 import '../../state/takeaway_controller.dart';
+import '../../state/takeaway_providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_with_fallback.dart';
 import '../../widgets/nutrition_badge.dart';
 import '../../widgets/price_text.dart';
 
-/// The Takeaway ordering menu: category tabs, dishes with +/- quantity controls,
-/// search / cart header actions, and floating bottom basket bar.
-class TakeawayMenuScreen extends StatefulWidget {
+class TakeawayMenuScreen extends ConsumerStatefulWidget {
   const TakeawayMenuScreen({super.key});
 
   @override
-  State<TakeawayMenuScreen> createState() => _TakeawayMenuScreenState();
+  ConsumerState<TakeawayMenuScreen> createState() =>
+      _TakeawayMenuScreenState();
 }
 
-class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
+class _TakeawayMenuScreenState extends ConsumerState<TakeawayMenuScreen> {
   int _selectedTab = 0;
   final TakeawayController _ctrl = TakeawayController.instance;
+  bool _isPlacingOrder = false;
 
   void _openProduct(Dish dish) {
     Navigator.of(context).pushNamed(AppRoutes.productDetail, arguments: dish);
   }
 
-  void _onNext() {
-    if (_ctrl.isCartEmpty) return;
-    _ctrl.placeOrder();
-    Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+  Future<void> _onNext() async {
+    if (_ctrl.isCartEmpty || _isPlacingOrder) return;
+
+    setState(() => _isPlacingOrder = true);
+
+    try {
+      await ref.read(takeawayServiceProvider).placeOrder();
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushNamed(AppRoutes.takeawaySuccess);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to place order: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+      }
+    }
   }
 
   @override
@@ -74,7 +94,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                     _recommendedRail(),
                   ],
                 ),
-                // ── Floating bottom basket bar ───────────────────────────
                 if (!_ctrl.isCartEmpty)
                   Positioned(
                     left: 16,
@@ -83,6 +102,7 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
                     child: _TakeawayBasketBar(
                       itemCount: _ctrl.totalQuantity,
                       onNext: _onNext,
+                      isLoading: _isPlacingOrder,
                     ),
                   ),
               ],
@@ -93,16 +113,17 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 
-  // ── Header ──────────────────────────────────────────────────────────────────
-
   Widget _header() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: AppColors.textPrimary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 4),
@@ -117,15 +138,16 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.search, color: AppColors.textPrimary),
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.search),
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.search),
           ),
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined,
-                    color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: () {},
               ),
               if (_ctrl.totalQuantity > 0)
@@ -160,8 +182,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 
-  // ── Menu & Sort Row ─────────────────────────────────────────────────────────
-
   Widget _menuSortRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -191,8 +211,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
       ],
     );
   }
-
-  // ── Category Tabs ───────────────────────────────────────────────────────────
 
   Widget _categoryTabs() {
     return SizedBox(
@@ -237,8 +255,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 
-  // ── Featured Rail ───────────────────────────────────────────────────────────
-
   Widget _featuredRail() {
     return SizedBox(
       height: 256,
@@ -263,8 +279,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 
-  // ── Combination List ────────────────────────────────────────────────────────
-
   Widget _combinationList() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -286,8 +300,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
       ),
     );
   }
-
-  // ── Recommended Rail ────────────────────────────────────────────────────────
 
   Widget _recommendedRail() {
     return SizedBox(
@@ -322,8 +334,6 @@ class _TakeawayMenuScreenState extends State<TakeawayMenuScreen> {
     );
   }
 }
-
-// ── Takeaway Dish Card (Frequent order rail) ───────────────────────────────────
 
 class _TakeawayDishCard extends StatelessWidget {
   const _TakeawayDishCard({
@@ -402,8 +412,6 @@ class _TakeawayDishCard extends StatelessWidget {
   }
 }
 
-// ── Takeaway List Tile (Combination Breakfast) ────────────────────────────────
-
 class _TakeawayListTile extends StatelessWidget {
   const _TakeawayListTile({
     required this.dish,
@@ -423,9 +431,8 @@ class _TakeawayListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = dish.subtitle == null
-        ? dish.name
-        : '${dish.name} - ${dish.subtitle}';
+    final title =
+        dish.subtitle == null ? dish.name : '${dish.name} - ${dish.subtitle}';
 
     return Container(
       decoration: BoxDecoration(
@@ -487,8 +494,6 @@ class _TakeawayListTile extends StatelessWidget {
   }
 }
 
-// ── Takeaway Recommended Card ─────────────────────────────────────────────────
-
 class _TakeawayRecommendedCard extends StatelessWidget {
   const _TakeawayRecommendedCard({
     required this.dish,
@@ -508,9 +513,8 @@ class _TakeawayRecommendedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = dish.subtitle == null
-        ? dish.name
-        : '${dish.name} - ${dish.subtitle}';
+    final title =
+        dish.subtitle == null ? dish.name : '${dish.name} - ${dish.subtitle}';
 
     return SizedBox(
       width: 175,
@@ -570,8 +574,6 @@ class _TakeawayRecommendedCard extends StatelessWidget {
   }
 }
 
-// ── Quantity Stepper Button ───────────────────────────────────────────────────
-
 class _QuantityStepperButton extends StatelessWidget {
   const _QuantityStepperButton({
     required this.quantity,
@@ -597,7 +599,11 @@ class _QuantityStepperButton extends StatelessWidget {
             color: AppColors.surfaceLight,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.add, color: AppColors.textPrimary, size: 18),
+          child: const Icon(
+            Icons.add,
+            color: AppColors.textPrimary,
+            size: 18,
+          ),
         ),
       );
     }
@@ -615,7 +621,11 @@ class _QuantityStepperButton extends StatelessWidget {
             onTap: onDecrement,
             child: const Padding(
               padding: EdgeInsets.all(4),
-              child: Icon(Icons.remove, color: AppColors.textPrimary, size: 14),
+              child: Icon(
+                Icons.remove,
+                color: AppColors.textPrimary,
+                size: 14,
+              ),
             ),
           ),
           Padding(
@@ -633,7 +643,11 @@ class _QuantityStepperButton extends StatelessWidget {
             onTap: onIncrement,
             child: const Padding(
               padding: EdgeInsets.all(4),
-              child: Icon(Icons.add, color: AppColors.textPrimary, size: 14),
+              child: Icon(
+                Icons.add,
+                color: AppColors.textPrimary,
+                size: 14,
+              ),
             ),
           ),
         ],
@@ -642,16 +656,16 @@ class _QuantityStepperButton extends StatelessWidget {
   }
 }
 
-// ── Floating Takeaway Basket Bar ──────────────────────────────────────────────
-
 class _TakeawayBasketBar extends StatelessWidget {
   const _TakeawayBasketBar({
     required this.itemCount,
     required this.onNext,
+    required this.isLoading,
   });
 
   final int itemCount;
   final VoidCallback onNext;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -670,8 +684,11 @@ class _TakeawayBasketBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.shopping_cart_outlined,
-              color: AppColors.textPrimary, size: 20),
+          const Icon(
+            Icons.shopping_cart_outlined,
+            color: AppColors.textPrimary,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -684,22 +701,31 @@ class _TakeawayBasketBar extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: onNext,
+            onTap: isLoading ? null : onNext,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'NEXT',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text(
+                      'NEXT',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
             ),
           ),
         ],

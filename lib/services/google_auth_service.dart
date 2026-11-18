@@ -1,6 +1,10 @@
+
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-/// Represents a signed-in or selectable Google user profile.
 class GoogleUserProfile {
   final String displayName;
   final String email;
@@ -21,18 +25,33 @@ class GoogleUserProfile {
     }
     return displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G';
   }
+
+  factory GoogleUserProfile.fromFirebaseUser(User user) {
+    return GoogleUserProfile(
+      displayName: user.displayName ?? 'Google User',
+      email: user.email ?? '',
+      photoUrl: user.photoURL,
+    );
+  }
 }
 
-/// Service providing state management for Google Authentication in PARAGON.
 class GoogleAuthService extends ChangeNotifier {
   GoogleAuthService._();
+
   static final GoogleAuthService instance = GoogleAuthService._();
 
   GoogleUserProfile? _currentUser;
   GoogleUserProfile? get currentUser => _currentUser;
-  bool get isLoggedIn => _currentUser != null;
 
-  /// Default mock accounts available for selection.
+  User? get firebaseUser =>
+      Firebase.apps.isEmpty ? null : FirebaseAuth.instance.currentUser;
+
+  bool get isLoggedIn => firebaseUser != null || _currentUser != null;
+
+  StreamSubscription<User?>? _authSubscription;
+
+  bool get isFirebaseReady => Firebase.apps.isNotEmpty;
+
   final List<GoogleUserProfile> availableAccounts = [
     const GoogleUserProfile(
       displayName: 'Sinchana DK',
@@ -46,28 +65,113 @@ class GoogleAuthService extends ChangeNotifier {
     ),
   ];
 
-  /// Signs in with the given profile.
+  /// Call after Firebase.initializeApp().
+  Future<void> initializeFirebaseAuth() async {
+    if (!isFirebaseReady) {
+      throw StateError('Firebase has not been initialized.');
+    }
+
+    await _authSubscription?.cancel();
+
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((user) {
+      _currentUser = user == null
+          ? null
+          : GoogleUserProfile.fromFirebaseUser(user);
+      notifyListeners();
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    _currentUser = user == null
+        ? null
+        : GoogleUserProfile.fromFirebaseUser(user);
+
+    notifyListeners();
+  }
+
+  /// Real Firebase email/password sign-in.
+  Future<UserCredential> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    _requireFirebase();
+
+    return FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  /// Real Firebase email/password account creation.
+  Future<UserCredential> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    _requireFirebase();
+
+    return FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  /// Completes Google sign-in using a Google OAuth credential.
+  /// Obtain this credential from the configured Google Sign-In flow.
+  Future<UserCredential> signInWithGoogleCredential(
+    AuthCredential credential,
+  ) async {
+    _requireFirebase();
+
+    return FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
+  void _requireFirebase() {
+    if (!isFirebaseReady) {
+      throw StateError(
+        'Firebase is not configured. Configure the Firebase app first.',
+      );
+    }
+  }
+
+  // Legacy mock methods retained so existing UI does not break.
+  // These methods do NOT authenticate with Firebase.
+
   void signIn(GoogleUserProfile user) {
     _currentUser = user;
     notifyListeners();
   }
 
-  /// Adds a custom Google account and signs in.
-  void signInWithCustomAccount({required String name, required String email}) {
+  void signInWithCustomAccount({
+    required String name,
+    required String email,
+  }) {
     final user = GoogleUserProfile(
       displayName: name.trim().isEmpty ? 'Google User' : name.trim(),
       email: email.trim(),
       avatarColor: const Color(0xFF1976D2),
     );
-    if (!availableAccounts.any((a) => a.email.toLowerCase() == user.email.toLowerCase())) {
+
+    if (!availableAccounts.any(
+      (account) => account.email.toLowerCase() == user.email.toLowerCase(),
+    )) {
       availableAccounts.add(user);
     }
+
     signIn(user);
   }
 
-  /// Signs out current session.
-  void signOut() {
+  Future<void> signOut() async {
+    if (isFirebaseReady) {
+      await FirebaseAuth.instance.signOut();
+    }
+
     _currentUser = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }
