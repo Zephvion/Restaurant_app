@@ -1,41 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/food_planner_assets.dart';
 import '../../data/mock_data.dart';
 import '../../routes/app_routes.dart';
-import '../../state/food_planner_controller.dart';
+import '../../state/food_planner_providers.dart';
 import '../../theme/app_colors.dart';
 
-/// Payment options screen for Food Planner matching Payment options.png and Payment options-1.png.
-class FoodPlannerPaymentScreen extends StatefulWidget {
+/// Payment options screen for Food Planner.
+class FoodPlannerPaymentScreen extends ConsumerStatefulWidget {
   const FoodPlannerPaymentScreen({super.key});
 
   @override
-  State<FoodPlannerPaymentScreen> createState() =>
+  ConsumerState<FoodPlannerPaymentScreen> createState() =>
       _FoodPlannerPaymentScreenState();
 }
 
-class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
+class _FoodPlannerPaymentScreenState
+    extends ConsumerState<FoodPlannerPaymentScreen> {
   String _selectedPayment = 'axis_card';
+  bool _isPlacingOrder = false;
 
-  void _placeOrder() {
-    final ctrl = FoodPlannerController.instance;
-    ctrl.confirmPlannedMeal(dish: MockData.plainDosa);
+  Future<void> _placeOrder() async {
+    if (_isPlacingOrder) return;
 
-    // Show success dialog matching image 1.png
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _SuccessDialog(
-        onDismiss: () {
-          Navigator.of(ctx).pop(); // pop dialog
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            AppRoutes.foodPlanner,
-            (route) => route.settings.name == AppRoutes.home,
+    setState(() => _isPlacingOrder = true);
+
+    try {
+      await ref.read(foodPlannerServiceProvider).placeOrder(
+            dish: MockData.plainDosa,
           );
-        },
-      ),
-    );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => _SuccessDialog(
+          onDismiss: () {
+            Navigator.of(ctx).pop();
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              AppRoutes.foodPlanner,
+              (route) => route.settings.name == AppRoutes.home,
+            );
+          },
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to place order: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+      }
+    }
   }
 
   @override
@@ -46,8 +67,11 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: AppColors.textPrimary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.textPrimary,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -64,7 +88,6 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
           ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
             children: [
-              // ── Summary Card ──────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -122,8 +145,11 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                     const SizedBox(height: 12),
                     const Row(
                       children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 14, color: AppColors.textSecondary),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -164,7 +190,6 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // ── Coupons ───────────────────────────────────────────────
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -185,13 +210,15 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                       ),
                     ),
                     Spacer(),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 14, color: AppColors.textSecondary),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              // ── Credit & Debit Cards ──────────────────────────────────
               const Text(
                 'Credit & Debit Cards',
                 style: TextStyle(
@@ -222,15 +249,18 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                     const Divider(height: 1, color: AppColors.border),
                     const ListTile(
                       leading: Icon(Icons.add, color: AppColors.textSecondary),
-                      title: Text('Add New Card',
-                          style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 13)),
+                      title: Text(
+                        'Add New Card',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              // ── UPI ───────────────────────────────────────────────────
               const Text(
                 'UPI',
                 style: TextStyle(
@@ -261,15 +291,18 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                     const Divider(height: 1, color: AppColors.border),
                     const ListTile(
                       leading: Icon(Icons.add, color: AppColors.textSecondary),
-                      title: Text('Add New UPI ID',
-                          style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 13)),
+                      title: Text(
+                        'Add New UPI ID',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              // ── More Payment Options ──────────────────────────────────
               const Text(
                 'More Payment Options',
                 style: TextStyle(
@@ -289,8 +322,9 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                     _optionTile(title: 'Wallet', icon: Icons.wallet),
                     const Divider(height: 1, color: AppColors.border),
                     _optionTile(
-                        title: 'Net Banking',
-                        icon: Icons.account_balance_outlined),
+                      title: 'Net Banking',
+                      icon: Icons.account_balance_outlined,
+                    ),
                     const Divider(height: 1, color: AppColors.border),
                     _radioRow(
                       id: 'cod',
@@ -302,13 +336,12 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
               ),
             ],
           ),
-          // ── Bottom Action ──────────────────────────────────────────────
           Positioned(
             left: 20,
             right: 20,
             bottom: 20,
             child: GestureDetector(
-              onTap: _placeOrder,
+              onTap: _isPlacingOrder ? null : _placeOrder,
               child: Container(
                 height: 56,
                 decoration: BoxDecoration(
@@ -316,15 +349,17 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'PROCEED TO PAY',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    letterSpacing: 1.5,
-                  ),
-                ),
+                child: _isPlacingOrder
+                    ? const CircularProgressIndicator()
+                    : const Text(
+                        'PROCEED TO PAY',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -339,12 +374,16 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
     required IconData icon,
   }) {
     final isSelected = _selectedPayment == id;
+
     return ListTile(
       onTap: () => setState(() => _selectedPayment = id),
       leading: Icon(icon, color: AppColors.textSecondary, size: 22),
       title: Text(
         title,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+        ),
       ),
       trailing: Container(
         width: 18,
@@ -366,18 +405,23 @@ class _FoodPlannerPaymentScreenState extends State<FoodPlannerPaymentScreen> {
       leading: Icon(icon, color: AppColors.textSecondary, size: 22),
       title: Text(
         title,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+        ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios,
-          size: 14, color: AppColors.textSecondary),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 14,
+        color: AppColors.textSecondary,
+      ),
     );
   }
 }
 
-// ── Success Dialog matching image 1.png ───────────────────────────────────────
-
 class _SuccessDialog extends StatelessWidget {
   const _SuccessDialog({required this.onDismiss});
+
   final VoidCallback onDismiss;
 
   @override
@@ -416,31 +460,44 @@ class _SuccessDialog extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 48),
-                // Layered Checkmark with sparkle dots/stars matching image 1.png
                 SizedBox(
                   width: 140,
                   height: 140,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Sparkle dots & stars
                       const Positioned(
-                          top: 4,
-                          child: Icon(Icons.star,
-                              color: Color(0xFFFF9800), size: 14)),
+                        top: 4,
+                        child: Icon(
+                          Icons.star,
+                          color: Color(0xFFFF9800),
+                          size: 14,
+                        ),
+                      ),
                       const Positioned(
-                          bottom: 4,
-                          child: Icon(Icons.star,
-                              color: Color(0xFFFF9800), size: 14)),
+                        bottom: 4,
+                        child: Icon(
+                          Icons.star,
+                          color: Color(0xFFFF9800),
+                          size: 14,
+                        ),
+                      ),
                       const Positioned(
-                          left: 4,
-                          child: Icon(Icons.star,
-                              color: Color(0xFFFF9800), size: 14)),
+                        left: 4,
+                        child: Icon(
+                          Icons.star,
+                          color: Color(0xFFFF9800),
+                          size: 14,
+                        ),
+                      ),
                       const Positioned(
-                          right: 4,
-                          child: Icon(Icons.star,
-                              color: Color(0xFFFF9800), size: 14)),
-                      // Outer mint halo
+                        right: 4,
+                        child: Icon(
+                          Icons.star,
+                          color: Color(0xFFFF9800),
+                          size: 14,
+                        ),
+                      ),
                       Container(
                         width: 96,
                         height: 96,
@@ -449,7 +506,6 @@ class _SuccessDialog extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      // Inner vivid green circle with checkmark
                       Container(
                         width: 68,
                         height: 68,
@@ -457,8 +513,11 @@ class _SuccessDialog extends StatelessWidget {
                           color: Color(0xFF00C853),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.check,
-                            color: Colors.white, size: 40),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
                     ],
                   ),

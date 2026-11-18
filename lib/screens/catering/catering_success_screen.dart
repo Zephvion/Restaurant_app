@@ -1,17 +1,16 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
-import '../../state/catering_controller.dart';
 import '../../theme/app_colors.dart';
 
-/// Success overlay displayed after submitting a catering order.
-/// Shows animated green checkmark with confetti and order ID.
 class CateringSuccessScreen extends StatefulWidget {
   const CateringSuccessScreen({super.key});
 
   @override
-  State<CateringSuccessScreen> createState() => _CateringSuccessScreenState();
+  State<CateringSuccessScreen> createState() =>
+      _CateringSuccessScreenState();
 }
 
 class _CateringSuccessScreenState extends State<CateringSuccessScreen>
@@ -23,10 +22,15 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
   @override
   void initState() {
     super.initState();
+
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+
     _ctrl.forward();
   }
 
@@ -45,16 +49,13 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    final latestOrder = CateringController.instance.orders.isNotEmpty
-        ? CateringController.instance.orders.first
-        : null;
-    final orderId = latestOrder?.id ?? 'ID4578';
+    final orderId =
+        ModalRoute.of(context)?.settings.arguments as String? ?? 'ID4578';
 
     return Scaffold(
       backgroundColor: AppColors.background.withValues(alpha: 0.94),
       body: Stack(
         children: [
-          // ── Close button ─────────────────────────────────────────────
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,
@@ -63,7 +64,6 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
               onPressed: _close,
             ),
           ),
-          // ── Main content ─────────────────────────────────────────────
           FadeTransition(
             opacity: _fade,
             child: Center(
@@ -81,7 +81,6 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 48),
-                  // ── Animated checkmark ───────────────────────────────
                   ScaleTransition(
                     scale: _scale,
                     child: const _CheckmarkBurst(),
@@ -114,8 +113,6 @@ class _CateringSuccessScreenState extends State<CateringSuccessScreen>
   }
 }
 
-// ── Checkmark burst ───────────────────────────────────────────────────────────
-
 class _CheckmarkBurst extends StatelessWidget {
   const _CheckmarkBurst();
 
@@ -127,11 +124,8 @@ class _CheckmarkBurst extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Confetti dots — teal circles
           ..._dots(),
-          // Stars
           ..._stars(),
-          // Glow ring
           Container(
             width: 130,
             height: 130,
@@ -140,7 +134,6 @@ class _CheckmarkBurst extends StatelessWidget {
               color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
             ),
           ),
-          // Green checkmark circle
           Container(
             width: 84,
             height: 84,
@@ -165,18 +158,23 @@ class _CheckmarkBurst extends StatelessWidget {
       Offset(30, 130),
       Offset(20, 60),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: teal,
+
+    return positions
+        .map(
+          (p) => Positioned(
+            left: p.dx,
+            top: p.dy,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: teal,
+              ),
             ),
           ),
-        )).toList();
+        )
+        .toList();
   }
 
   List<Widget> _stars() {
@@ -188,16 +186,22 @@ class _CheckmarkBurst extends StatelessWidget {
       Offset(20, 38),
       Offset(15, 148),
     ];
-    return positions.map((p) => Positioned(
-          left: p.dx,
-          top: p.dy,
-          child: const _Star(color: orange, size: 14),
-        )).toList();
+
+    return positions
+        .map(
+          (p) => Positioned(
+            left: p.dx,
+            top: p.dy,
+            child: const _Star(color: orange, size: 14),
+          ),
+        )
+        .toList();
   }
 }
 
 class _Star extends StatelessWidget {
   const _Star({required this.color, required this.size});
+
   final Color color;
   final double size;
 
@@ -212,12 +216,14 @@ class _Star extends StatelessWidget {
 
 class _StarPainter extends CustomPainter {
   const _StarPainter({required this.color});
+
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
     final path = Path();
+
     const n = 5;
     final cx = size.width / 2;
     final cy = size.height / 2;
@@ -229,8 +235,14 @@ class _StarPainter extends CustomPainter {
       final angle = (math.pi / n) * i - math.pi / 2;
       final x = cx + r * math.cos(angle);
       final y = cy + r * math.sin(angle);
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
+
     path.close();
     canvas.drawPath(path, paint);
   }
