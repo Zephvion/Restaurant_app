@@ -1,3 +1,4 @@
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
@@ -17,4 +18,12 @@ test("scheduled cleanup job is exported", () => {
 
 test("admin operation is exported", () => {
   assert.equal(typeof functions.runAdminOperation, "function");
+});
+
+test("admin audit log reader is exported", () => {
+  assert.equal(typeof functions.getAdminAuditLogs, "function");
+});
+
+test("admin resource mutation endpoint is exported", () => {
+  assert.equal(typeof functions.adminMutateResource, "function");
 });
