@@ -8,6 +8,8 @@ const {
   validatePolygon,
   validateServiceArea,
   pointInPolygon,
+  haversineDistanceKm,
+  selectNearestBranch,
 } = require("../src/service-areas");
 
 const polygon = {
@@ -95,4 +97,62 @@ test("point inside polygon is serviceable", () => {
 
 test("point outside polygon is not serviceable", () => {
   assert.equal(pointInPolygon(78, 11, polygon), false);
+});
+
+test("point inside a polygon hole is not serviceable", () => {
+  const polygonWithHole = {
+    type: "Polygon",
+    coordinates: [
+      [
+        [76, 9],
+        [77, 9],
+        [77, 10],
+        [76, 10],
+        [76, 9],
+      ],
+      [
+        [76.3, 9.3],
+        [76.7, 9.3],
+        [76.7, 9.7],
+        [76.3, 9.7],
+        [76.3, 9.3],
+      ],
+    ],
+  };
+
+  assert.equal(pointInPolygon(76.5, 9.5, polygonWithHole), false);
+});
+
+test("Haversine distance between identical coordinates is zero", () => {
+  assert.equal(haversineDistanceKm(9.5, 76.5, 9.5, 76.5), 0);
+});
+
+test("Haversine distance calculates a positive distance", () => {
+  const distance = haversineDistanceKm(9.5, 76.5, 9.6, 76.6);
+
+  assert.ok(distance > 0);
+  assert.ok(distance < 20);
+});
+
+test("nearest branch is selected by shortest distance", () => {
+  const result = selectNearestBranch([
+    { branchId: "BRANCH002", distanceKm: 8 },
+    { branchId: "BRANCH001", distanceKm: 3 },
+    { branchId: "BRANCH003", distanceKm: 5 },
+  ]);
+
+  assert.equal(result.branchId, "BRANCH001");
+});
+
+test("nearest branch selection returns null for no candidates", () => {
+  assert.equal(selectNearestBranch([]), null);
+});
+
+test("nearest branch selection handles equal distances deterministically", () => {
+  const result = selectNearestBranch([
+    { branchId: "BRANCH002", distanceKm: 5 },
+    { branchId: "BRANCH001", distanceKm: 5 },
+  ]);
+
+  assert.equal(result.branchId, "BRANCH001");
 });

@@ -1,3 +1,4 @@
+
 "use strict";
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -9,6 +10,7 @@ const {
 } = require("../admin/rbac");
 
 const COLLECTION = "serviceAreas";
+const EARTH_RADIUS_KM = 6371;
 
 function validatePolygon(polygon) {
   if (
@@ -102,6 +104,15 @@ function pointInRing(longitude, latitude, ring) {
 }
 
 function pointInPolygon(longitude, latitude, polygon) {
+  if (
+    !polygon ||
+    polygon.type !== "Polygon" ||
+    !Array.isArray(polygon.coordinates) ||
+    polygon.coordinates.length === 0
+  ) {
+    return false;
+  }
+
   const rings = polygon.coordinates;
 
   if (!pointInRing(longitude, latitude, rings[0])) {
@@ -111,6 +122,37 @@ function pointInPolygon(longitude, latitude, polygon) {
   return !rings.slice(1).some((hole) =>
     pointInRing(longitude, latitude, hole)
   );
+}
+
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
+  const latitudeDifference = toRadians(lat2 - lat1);
+  const longitudeDifference = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(latitudeDifference / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(longitudeDifference / 2) ** 2;
+
+  const centralAngle = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return EARTH_RADIUS_KM * centralAngle;
+}
+
+function selectNearestBranch(candidates) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return null;
+  }
+
+  return [...candidates].sort((a, b) => {
+    if (a.distanceKm !== b.distanceKm) {
+      return a.distanceKm - b.distanceKm;
+    }
+
+    return String(a.branchId).localeCompare(String(b.branchId));
+  })[0];
 }
 
 async function verifyBranch(db, user, branchId) {
@@ -156,7 +198,12 @@ exports.updateServiceArea = onCall(async (request) => {
   const db = getFirestore();
   const { serviceAreaId, updates } = request.data || {};
 
-  if (!serviceAreaId || !updates || typeof updates !== "object") {
+  if (
+    !serviceAreaId ||
+    !updates ||
+    typeof updates !== "object" ||
+    Array.isArray(updates)
+  ) {
     throw new HttpsError("invalid-argument", "Service area ID and updates are required.");
   }
 
@@ -237,7 +284,10 @@ exports.checkDeliveryServiceability = onCall(async (request) => {
   );
 
   if (!matching) {
-    return { serviceable: false, message: "Delivery is not available at this location." };
+    return {
+      serviceable: false,
+      message: "Delivery is not available at this location.",
+    };
   }
 
   const area = matching.data();
@@ -252,6 +302,134 @@ exports.checkDeliveryServiceability = onCall(async (request) => {
   };
 });
 
+exports.resolveNearestBranch = onCall(async (request) => {
+  const {
+    latitude,
+    longitude,
+    orderValue = 0,
+    restaurantId,
+  } = request.data || {};
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180 ||
+    !Number.isFinite(orderValue) ||
+    orderValue < 0 ||
+    (restaurantId !== undefined &&
+      (typeof restaurantId !== "string" || !restaurantId.trim()))
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Valid customer coordinates and order value are required."
+    );
+  }
+
+  const db = getFirestore();
+
+  const areasSnapshot = await db
+    .collection(COLLECTION)
+    .where("status", "==", "active")
+    .get();
+
+  const branchCache = new Map();
+  const candidates = [];
+
+  for (const areaDocument of areasSnapshot.docs) {
+    const area = areaDocument.data();
+
+    if (
+      !area.branchId ||
+      !area.restaurantId ||
+      (restaurantId && area.restaurantId !== restaurantId)
+    ) {
+      continue;
+    }
+
+    if (!pointInPolygon(longitude, latitude, area.polygon)) {
+      continue;
+    }
+
+    let branch = branchCache.get(area.branchId);
+
+    if (branch === undefined) {
+      const branchSnapshot = await db
+        .collection("branches")
+        .doc(area.branchId)
+        .get();
+
+      branch = branchSnapshot.exists ? branchSnapshot.data() : null;
+      branchCache.set(area.branchId, branch);
+    }
+
+    if (!branch || branch.status === "inactive") {
+      continue;
+    }
+
+    if (branch.restaurantId !== area.restaurantId) {
+      continue;
+    }
+
+    if (
+      !Number.isFinite(branch.latitude) ||
+      !Number.isFinite(branch.longitude) ||
+      branch.latitude < -90 ||
+      branch.latitude > 90 ||
+      branch.longitude < -180 ||
+      branch.longitude > 180
+    ) {
+      continue;
+    }
+
+    const distanceKm = haversineDistanceKm(
+      latitude,
+      longitude,
+      branch.latitude,
+      branch.longitude
+    );
+
+    if (
+      !Number.isFinite(area.maxDeliveryDistanceKm) ||
+      area.maxDeliveryDistanceKm < 0 ||
+      distanceKm > area.maxDeliveryDistanceKm
+    ) {
+      continue;
+    }
+
+    candidates.push({
+      branchId: area.branchId,
+      restaurantId: area.restaurantId,
+      serviceAreaId: areaDocument.id,
+      distanceKm,
+      deliveryFee: area.deliveryFee,
+      minimumOrderValue: area.minimumOrderValue,
+      minimumOrderMet: orderValue >= area.minimumOrderValue,
+      estimatedDeliveryMinutes: area.estimatedDeliveryMinutes,
+    });
+  }
+
+  const nearest = selectNearestBranch(candidates);
+
+  if (!nearest) {
+    return {
+      serviceable: false,
+      message: "No eligible branch delivers to this location.",
+      reason: "NO_MATCHING_BRANCH",
+    };
+  }
+
+  return {
+    serviceable: true,
+    ...nearest,
+    distanceKm: Number(nearest.distanceKm.toFixed(2)),
+  };
+});
+
 module.exports.validatePolygon = validatePolygon;
 module.exports.validateServiceArea = validateServiceArea;
 module.exports.pointInPolygon = pointInPolygon;
+module.exports.haversineDistanceKm = haversineDistanceKm;
+module.exports.selectNearestBranch = selectNearestBranch;

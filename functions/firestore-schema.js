@@ -455,6 +455,27 @@ function validateBranch(data) {
   optionalStringField(data, "phone");
   optionalStringField(data, "timezone");
 
+  // Optional coordinates used by the nearest-branch resolver.
+  if (data.latitude !== undefined) {
+    if (
+      !isFiniteNumber(data.latitude) ||
+      data.latitude < -90 ||
+      data.latitude > 90
+    ) {
+      throw new Error("latitude must be between -90 and 90");
+    }
+  }
+
+  if (data.longitude !== undefined) {
+    if (
+      !isFiniteNumber(data.longitude) ||
+      data.longitude < -180 ||
+      data.longitude > 180
+    ) {
+      throw new Error("longitude must be between -180 and 180");
+    }
+  }
+
   if (data.status !== undefined) {
     enumField(data, "status", ENUMS.branchStatus);
   }
