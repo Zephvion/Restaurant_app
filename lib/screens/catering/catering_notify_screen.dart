@@ -1,32 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../routes/app_routes.dart';
-import '../../state/catering_controller.dart';
+import '../../state/catering_providers.dart';
 import '../../theme/app_colors.dart';
 import 'catering_booking_screen.dart' show CateringBookingArgs;
 
-/// "Notify the restaurant?" confirmation screen displaying the selected date and guest range.
-class CateringNotifyScreen extends StatelessWidget {
+class CateringNotifyScreen extends ConsumerWidget {
   const CateringNotifyScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final args =
         ModalRoute.of(context)!.settings.arguments as CateringBookingArgs;
 
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
+
     final formattedDate =
         '${months[args.date.month - 1]} ${args.date.day} , ${args.date.year}';
 
-    void proceed() {
-      CateringController.instance.placeOrder(
-        date: args.date,
-        guestRange: args.guestRange,
-      );
-      Navigator.of(context).pushNamed(AppRoutes.cateringSuccess);
+    Future<void> proceed() async {
+      try {
+        final order = await ref.read(cateringServiceProvider).placeOrder(
+              date: args.date,
+              guestRange: args.guestRange,
+            );
+
+        if (!context.mounted) return;
+
+        Navigator.of(context).pushNamed(
+          AppRoutes.cateringSuccess,
+          arguments: order.id,
+        );
+      } catch (error) {
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to place catering order: $error')),
+        );
+      }
     }
 
     return Scaffold(
@@ -39,8 +64,11 @@ class CateringNotifyScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 16),
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: AppColors.textPrimary, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: AppColors.textPrimary,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
               const SizedBox(height: 32),
@@ -62,7 +90,6 @@ class CateringNotifyScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 48),
-              // ── Date Row ─────────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -87,7 +114,6 @@ class CateringNotifyScreen extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Divider(color: AppColors.border),
               ),
-              // ── Expected number of people ────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -110,7 +136,6 @@ class CateringNotifyScreen extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              // ── PROCEED Button ───────────────────────────────────────────
               Center(
                 child: GestureDetector(
                   onTap: proceed,

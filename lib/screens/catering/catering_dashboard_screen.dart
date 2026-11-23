@@ -1,50 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/mock_data.dart';
 import '../../models/catering_order.dart';
 import '../../routes/app_routes.dart';
-import '../../state/catering_controller.dart';
+import '../../state/catering_providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/dashboard_tab_bar.dart';
 import '../../widgets/network_image_with_fallback.dart';
 
-/// Dashboard screen for Catering:
-/// Shows empty state ("No catering orders yet") or active order cards with progress stepper.
-class CateringDashboardScreen extends StatelessWidget {
+/// Dashboard screen for Catering.
+class CateringDashboardScreen extends ConsumerWidget {
   const CateringDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(cateringOrdersAsyncProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: AnimatedBuilder(
-        animation: CateringController.instance,
-        builder: (context, _) {
-          final ctrl = CateringController.instance;
-          return Column(
-            children: [
-              // ── Top Hero Image ──────────────────────────────────────────
-              const _HeroHeader(),
-              // ── Swiggy-style Section Switcher ───────────────────────────
-              const DashboardTabBar(activeId: 'catering'),
-              // ── Main Content ────────────────────────────────────────────
-              Expanded(
-                child: ctrl.hasNoOrders
-                    ? _EmptyState(onAdd: () => _goNotice(context))
-                    : _OrdersList(
-                        orders: ctrl.orders,
-                        onAdd: () => _goNotice(context),
-                      ),
+      body: Column(
+        children: [
+          const _HeroHeader(),
+          const DashboardTabBar(activeId: 'catering'),
+          Expanded(
+            child: ordersAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
               ),
-            ],
-          );
-        },
+              error: (error, stackTrace) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Unable to load catering orders.',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () =>
+                            ref.invalidate(cateringOrdersAsyncProvider),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (orders) => orders.isEmpty
+                  ? _EmptyState(onAdd: () => _goNotice(context))
+                  : _OrdersList(
+                      orders: orders,
+                      onAdd: () => _goNotice(context),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _goNotice(BuildContext context) =>
-      Navigator.of(context).pushNamed(AppRoutes.cateringNotice);
+  void _goNotice(BuildContext context) {
+    Navigator.of(context).pushNamed(AppRoutes.cateringNotice);
+  }
 }
 
 // ── Hero header ──────────────────────────────────────────────────────────────
@@ -71,8 +93,11 @@ class _HeroHeader extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     onPressed: () {
                       if (Navigator.of(context).canPop()) {
                         Navigator.of(context).pop();
@@ -84,10 +109,12 @@ class _HeroHeader extends StatelessWidget {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded,
-                        color: Colors.white),
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.notifications),
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.of(context)
+                        .pushNamed(AppRoutes.notifications),
                   ),
                 ],
               ),
@@ -99,10 +126,11 @@ class _HeroHeader extends StatelessWidget {
   }
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
+// ── Empty state ──────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.onAdd});
+
   final VoidCallback onAdd;
 
   @override
@@ -115,7 +143,10 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 28),
           const Text(
             'Hello, Arti!',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -135,10 +166,14 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Orders list ───────────────────────────────────────────────────────────────
+// ── Orders list ──────────────────────────────────────────────────────────────
 
 class _OrdersList extends StatelessWidget {
-  const _OrdersList({required this.orders, required this.onAdd});
+  const _OrdersList({
+    required this.orders,
+    required this.onAdd,
+  });
+
   final List<CateringOrder> orders;
   final VoidCallback onAdd;
 
@@ -149,7 +184,10 @@ class _OrdersList extends StatelessWidget {
       children: [
         const Text(
           'Hello, Arti!',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -161,10 +199,12 @@ class _OrdersList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        ...orders.map((order) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _CateringOrderCard(order: order),
-            )),
+        ...orders.map(
+          (order) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _CateringOrderCard(order: order),
+          ),
+        ),
         const SizedBox(height: 16),
         Center(child: _AddButton(onTap: onAdd)),
       ],
@@ -172,10 +212,11 @@ class _OrdersList extends StatelessWidget {
   }
 }
 
-// ── Catering Order Card ───────────────────────────────────────────────────────
+// ── Catering order card ──────────────────────────────────────────────────────
 
 class _CateringOrderCard extends StatelessWidget {
   const _CateringOrderCard({required this.order});
+
   final CateringOrder order;
 
   @override
@@ -189,7 +230,6 @@ class _CateringOrderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Status row with dot ──────────────────────────────────────────
           Row(
             children: [
               Container(
@@ -214,10 +254,8 @@ class _CateringOrderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          // ── Progress Stepper ────────────────────────────────────────────
           _ProgressStepper(status: order.status),
           const SizedBox(height: 24),
-          // ── Order ID & Call Action ───────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -249,7 +287,11 @@ class _CateringOrderCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 6),
-                    Icon(Icons.phone, color: AppColors.accentRed, size: 16),
+                    Icon(
+                      Icons.phone,
+                      color: AppColors.accentRed,
+                      size: 16,
+                    ),
                   ],
                 ),
               ),
@@ -261,10 +303,11 @@ class _CateringOrderCard extends StatelessWidget {
   }
 }
 
-// ── Progress Stepper ──────────────────────────────────────────────────────────
+// ── Progress stepper ─────────────────────────────────────────────────────────
 
 class _ProgressStepper extends StatelessWidget {
   const _ProgressStepper({required this.status});
+
   final CateringStatus status;
 
   @override
@@ -298,9 +341,7 @@ class _ProgressStepper extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active
-                ? const Color(0xFF4CAF50)
-                : AppColors.surfaceLight,
+            color: active ? const Color(0xFF4CAF50) : AppColors.surfaceLight,
           ),
           child: Icon(
             Icons.check,
@@ -333,9 +374,8 @@ class _ProgressStepper extends StatelessWidget {
               child: Container(
                 height: 2,
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                color: active
-                    ? const Color(0xFF4CAF50)
-                    : AppColors.surfaceLight,
+                color:
+                    active ? const Color(0xFF4CAF50) : AppColors.surfaceLight,
               ),
             ),
           ),
@@ -345,10 +385,11 @@ class _ProgressStepper extends StatelessWidget {
   }
 }
 
-// ── Add button ────────────────────────────────────────────────────────────────
+// ── Add button ───────────────────────────────────────────────────────────────
 
 class _AddButton extends StatelessWidget {
   const _AddButton({required this.onTap});
+
   final VoidCallback onTap;
 
   @override
@@ -362,7 +403,11 @@ class _AddButton extends StatelessWidget {
           color: AppColors.surface,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+        child: const Icon(
+          Icons.add,
+          color: AppColors.textPrimary,
+          size: 28,
+        ),
       ),
     );
   }
